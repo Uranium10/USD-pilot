@@ -2,6 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { getNetWorth, useGameStore } from '../store/gameStore.js'
 import SpriteAnimator from './SpriteAnimator.jsx'
 
+function FloatingNotes() {
+  return (
+    <div className="floating-notes-container">
+      <img src="/imgs/bg/music_note.png" className="note note-1" alt="" aria-hidden="true" />
+      <img src="/imgs/bg/music_note.png" className="note note-2" alt="" aria-hidden="true" />
+      <img src="/imgs/bg/music_note.png" className="note note-3" alt="" aria-hidden="true" />
+    </div>
+  )
+}
+
 // 방 배경은 Tarae 아트 3장(눈 뜸/반쯤 감음/완전히 감음)을 SpriteAnimator로 재생해
 // 자연스러운 깜빡임을 흉내낸다. 평소엔 눈 뜬 프레임에 멈춰 있다가, 무작위 간격으로
 // 반쯤→완전히→반쯤→뜸 4프레임을 한 번(loop 없이) 재생하고 다시 멈춘다.
@@ -64,6 +74,7 @@ export default function RoomScene({ children }) {
       {blinking
         ? <SpriteAnimator key={`blink-${set}`} type="frames" src={blinkFrames} width="100%" height="100%" fps={BLINK_FPS} loop={false} onComplete={finishBlink} className="room-art" />
         : <SpriteAnimator key={`rest-${set}`} type="frames" src={restFrames} width="100%" height="100%" className="room-art" />}
+      {set === 'day' && isHappy && <FloatingNotes />}
       {phase === 'loading' && <p className="room-loading-text">궤도 시장을 도청하는 중…</p>}
       {canOpenMonitor && (
         <button className="monitor-hotspot" onClick={() => setScreen('monitor')} aria-label="모니터 켜기">
