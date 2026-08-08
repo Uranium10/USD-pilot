@@ -11,7 +11,7 @@ import { fetchMarketCycle } from './services/marketService.js'
 import { useGameStore } from './store/gameStore.js'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
-const subtitles = ['Upside Down', 'Useless Decision', 'Unpaid Space Debt', 'Urgent Sell Disaster']
+const subtitles = ['Upside Down', 'Useless Decision', 'Unpaid Space Debt', 'Urgent Sell Disaster', 'Universal Space Depression', 'Unbelievable Stock Drop', 'Ultimate Survival Day', 'Unfair System Design', 'Underground Stock Dealer', 'Unlimited Space Dream']
 
 function Title() {
   const beginLoading = useGameStore((state) => state.beginLoading)
