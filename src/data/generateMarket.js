@@ -1,4 +1,4 @@
-import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE } from '../config.js'
+import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INFO_COST_MULTIPLIER, VOLATILITY_BY_CYCLE } from '../config.js'
 
 const companies = [
   ['오비탈 레일', '궤도 건설', 128],
@@ -66,6 +66,7 @@ const rumorEvents = [
 
 const round = (value) => Math.round(value * 100) / 100
 const pick = (items, random) => items[Math.floor(random() * items.length)]
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 function seeded(seed) {
   let value = seed >>> 0
@@ -75,15 +76,18 @@ function seeded(seed) {
   }
 }
 
-function makePath(startPrice, random) {
+function makePath(startPrice, random, cycle) {
+  const volatility = VOLATILITY_BY_CYCLE[cycle - 1] ?? VOLATILITY_BY_CYCLE.at(-1)
   const pointCount = 4 + Math.floor(random() * 5)
   const progresses = Array.from({ length: pointCount - 2 }, () => 0.05 + random() * 0.9)
     .sort((left, right) => left - right)
   const points = [{ progress: 0, price: startPrice }]
   let price = startPrice
   for (const progress of [...progresses, 1]) {
-    const shock = random() < 0.14 ? (random() - 0.5) * 0.32 : 0
-    price = Math.max(8, price * (1 + (random() - 0.48) * 0.11 + shock))
+    const normalMove = (random() - 0.5) * 0.11 * volatility
+    const shock = random() < 0.14 ? (random() - 0.5) * 0.32 * Math.sqrt(volatility) : 0
+    const move = clamp(normalMove + shock, -0.22, 0.22)
+    price = Math.max(8, price * (1 + move))
     points.push({ progress: round(progress), price: round(price) })
   }
   return points
@@ -101,7 +105,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
         name,
         sector,
         startPrice,
-        path: makePath(startPrice, random),
+        path: makePath(startPrice, random, cycle),
       }
       previousCloses[stockIndex] = stock.path.at(-1).price
       return stock
@@ -135,7 +139,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
         id: `c${cycle}-d${dayIndex + 1}-r${index}`,
         stockId: stock.id,
         direction: predictedUp ? 'up' : 'down',
-        cost: Math.round(250 + accuracy * 900),
+        cost: Math.round((100 + accuracy * 350) * (INFO_COST_MULTIPLIER[cycle - 1] ?? INFO_COST_MULTIPLIER.at(-1))),
         accuracy,
         source: pick(rumorSources, random),
         text: `${stock.name}: ${pick(stockEvents[eventDirection], random)}`,

@@ -1,4 +1,4 @@
-import { MINE_BASE_COST, MINE_BASE_RATE, MINE_COST_GROWTH, MINE_RATE_GROWTH } from '../config.js'
+import { MINE_BASE_COST, MINE_BASE_RATE, MINE_COST_GROWTH, MINE_INSTALL_COST, MINE_RATE_GROWTH } from '../config.js'
 
 export function mineRate(tier) {
   if (tier < 0) return 0
@@ -6,7 +6,8 @@ export function mineRate(tier) {
 }
 
 export function mineUpgradeCost(tier) {
-  return Math.round(MINE_BASE_COST * MINE_COST_GROWTH ** Math.max(0, tier))
+  if (tier < 0) return MINE_INSTALL_COST
+  return Math.round(MINE_BASE_COST * MINE_COST_GROWTH ** tier)
 }
 
 export function nextMineTier(tier) {

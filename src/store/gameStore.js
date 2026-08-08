@@ -169,7 +169,7 @@ export const useGameStore = create((set, get) => ({
   settleCycle: (payAmount) => {
     const state = get()
     if (state.phase !== 'settlement') return null
-    const amount = Math.min(Math.round(payAmount), state.cash)
+    const amount = Math.min(Math.max(0, Math.round(payAmount)), state.cash, state.debt)
     const result = computeSettlement(state.debt, state.cycle, amount)
     if (result.gameOver) {
       set({ phase: 'gameover' })
@@ -235,11 +235,11 @@ export const useGameStore = create((set, get) => ({
   buyNightItem: (item) => {
     const state = get()
     if (state.phase !== 'night' || state.nightActivity || state.cash < item.price) return false
-    if (item.id === 'chiliEnergy' && state.dailyDrinkPurchased >= 2) return false
+    if (item.id === 'chili-energy' && state.dailyDrinkPurchased >= 2) return false
     set({
       cash: state.cash - item.price,
       inventory: { ...state.inventory, [item.id]: (state.inventory[item.id] || 0) + 1 },
-      dailyDrinkPurchased: item.id === 'chiliEnergy' ? state.dailyDrinkPurchased + 1 : state.dailyDrinkPurchased,
+      dailyDrinkPurchased: item.id === 'chili-energy' ? state.dailyDrinkPurchased + 1 : state.dailyDrinkPurchased,
     })
     return true
   },

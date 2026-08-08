@@ -15,7 +15,7 @@ import { DEBT_RATIO, FLOOR_BY_CYCLE, INTEREST_RATE, MAX_CYCLES } from '../config
 export function getMinPayment(debt, cycle) {
   const proportional = Math.round(debt * DEBT_RATIO)
   const floor = FLOOR_BY_CYCLE[cycle - 1] ?? FLOOR_BY_CYCLE.at(-1)
-  return Math.max(proportional, floor)
+  return Math.min(debt, Math.max(proportional, floor))
 }
 
 // 주기 말 정산. payAmount는 플레이어가 실제로 낸 금액(선상환 포함 가능)이다.
@@ -31,9 +31,9 @@ export function computeSettlement(debt, cycle, payAmount) {
   let remaining = debt - payAmount
   if (remaining <= 0) return { cleared: true }
 
-  remaining = Math.round(remaining * (1 + INTEREST_RATE))
+  if (cycle >= MAX_CYCLES) return { gameOver: true, remainingDebt: remaining }
 
-  if (cycle >= MAX_CYCLES) return { cleared: true }
+  remaining = Math.round(remaining * (1 + INTEREST_RATE))
 
   return { debt: remaining, nextCycle: cycle + 1, gameOver: false, cleared: false }
 }
