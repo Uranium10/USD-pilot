@@ -28,22 +28,29 @@ function Title() {
 
 function Premarket() {
   const state = useGameStore()
+  const [flashingRumorId, setFlashingRumorId] = useState(null)
   if (!state.market) return null
   const data = state.market.days[state.day - 1]
+  const purchase = (rumor) => {
+    if (!state.purchaseRumor(rumor)) return
+    setFlashingRumorId(rumor.id)
+    window.setTimeout(() => setFlashingRumorId(null), 450)
+  }
+  const completePurchase = () => state.showOverlay({ type: 'dayBriefing', title: `${state.day}일차 정보 브리핑` })
   return <section className="panel premarket">
     <p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p>
-    <h2>오늘의 소문 하나를 사시겠습니까?</h2>
+    <h2>필요한 정보를 구입하세요.</h2>
     <div className="rumor-grid">{data.rumors.map((rumor) => {
-      const isSelected = state.selectedRumor?.id === rumor.id;
-      const isBought = Boolean(state.selectedRumor);
+      const isPurchased = state.purchasedRumors.some((item) => item.id === rumor.id)
       return (
-      <button key={rumor.id} className={`rumor ${isSelected ? 'selected' : ''}`} onClick={() => state.selectRumor(rumor)} disabled={isBought && !isSelected}>
-        <span>{isSelected ? '정보 해독 완료' : '암호화된 정보'}</span>
-        <strong>{isSelected ? rumor.text : `출처: ${rumor.source}`}</strong>
-        <small>{isSelected ? `출처 ${rumor.source} · 신뢰도 ${Math.round(rumor.accuracy * 100)}%` : '내용 및 신뢰도 미상'} · {money(rumor.cost)}</small>
+      <button key={rumor.id} className={`rumor ${isPurchased ? 'selected' : ''} ${flashingRumorId === rumor.id ? 'purchase-flash' : ''}`} onClick={() => purchase(rumor)} disabled={isPurchased || state.cash < rumor.cost}>
+        <span>{isPurchased ? '구입됨' : '암호화된 정보'}</span>
+        <strong>출처: {rumor.source}</strong>
+        <small>내용 및 신뢰도 미상 · {money(rumor.cost)}</small>
       </button>
     )})}</div>
-    <button className="primary" onClick={state.startDay}>{state.selectedRumor ? '정보 확인 · 장 시작' : '정보 없이 장 시작'}</button>
+    <p className="purchase-summary">구입 {state.purchasedRumors.length}건 · 남은 현금 {money(state.cash)}</p>
+    <button className="primary" onClick={completePurchase}>구입 완료</button>
   </section>
 }
 
@@ -86,17 +93,18 @@ function Monitor() {
   const canSell = sellQuantity > 0
   const remaining = Math.max(0, DAY_DURATION_SECONDS - state.elapsed)
   const netWorth = getNetWorth(state)
+  const previousSummary = state.dailySummaries.at(-1)
+  const assetChange = previousSummary ? netWorth - previousSummary.netWorth : 0
   
   const profitDiff = holding.quantity > 0 ? (currentPrice - holding.average) : 0
   const profitPct = holding.quantity > 0 ? (profitDiff / holding.average) * 100 : 0
   
-  const addQuantity = (add) => setQuantity((q) => Math.max(1, q + add))
-  const setMaxBuy = () => setQuantity(Math.max(1, Math.floor(state.cash / currentPrice)))
-  const setMaxSell = () => setQuantity(Math.max(1, holding.quantity))
+  const addQuantity = (add) => setQuantity((q) => Math.max(0, q + add))
+  const setMaxBuy = () => setQuantity(Math.max(0, Math.floor(state.cash / currentPrice)))
 
   return <main className="monitor-shell">
-    <header className="terminal-bar"><b>U.S.D // MARKET</b><span>{state.cycle}주차 {state.day}/7일 · 낮</span><span className={remaining < 60 ? 'red' : ''}>{Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}</span><button onClick={() => state.showOverlay({ title: '거래 안내', text: '낮 동안에는 시간이 흐릅니다. 종목과 뉴스를 확인해 매매하세요. 이 안내가 열린 동안 시장은 일시정지됩니다.' })}>도움말</button><button onClick={() => state.setScreen('room')}>방 보기</button></header>
-    <section className="account-strip"><div><small>총자산</small><strong>{money(netWorth)}</strong></div><div><small>현금</small><strong>{money(state.cash)}</strong></div><div><small>이번 주 상환</small><strong className="red">{money(state.debt)}</strong></div></section>
+    <header className="terminal-bar"><b>U.S.D // MARKET</b><span>{state.cycle}주차 {state.day}/7일 · 낮</span><span className={remaining < 60 ? 'red' : ''}>{Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}</span><button onClick={() => state.showOverlay({ type: 'purchasedInfo', title: '구입한 정보' })}>구입 정보 {state.purchasedRumors.length}</button><button onClick={() => state.showOverlay({ title: '거래 안내', text: '낮 동안에는 시간이 흐릅니다. 종목과 뉴스를 확인해 매매하세요. 이 안내가 열린 동안 시장은 일시정지됩니다.' })}>도움말</button><button onClick={() => state.setScreen('room')}>방 보기</button></header>
+    <section className="account-strip"><div><small>총자산</small><strong>{money(netWorth)}</strong>{previousSummary && <small className={assetChange >= 0 ? 'green' : 'red'}>전일 대비 {assetChange >= 0 ? '+' : ''}{money(assetChange)}</small>}</div><div><small>현금</small><strong>{money(state.cash)}</strong></div><div><small>이번 주 상환</small><strong className="red">{money(state.debt)}</strong></div></section>
     <div className="trading-grid">
       <aside className="stock-list">{data.stocks.map((stock) => { 
         const current = state.currentPrices[stock.id] || stock.startPrice; 
@@ -125,10 +133,9 @@ function Monitor() {
               <button onClick={() => addQuantity(5)}>+5</button>
               <button onClick={() => addQuantity(10)}>+10</button>
               <button onClick={() => addQuantity(100)}>+100</button>
-              <button onClick={setMaxBuy}>전부 매수</button>
-              <button onClick={setMaxSell}>전부 매도</button>
+              <button onClick={setMaxBuy}>전부</button>
             </div>
-            <label>수량<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label>
+            <label>수량<input type="number" min="0" value={quantity} onChange={(event) => setQuantity(Math.max(0, Number(event.target.value) || 0))} /></label>
           </div>
           <div className="order-actions">
             <div className="order-totals">
@@ -140,7 +147,7 @@ function Monitor() {
           </div>
         </div>
       </section>
-      <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => <article key={item.id}><small>{item.direction === 'up' ? '호재' : '악재'}</small><p>{item.text}</p></article>)}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
+      <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const relatedStock = data.stocks.find((stock) => stock.id === item.stockId); return <article key={item.id}><small>{Math.floor(item.progress * 12)}:{String(Math.floor((item.progress * 12 % 1) * 60)).padStart(2, '0')} · {relatedStock?.name || '시장 속보'}</small><p>{item.text}</p></article> })}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
     </div>
     {state.feedback && <div key={state.feedback.id} className={`money-pop ${state.feedback.amount >= 0 ? 'gain' : 'loss'}`}>{state.feedback.amount >= 0 ? '+' : ''}{money(state.feedback.amount)}</div>}
   </main>
@@ -155,13 +162,23 @@ function Ending() {
 function Overlay() {
   const overlay = useGameStore((state) => state.overlay)
   const close = useGameStore((state) => state.closeOverlay)
+  const purchasedRumors = useGameStore((state) => state.purchasedRumors)
+  const startDay = useGameStore((state) => state.startDay)
+  const day = useGameStore((state) => state.day)
   if (!overlay) return null
+  const isInformationOverlay = overlay.type === 'dayBriefing' || overlay.type === 'purchasedInfo'
   return (
     <div className="overlay-backdrop">
       <div className="overlay-modal">
         {overlay.title && <h2>{overlay.title}</h2>}
         {overlay.text && <p>{overlay.text}</p>}
-        <button className="primary" onClick={close}>닫기</button>
+        {isInformationOverlay && <div className="information-list">
+          {purchasedRumors.length === 0 && <p className="muted">구입한 정보가 없습니다.</p>}
+          {purchasedRumors.map((rumor) => <article key={rumor.id}><small>{rumor.source} · 신뢰도 {Math.round(rumor.accuracy * 100)}%</small><p>{rumor.text}</p></article>)}
+        </div>}
+        {overlay.type === 'dayBriefing'
+          ? <button className="primary" onClick={startDay}>{day}일차 시작</button>
+          : <button className="primary" onClick={close}>닫기</button>}
       </div>
     </div>
   )
@@ -182,7 +199,7 @@ function App() {
   const showMonitor = screen === 'monitor' && phase !== 'premarket' && !showEnding
 
   return (
-    <>
+    <div className="game-frame">
       <div style={{ display: showEnding ? 'block' : 'none', height: '100%' }}>
         <Ending />
       </div>
@@ -199,7 +216,7 @@ function App() {
         <Monitor />
       </div>
       <Overlay />
-    </>
+    </div>
   )
 }
 

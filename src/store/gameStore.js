@@ -11,7 +11,8 @@ const initialGame = {
   holdings: {},
   market: null,
   selectedStockId: null,
-  selectedRumor: null,
+  purchasedRumors: [],
+  dailySummaries: [],
   elapsed: 0,
   currentPrices: {},
   visibleNews: [],
@@ -31,6 +32,11 @@ function interpolate(path, progress) {
 
 const dayData = (state) => state.market?.days[state.day - 1]
 
+const calculateNetWorth = (state) => Object.entries(state.holdings).reduce(
+  (total, [stockId, holding]) => total + (state.currentPrices[stockId] || holding.average) * holding.quantity,
+  state.cash,
+)
+
 export const useGameStore = create((set, get) => ({
   ...initialGame,
   setScreen: (screen) => set({ screen }),
@@ -45,10 +51,15 @@ export const useGameStore = create((set, get) => ({
       currentPrices: Object.fromEntries(firstDay.stocks.map((stock) => [stock.id, stock.startPrice])),
     })
   },
-  selectRumor: (rumor) => {
-    const { cash, selectedRumor, phase } = get()
-    if (phase !== 'premarket' || selectedRumor || cash < rumor.cost) return
-    set({ cash: cash - rumor.cost, selectedRumor: rumor, feedback: { amount: -rumor.cost, id: Date.now() } })
+  purchaseRumor: (rumor) => {
+    const { cash, purchasedRumors, phase } = get()
+    if (phase !== 'premarket' || purchasedRumors.some((item) => item.id === rumor.id) || cash < rumor.cost) return false
+    set({
+      cash: cash - rumor.cost,
+      purchasedRumors: [...purchasedRumors, rumor],
+      feedback: { amount: -rumor.cost, id: Date.now() },
+    })
+    return true
   },
   startDay: () => {
     const data = dayData(get())
@@ -58,6 +69,8 @@ export const useGameStore = create((set, get) => ({
       screen: 'monitor',
       elapsed: 0,
       visibleNews: [],
+      overlay: null,
+      paused: false,
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
     })
   },
@@ -72,7 +85,17 @@ export const useGameStore = create((set, get) => ({
     set({ elapsed, currentPrices, visibleNews })
     if (elapsed >= DAY_DURATION_SECONDS) get().finishDay()
   },
-  finishDay: () => set({ phase: 'night', screen: 'room', paused: false, overlay: null }),
+  finishDay: () => {
+    const state = get()
+    const summary = { cycle: state.cycle, day: state.day, netWorth: calculateNetWorth(state), cash: state.cash }
+    set({
+      phase: 'night',
+      screen: 'room',
+      paused: false,
+      overlay: null,
+      dailySummaries: [...state.dailySummaries.filter((item) => item.cycle !== state.cycle || item.day !== state.day), summary],
+    })
+  },
   endNight: () => {
     const state = get()
     if (state.phase !== 'night') return
@@ -85,7 +108,8 @@ export const useGameStore = create((set, get) => ({
     set({
       day: nextDay,
       phase: 'premarket',
-      selectedRumor: null,
+      screen: 'monitor',
+      purchasedRumors: [],
       elapsed: 0,
       visibleNews: [],
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
@@ -116,7 +140,7 @@ export const useGameStore = create((set, get) => ({
       market,
       phase: 'premarket',
       screen: 'room',
-      selectedRumor: null,
+      purchasedRumors: [],
       selectedStockId: data.stocks[0].id,
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
       visibleNews: [],
@@ -157,8 +181,5 @@ export const useGameStore = create((set, get) => ({
 }))
 
 export function getNetWorth(state) {
-  return Object.entries(state.holdings).reduce(
-    (total, [stockId, holding]) => total + (state.currentPrices[stockId] || holding.average) * holding.quantity,
-    state.cash,
-  )
+  return calculateNetWorth(state)
 }

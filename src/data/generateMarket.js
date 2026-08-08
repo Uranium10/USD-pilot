@@ -60,16 +60,20 @@ function makePath(startPrice, random) {
 
 export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
   const random = seeded(Number(seed) + cycle * 7919)
+  const previousCloses = companies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
   const days = Array.from({ length: 7 }, (_, dayIndex) => {
     const stocks = companies.map(([name, sector, base], stockIndex) => {
-      const startPrice = round(base * (1 + (cycle - 1) * 0.025 + (random() - 0.5) * 0.18))
-      return {
+      const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
+      const startPrice = round(referencePrice * (1 + (random() - 0.5) * 0.025))
+      const stock = {
         id: `stock-${stockIndex + 1}`,
         name,
         sector,
         startPrice,
         path: makePath(startPrice, random),
       }
+      previousCloses[stockIndex] = stock.path.at(-1).price
+      return stock
     })
     const news = Array.from({ length: 5 }, (_, index) => {
       const stock = stocks[Math.floor(random() * stocks.length)]

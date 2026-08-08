@@ -1,5 +1,7 @@
 :root { --ink:#e8f0ff; --muted:#8490a5; --panel:#101722; --line:#26344a; --cyan:#55e7ff; --green:#4cffb2; --red:#ff5277; --yellow:#ffd15c; }
-.title-screen,.ending { min-height:100vh; display:grid; place-content:center; text-align:center; background:radial-gradient(circle at 50% 45%,#172b3e 0,#080b12 45%,#030508 100%); }
+.game-frame { width:min(100vw, calc(100vh * 4 / 3)); height:min(100vh, calc(100vw * 3 / 4)); aspect-ratio:4/3; position:relative; overflow:hidden; background:#070a10; box-shadow:0 0 80px #000; }
+.game-frame>div { height:100%; }
+.title-screen,.ending { min-height:100%; height:100%; display:grid; place-content:center; text-align:center; background:radial-gradient(circle at 50% 45%,#172b3e 0,#080b12 45%,#030508 100%); }
 .title-screen::before { content:''; position:fixed; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg,transparent 0 3px,#55e7ff08 4px); }
 .eyebrow { color:var(--cyan); font:600 12px 'IBM Plex Mono'; letter-spacing:.2em; text-transform:uppercase; }
 .title-screen h1,.ending h1 { margin:0; font:800 clamp(78px,16vw,180px) 'IBM Plex Mono'; letter-spacing:-.08em; text-shadow:0 0 40px #55e7ff55; }
@@ -11,7 +13,7 @@ button:hover { border-color:var(--cyan); background:#1b2b3b; }
 .primary:hover { color:white; background:#178ba0; }
 .large { justify-self:center; padding:15px 34px; }
 .danger { background:var(--red); color:#18040a; border-color:var(--red); }
-.room { min-height:100vh; position:relative; overflow:hidden; background:linear-gradient(#0d1725 0 58%,#17131a 58%); }
+.room { min-height:100%; height:100%; position:relative; overflow:hidden; background:linear-gradient(#0d1725 0 58%,#17131a 58%); }
 .window { position:absolute; left:8%; top:8%; width:34%; height:38%; border:12px solid #111621; background:linear-gradient(#070e21aa,#171438cc),repeating-linear-gradient(90deg,transparent 0 44px,#ff527719 45px),linear-gradient(140deg,#121e43,#481d46); box-shadow:inset 0 0 60px #000; }
 .window span { padding:8px; display:block; color:#ff8aae; font:11px 'IBM Plex Mono'; }
 .character { position:absolute; left:22%; bottom:19%; width:180px; height:300px; display:grid; place-content:center; text-align:center; border-radius:48% 48% 12% 12%; background:linear-gradient(100deg,#141923,#25202b); box-shadow:0 25px 50px #0009; color:var(--cyan); }
@@ -25,13 +27,14 @@ button:hover { border-color:var(--cyan); background:#1b2b3b; }
 .overlay-backdrop { position:fixed; inset:0; background:#0009; z-index:100; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
 .overlay-modal { background:#101722; border:1px solid var(--cyan); padding:32px; max-width:500px; text-align:center; box-shadow:0 10px 50px #000; }
 .overlay-modal h2 { margin:0 0 16px; color:var(--cyan); }.overlay-modal p { color:var(--ink); margin-bottom:24px; }
-.monitor-shell { min-height:100vh; padding:12px; background:#080d14; font-family:'IBM Plex Mono',monospace; }
+.monitor-shell { min-height:100%; height:100%; padding:12px; overflow:auto; background:#080d14; font-family:'IBM Plex Mono',monospace; }
 .terminal-bar { min-height:45px; display:flex; align-items:center; gap:24px; padding:0 14px; border:1px solid var(--line); background:#0d1520; }.terminal-bar b { color:var(--cyan); margin-right:auto; }.terminal-bar button { padding:6px 10px; }
 .account-strip { display:grid; grid-template-columns:repeat(3,1fr); margin:10px 0; border:1px solid var(--line); }.account-strip div { padding:12px 18px; border-right:1px solid var(--line); }.account-strip div:last-child{border:0}.account-strip small,.account-strip strong{display:block}.account-strip small{color:var(--muted);font-size:10px}.account-strip strong{font-size:20px;margin-top:4px}
-.trading-grid { display:grid; grid-template-columns:250px minmax(400px,1fr) 300px; gap:10px; min-height:calc(100vh - 135px); }
+.trading-grid { display:grid; grid-template-columns:250px minmax(400px,1fr) 300px; gap:10px; height:calc(100% - 135px); min-height:0; }
 .stock-list,.chart-panel,.news-panel,.panel { border:1px solid var(--line); background:var(--panel); }
 .stock-list button { width:100%; min-height:76px; padding:10px; border:0; border-bottom:1px solid var(--line); border-radius:0; display:flex; justify-content:space-between; text-align:left; }.stock-list button>span:last-child{text-align:right}.stock-list small{display:block;color:var(--muted);margin-top:4px}.stock-list .active{background:#183043;border-left:3px solid var(--cyan)}
 .chart-panel { display:grid; grid-template-rows:auto 1fr auto; min-height:450px; }.chart-title{display:flex;justify-content:space-between;align-items:end;padding:18px}.chart-title h2{margin:3px 0}.chart-title small{color:var(--muted)}.chart-title>strong{font-size:25px;color:var(--cyan)}.stock-chart{width:100%;height:100%;min-height:220px;background:#0a111b;display:block;}
+.chart-canvas-wrap{position:relative;width:100%;height:100%;min-height:220px}
 .zoom-controls{position:absolute;right:10px;bottom:10px;z-index:2;display:flex;gap:4px;}.zoom-controls button{padding:4px 8px;font-size:12px;opacity:0.7;}.zoom-controls button:hover{opacity:1;}
 .order-bar{display:flex;flex-direction:column;gap:12px;padding:16px;border-top:1px solid var(--line)}
 .order-info{display:flex;justify-content:space-between;font-size:14px}
@@ -44,7 +47,9 @@ button:hover { border-color:var(--cyan); background:#1b2b3b; }
 .order-actions button{padding:10px 24px;font-weight:800}.buy{background:#153f32;color:var(--green)}.sell{background:#481728;color:#ff86a0}
 .news-panel{padding:16px;overflow:auto}.news-panel h3{color:var(--yellow);font-size:14px}.news-panel article{padding:12px 0;border-top:1px solid var(--line)}.news-panel article small{color:var(--yellow)}.news-panel article p{font:13px/1.6 'Noto Sans KR';}.muted{color:var(--muted);font-size:12px}
 .green{color:var(--green)!important}.red{color:var(--red)!important}.money-pop{position:fixed;right:25%;top:20%;font-size:30px;font-weight:800;animation:pop 1.2s ease forwards;pointer-events:none}.gain{color:var(--green)}.loss{color:var(--red)}@keyframes pop{0%{opacity:0;transform:translateY(20px) scale(.8)}20%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:translateY(-60px)}}
-.premarket { min-height:calc(100vh - 24px); display:flex; flex-direction:column; justify-content:center; align-items:center; padding:35px; text-align:center; }.premarket h2{font-family:'Noto Sans KR';font-size:32px}.rumor-grid{width:min(1050px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:25px 0}.rumor{min-height:200px;padding:20px;text-align:left;display:flex;flex-direction:column;justify-content:space-between}.rumor span{color:var(--yellow);font-size:12px}.rumor strong{font:600 18px/1.55 'Noto Sans KR'}.rumor small{color:var(--muted)}.rumor.selected{border-color:var(--yellow);box-shadow:0 0 25px #ffd15c22}
+.premarket { min-height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:35px; text-align:center; }.premarket h2{font-family:'Noto Sans KR';font-size:32px}.rumor-grid{width:min(1050px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:25px 0}.rumor{min-height:200px;padding:20px;text-align:left;display:flex;flex-direction:column;justify-content:space-between}.rumor span{color:var(--yellow);font-size:12px}.rumor strong{font:600 18px/1.55 'Noto Sans KR'}.rumor small{color:var(--muted)}.rumor.selected{border-color:var(--yellow);box-shadow:0 0 25px #ffd15c22}
+.purchase-summary{color:var(--muted);font-size:12px}.purchase-flash{animation:purchaseFlash .45s ease-out}@keyframes purchaseFlash{0%{filter:brightness(1)}35%{filter:brightness(3);box-shadow:0 0 45px #fff}100%{filter:brightness(1)}}
+.information-list{max-height:360px;overflow:auto;text-align:left;margin:18px 0}.information-list article{padding:12px;border-top:1px solid var(--line)}.information-list small{color:var(--cyan)}.information-list p{margin:6px 0 0!important;line-height:1.55}
 .ending p{color:var(--muted)}.ending .primary{justify-self:center;margin-top:24px}.ending.clear{background:radial-gradient(circle,#164431,#080d0b 60%)}
 @media(max-width:950px){.trading-grid{grid-template-columns:1fr}.stock-list{display:grid;grid-template-columns:repeat(5,1fr)}.stock-list button{min-width:0;display:block}.news-panel{max-height:260px}.rumor-grid{grid-template-columns:1fr}.room-status{left:10px;right:10px;justify-content:center}.character{left:8%;transform:scale(.8)}.desk{right:2%;width:60%}}
 @media(max-width:600px){.terminal-bar{gap:8px;font-size:10px}.account-strip strong{font-size:14px}.trading-grid{display:block}.stock-list{display:flex;overflow:auto}.stock-list button{min-width:155px}.chart-panel{min-height:500px}.order-bar{flex-wrap:wrap}.news-panel{margin-top:10px}.window{width:70%}.character{display:none}.desk{width:90%;right:5%}}
