@@ -85,19 +85,22 @@ export default function SpriteAnimator({
   // Type: strip (Sprite Sheet)
   const colIndex = currentFrame % cols
   const rowIndex = Math.floor(currentFrame / cols)
-  
+  const rows = cols ? Math.ceil(totalFrames / cols) : 0
+
   const bgX = -(colIndex * width)
   const bgY = -(rowIndex * height)
 
   return (
-    <div 
+    <div
       className={`sprite-animator ${className}`}
       style={{
         width,
         height,
         backgroundImage: `url(${src})`,
         backgroundPosition: `${bgX}px ${bgY}px`,
-        backgroundSize: cols ? `${cols * width}px auto` : 'auto',
+        // 세로도 rows*height로 고정해야 한다. 'auto'로 두면 원본 이미지의 실제 비율이
+        // 의도한 그리드(cols×rows)와 다를 때 아래쪽 줄 프레임이 밀려 보인다.
+        backgroundSize: cols && rows ? `${cols * width}px ${rows * height}px` : 'auto',
         backgroundRepeat: 'no-repeat',
         display: 'inline-block',
         ...style

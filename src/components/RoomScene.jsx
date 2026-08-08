@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useGameStore } from '../store/gameStore.js'
 import SpriteAnimator from './SpriteAnimator.jsx'
 
@@ -7,6 +7,17 @@ import SpriteAnimator from './SpriteAnimator.jsx'
 // 반쯤→완전히→반쯤→뜸 4프레임을 한 번(loop 없이) 재생하고 다시 멈춘다.
 const frameUrl = (set, frame) => `/imgs/bg/Tarae/room_${set}_${frame}.png`
 const BLINK_FPS = 14
+const ALL_ROOM_IMAGES = ['day', 'night'].flatMap((set) => [1, 2, 3].map((frame) => frameUrl(set, frame)))
+
+// 쉬는 프레임/깜빡임 프레임으로 전환할 때마다 SpriteAnimator가 새로 마운트되면서
+// <img>가 처음 보는 src를 만나면(브라우저가 아직 못 받아온 이미지) 한 프레임 정도
+// 빈 화면이 비치는 "깜빡임"이 생긴다. 여섯 장을 미리 받아 디코드해두면 이후의 모든
+// 프레임 전환은 캐시에서 바로 그려져 이 현상이 사라진다.
+function usePreloadRoomImages() {
+  useEffect(() => {
+    ALL_ROOM_IMAGES.forEach((url) => { const image = new Image(); image.src = url })
+  }, [])
+}
 
 function useBlink(set) {
   const [blinking, setBlinking] = useState(false)
@@ -29,15 +40,18 @@ export default function RoomScene({ children }) {
   const setScreen = useGameStore((state) => state.setScreen)
   const set = isNightPhase(phase) ? 'night' : 'day'
   const [blinking, finishBlink] = useBlink(set)
+  usePreloadRoomImages()
   // 낮 동안(정보 구매·거래·일일 보고서)에는 모니터를 눌러 거래소를 열 수 있다.
   // 로딩 중엔 아직 시장이 없고, 밤/정산 중엔 상호작용이 NightPanel/Settlement로 넘어간다.
   const canOpenMonitor = phase === 'premarket' || phase === 'day' || phase === 'dayReport'
+  const restFrames = useMemo(() => [frameUrl(set, 1)], [set])
+  const blinkFrames = useMemo(() => [2, 3, 2, 1].map((frame) => frameUrl(set, frame)), [set])
 
   return (
     <main className="room">
       {blinking
-        ? <SpriteAnimator key={`blink-${set}`} type="frames" src={[2, 3, 2, 1].map((frame) => frameUrl(set, frame))} width="100%" height="100%" fps={BLINK_FPS} loop={false} onComplete={finishBlink} className="room-art" />
-        : <SpriteAnimator key={`rest-${set}`} type="frames" src={[frameUrl(set, 1)]} width="100%" height="100%" className="room-art" />}
+        ? <SpriteAnimator key={`blink-${set}`} type="frames" src={blinkFrames} width="100%" height="100%" fps={BLINK_FPS} loop={false} onComplete={finishBlink} className="room-art" />
+        : <SpriteAnimator key={`rest-${set}`} type="frames" src={restFrames} width="100%" height="100%" className="room-art" />}
       {phase === 'loading' && <p className="room-loading-text">궤도 시장을 도청하는 중…</p>}
       {canOpenMonitor && (
         <button className="monitor-hotspot" onClick={() => setScreen('monitor')} aria-label="모니터 켜기">
