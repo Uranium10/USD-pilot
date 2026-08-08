@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
 import { computeSettlement } from '../logic/debtSystem.js'
+import { mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
 
 const initialGame = {
   screen: 'title',
@@ -27,6 +28,10 @@ const initialGame = {
   inventory: {},
   nightActivity: null,
   nightMessage: null,
+  dailyDrinkPurchased: 0,
+  miningTier: -1,
+  miningIncomeToday: 0,
+  totalMiningIncome: 0,
 }
 
 function interpolate(path, progress) {
@@ -96,6 +101,7 @@ export const useGameStore = create((set, get) => ({
       overlay: null,
       paused: false,
       dayStartNetWorth: calculateNetWorth(state),
+      miningIncomeToday: 0,
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
     })
   },
@@ -103,11 +109,20 @@ export const useGameStore = create((set, get) => ({
     const state = get()
     if (state.phase !== 'day' || state.paused) return
     const elapsed = Math.min(DAY_DURATION_SECONDS, state.elapsed + deltaSeconds)
+    const activeSeconds = elapsed - state.elapsed
+    const miningIncome = mineRate(state.miningTier) * activeSeconds
     const progress = elapsed / DAY_DURATION_SECONDS
     const data = dayData(state)
     const currentPrices = Object.fromEntries(data.stocks.map((stock) => [stock.id, interpolate(stock.path, progress)]))
     const visibleNews = data.news.filter((item) => item.progress <= progress)
-    set({ elapsed, currentPrices, visibleNews })
+    set({
+      elapsed,
+      currentPrices,
+      visibleNews,
+      cash: state.cash + miningIncome,
+      miningIncomeToday: state.miningIncomeToday + miningIncome,
+      totalMiningIncome: state.totalMiningIncome + miningIncome,
+    })
     if (elapsed >= DAY_DURATION_SECONDS) get().finishDay()
   },
   finishDay: () => {
@@ -146,6 +161,7 @@ export const useGameStore = create((set, get) => ({
       selectedStockId: data.stocks[0].id,
       energy: MAX_ENERGY,
       nightMessage: null,
+      dailyDrinkPurchased: 0,
     })
   },
   // payAmount: 플레이어가 이번 주기에 실제로 낼 금액(최소 상환액 이상, 초과분은 선상환).
@@ -181,6 +197,8 @@ export const useGameStore = create((set, get) => ({
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
       visibleNews: [],
       elapsed: 0,
+      dailyDrinkPurchased: 0,
+      miningIncomeToday: 0,
     })
   },
   selectStock: (selectedStockId) => set({ selectedStockId }),
@@ -217,7 +235,19 @@ export const useGameStore = create((set, get) => ({
   buyNightItem: (item) => {
     const state = get()
     if (state.phase !== 'night' || state.nightActivity || state.cash < item.price) return false
-    set({ cash: state.cash - item.price, inventory: { ...state.inventory, [item.id]: (state.inventory[item.id] || 0) + 1 } })
+    if (item.id === 'chiliEnergy' && state.dailyDrinkPurchased >= 2) return false
+    set({
+      cash: state.cash - item.price,
+      inventory: { ...state.inventory, [item.id]: (state.inventory[item.id] || 0) + 1 },
+      dailyDrinkPurchased: item.id === 'chiliEnergy' ? state.dailyDrinkPurchased + 1 : state.dailyDrinkPurchased,
+    })
+    return true
+  },
+  upgradeMiningMachine: () => {
+    const state = get()
+    const cost = mineUpgradeCost(state.miningTier)
+    if (state.phase !== 'night' || state.nightActivity || state.cash < cost) return false
+    set({ cash: state.cash - cost, miningTier: state.miningTier + 1 })
     return true
   },
   useNightItem: (item) => {

@@ -1,4 +1,4 @@
-import { DAY_DURATION_SECONDS } from '../config.js'
+import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE } from '../config.js'
 
 const companies = [
   ['오비탈 레일', '궤도 건설', 128],
@@ -92,7 +92,7 @@ function makePath(startPrice, random) {
 export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
   const random = seeded(Number(seed) + cycle * 7919)
   const previousCloses = companies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
-  const days = Array.from({ length: 7 }, (_, dayIndex) => {
+  const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
     const stocks = companies.map(([name, sector, base], stockIndex) => {
       const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
       const startPrice = round(referencePrice * (1 + (random() - 0.5) * 0.025))

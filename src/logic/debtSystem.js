@@ -1,6 +1,6 @@
-import { DEBT_RATIO, FLOOR_BASE, FLOOR_GROWTH, INTEREST_RATE, MAX_CYCLES } from '../config.js'
+import { DEBT_RATIO, FLOOR_BY_CYCLE, INTEREST_RATE, MAX_CYCLES } from '../config.js'
 
-// U.S.D 부채 시스템(B 구조). USD-spec/USD_작업지시서.md의 명세를 그대로 옮긴 순수 함수들이다.
+// U.S.D 부채 시스템(B 구조). USD-spec/USD_debt_system.md의 명세를 그대로 옮긴 순수 함수들이다.
 //
 // 두 축으로 나눈다:
 // - 최소 상환액(minPayment): 매 주기 반드시 내야 하는 금액. 계속 오른다(압박 유지). 선상환과 무관.
@@ -11,9 +11,10 @@ import { DEBT_RATIO, FLOOR_BASE, FLOOR_GROWTH, INTEREST_RATE, MAX_CYCLES } from 
 
 // 이번 주기의 최소 상환액. Math.max(부채 비례분, 상승 하한) — 하한이 매 주기 계속 오르므로
 // 선상환으로 부채 비례분이 작아져도 압박이 유지된다.
+// 하한은 지수식이 아니라 실측으로 조정한 계단형 배열(FLOOR_BY_CYCLE)을 그대로 찾아 쓴다.
 export function getMinPayment(debt, cycle) {
   const proportional = Math.round(debt * DEBT_RATIO)
-  const floor = Math.round(FLOOR_BASE * FLOOR_GROWTH ** (cycle - 1))
+  const floor = FLOOR_BY_CYCLE[cycle - 1] ?? FLOOR_BY_CYCLE.at(-1)
   return Math.max(proportional, floor)
 }
 

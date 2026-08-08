@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../data/nightContent.js'
+import { mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
 import { useGameStore } from '../store/gameStore.js'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
@@ -10,6 +11,9 @@ export default function NightPanel() {
   const [tab, setTab] = useState('activity')
   const drink = NIGHT_ITEMS.chiliEnergy
   const job = NIGHT_ACTIVITIES.convenienceJob
+  const miningCost = mineUpgradeCost(state.miningTier)
+  const currentMiningRate = mineRate(state.miningTier)
+  const upgradedMiningRate = mineRate(nextMineTier(state.miningTier))
 
   useEffect(() => {
     if (state.nightActivity?.id !== job.id) return undefined
@@ -29,7 +33,7 @@ export default function NightPanel() {
     </nav>
     <div className="night-content">
       {tab === 'activity' && <article className="night-entry"><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>}
-      {tab === 'shop' && <article className="night-entry"><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)}</small></div><button onClick={() => state.buyNightItem(drink)} disabled={Boolean(state.nightActivity) || state.cash < drink.price}>구입</button></article>}
+      {tab === 'shop' && <div className="night-shop-list"><article className="night-entry"><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => state.buyNightItem(drink)} disabled={Boolean(state.nightActivity) || state.cash < drink.price || state.dailyDrinkPurchased >= 2}>구입</button></article><article className="night-entry mining-machine"><div><p className="eyebrow">PASSIVE INCOME MODULE</p><h3>마이닝 머신 {state.miningTier < 0 ? '미보유' : `T.${state.miningTier}`}</h3><p>장 운영 중 크레딧을 천천히 생산하는 단일 채굴기입니다. 업그레이드하면 기존 기계를 대체합니다.</p><dl><div><dt>현재 생산</dt><dd>{currentMiningRate.toFixed(3)} ₡/초</dd></div><div><dt>{state.miningTier < 0 ? '설치 후' : `T.${nextMineTier(state.miningTier)} 생산`}</dt><dd>{upgradedMiningRate.toFixed(3)} ₡/초</dd></div><div><dt>{state.miningTier < 0 ? '설치 비용' : '업그레이드 비용'}</dt><dd>{money(miningCost)}</dd></div></dl></div><button onClick={state.upgradeMiningMachine} disabled={Boolean(state.nightActivity) || state.cash < miningCost}>{state.miningTier < 0 ? 'T.0 설치' : `T.${nextMineTier(state.miningTier)} 업그레이드`}</button></article></div>}
       {tab === 'inventory' && <>{drinkCount > 0 ? <article className="night-entry"><div><h3>{drink.name} × {drinkCount}</h3><p>마시면 활동력을 아주 조금 회복한다.</p><small>활동력 +{drink.energyRestore}</small></div><button onClick={() => state.useNightItem(drink)} disabled={Boolean(state.nightActivity) || state.energy >= MAX_ENERGY}>마시기</button></article> : <p className="empty-state">인벤토리가 비어 있습니다.</p>}</>}
     </div>
     <button className="sleep-button" onClick={state.endNight} disabled={Boolean(state.nightActivity)}>자기</button>

@@ -4,6 +4,7 @@ import BgmController from './components/BgmController.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
 import RoomScene from './components/RoomScene.jsx'
+import { DAYS_PER_CYCLE } from './config.js'
 import { INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
@@ -67,7 +68,7 @@ function Settlement() {
 
   return <section className="modal-card settlement-card">
     <p className="eyebrow">WEEKLY COLLECTION</p>
-    <h2>7일이 지났습니다.</h2>
+    <h2>{DAYS_PER_CYCLE}일이 지났습니다.</h2>
     <dl className="settlement-figures">
       <div><dt>보유 현금</dt><dd>{money(state.cash)}</dd></div>
       <div><dt>이번 주 최소 상환액</dt><dd>{money(minPayment)}</dd></div>
