@@ -1,16 +1,31 @@
-# React + Vite
+# U.S.D
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+빚 상환일까지 7일 동안 실시간 주식 거래로 살아남는 로그라이크 웹게임 파일럿입니다.
 
-Currently, two official plugins are available:
+## 실행
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Windows에서는 `run.bat`을 실행하면 의존성을 확인하고 `http://localhost:5173`에서 브라우저와 Vite 개발 서버를 함께 시작합니다. 로컬 `/api`는 Vite 미들웨어로 제공되므로 Vercel 로그인이나 프로젝트 연결이 필요하지 않습니다.
 
-## React Compiler
+```bash
+npm install
+vercel dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`npm run dev`에서는 Vite 미들웨어가 시장 API를 제공합니다. Vercel 배포 환경에서는 `api/market-cycle.js` Vercel Function이 같은 인터페이스를 제공합니다. 어느 API든 실패하면 클라이언트의 로컬 생성기로 자동 대체됩니다.
 
-## Expanding the Oxlint configuration
+낮 주식 스테이지는 기본 12분입니다. 개발 중에는 `.env.local`에 `VITE_DAY_DURATION_SECONDS=30`처럼 지정해 단축할 수 있습니다.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## 게임 규칙
+
+- 하루는 12분의 낮 주식 장과 시간제한 없는 밤으로 구성됩니다.
+- 밤에는 `하루 종료`를 눌러야 다음 날로 넘어갑니다.
+- 7일째 밤 종료 후 빚을 갚고, 6주차 상환 성공 시 클리어합니다.
+- 시장 API가 실패해도 로컬 대체 데이터로 계속 플레이할 수 있습니다.
+
+## 기술
+
+- React + Vite
+- Zustand 중앙 상태 관리
+- React 외부 스테이지 엔진
+- Canvas 차트
+- Vercel Functions 시장 생성 API

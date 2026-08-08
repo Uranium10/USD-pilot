@@ -1,0 +1,38 @@
+:root { --ink:#e8f0ff; --muted:#8490a5; --panel:#101722; --line:#26344a; --cyan:#55e7ff; --green:#4cffb2; --red:#ff5277; --yellow:#ffd15c; }
+.title-screen,.ending { min-height:100vh; display:grid; place-content:center; text-align:center; background:radial-gradient(circle at 50% 45%,#172b3e 0,#080b12 45%,#030508 100%); }
+.title-screen::before { content:''; position:fixed; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg,transparent 0 3px,#55e7ff08 4px); }
+.eyebrow { color:var(--cyan); font:600 12px 'IBM Plex Mono'; letter-spacing:.2em; text-transform:uppercase; }
+.title-screen h1,.ending h1 { margin:0; font:800 clamp(78px,16vw,180px) 'IBM Plex Mono'; letter-spacing:-.08em; text-shadow:0 0 40px #55e7ff55; }
+.subtitle { margin:0 0 42px; color:var(--muted); font:16px 'IBM Plex Mono'; letter-spacing:.25em; }
+button { color:var(--ink); border:1px solid var(--line); background:#151e2b; border-radius:4px; transition:.15s ease; }
+button:hover { border-color:var(--cyan); background:#1b2b3b; }
+.primary,.danger { padding:12px 22px; font-weight:800; }
+.primary { color:#061116; background:var(--cyan); border-color:var(--cyan); }
+.primary:hover { color:white; background:#178ba0; }
+.large { justify-self:center; padding:15px 34px; }
+.danger { background:var(--red); color:#18040a; border-color:var(--red); }
+.room { min-height:100vh; position:relative; overflow:hidden; background:linear-gradient(#0d1725 0 58%,#17131a 58%); }
+.window { position:absolute; left:8%; top:8%; width:34%; height:38%; border:12px solid #111621; background:linear-gradient(#070e21aa,#171438cc),repeating-linear-gradient(90deg,transparent 0 44px,#ff527719 45px),linear-gradient(140deg,#121e43,#481d46); box-shadow:inset 0 0 60px #000; }
+.window span { padding:8px; display:block; color:#ff8aae; font:11px 'IBM Plex Mono'; }
+.character { position:absolute; left:22%; bottom:19%; width:180px; height:300px; display:grid; place-content:center; text-align:center; border-radius:48% 48% 12% 12%; background:linear-gradient(100deg,#141923,#25202b); box-shadow:0 25px 50px #0009; color:var(--cyan); }
+.character .face { font:32px 'IBM Plex Mono'; }.character small { margin-top:25px;color:var(--muted); }
+.desk { position:absolute; right:8%; bottom:15%; width:48%; height:25%; background:#171b23; border-top:8px solid #303846; }
+.computer { position:absolute; left:16%; bottom:55%; width:65%; height:170px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#08141b; border:12px solid #222b36; box-shadow:0 0 40px #55e7ff22; }
+.computer span { color:var(--cyan); font:800 24px 'IBM Plex Mono'; }.computer small { color:var(--muted);margin-top:10px; }
+.room-status { position:absolute; top:24px; right:28px; display:flex; gap:18px; padding:12px 16px; border:1px solid var(--line); background:#080d14dd; font:12px 'IBM Plex Mono'; }
+.night-card,.modal-card { position:absolute; z-index:3; left:50%; top:50%; transform:translate(-50%,-50%); width:min(520px,90vw); padding:32px; text-align:center; background:#0c131eec; border:1px solid var(--cyan); box-shadow:0 20px 100px #000; }
+.night-card p:not(.eyebrow),.modal-card p:not(.eyebrow) { color:var(--muted); }.night-card button,.modal-card button { margin-top:14px; }
+.monitor-shell { min-height:100vh; padding:12px; background:#080d14; font-family:'IBM Plex Mono',monospace; }
+.terminal-bar { min-height:45px; display:flex; align-items:center; gap:24px; padding:0 14px; border:1px solid var(--line); background:#0d1520; }.terminal-bar b { color:var(--cyan); margin-right:auto; }.terminal-bar button { padding:6px 10px; }
+.account-strip { display:grid; grid-template-columns:repeat(3,1fr); margin:10px 0; border:1px solid var(--line); }.account-strip div { padding:12px 18px; border-right:1px solid var(--line); }.account-strip div:last-child{border:0}.account-strip small,.account-strip strong{display:block}.account-strip small{color:var(--muted);font-size:10px}.account-strip strong{font-size:20px;margin-top:4px}
+.trading-grid { display:grid; grid-template-columns:250px minmax(400px,1fr) 300px; gap:10px; min-height:calc(100vh - 135px); }
+.stock-list,.chart-panel,.news-panel,.panel { border:1px solid var(--line); background:var(--panel); }
+.stock-list button { width:100%; min-height:76px; padding:10px; border:0; border-bottom:1px solid var(--line); border-radius:0; display:flex; justify-content:space-between; text-align:left; }.stock-list button>span:last-child{text-align:right}.stock-list small{display:block;color:var(--muted);margin-top:4px}.stock-list .active{background:#183043;border-left:3px solid var(--cyan)}
+.chart-panel { display:grid; grid-template-rows:auto 1fr auto; min-height:500px; }.chart-title{display:flex;justify-content:space-between;align-items:end;padding:18px}.chart-title h2{margin:3px 0}.chart-title small{color:var(--muted)}.chart-title>strong{font-size:25px;color:var(--cyan)}.stock-chart{width:100%;height:100%;min-height:320px;background:#0a111b}
+.order-bar{display:flex;align-items:center;gap:12px;padding:12px;border-top:1px solid var(--line)}.order-bar label{display:flex;gap:8px;align-items:center}.order-bar input{width:75px;padding:8px;color:white;background:#080d14;border:1px solid var(--line)}.order-bar span{margin-right:auto;color:var(--muted)}.order-bar button{padding:9px 20px;font-weight:800}.buy{background:#153f32;color:var(--green)}.sell{background:#481728;color:#ff86a0}
+.news-panel{padding:16px;overflow:auto}.news-panel h3{color:var(--yellow);font-size:14px}.news-panel article{padding:12px 0;border-top:1px solid var(--line)}.news-panel article small{color:var(--yellow)}.news-panel article p{font:13px/1.6 'Noto Sans KR';}.muted{color:var(--muted);font-size:12px}
+.green{color:var(--green)!important}.red{color:var(--red)!important}.money-pop{position:fixed;right:25%;top:20%;font-size:30px;font-weight:800;animation:pop 1.2s ease forwards;pointer-events:none}.gain{color:var(--green)}.loss{color:var(--red)}@keyframes pop{0%{opacity:0;transform:translateY(20px) scale(.8)}20%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:translateY(-60px)}}
+.premarket { min-height:calc(100vh - 24px); display:flex; flex-direction:column; justify-content:center; align-items:center; padding:35px; text-align:center; }.premarket h2{font-family:'Noto Sans KR';font-size:32px}.rumor-grid{width:min(1050px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:25px 0}.rumor{min-height:200px;padding:20px;text-align:left;display:flex;flex-direction:column;justify-content:space-between}.rumor span{color:var(--yellow);font-size:12px}.rumor strong{font:600 18px/1.55 'Noto Sans KR'}.rumor small{color:var(--muted)}.rumor.selected{border-color:var(--yellow);box-shadow:0 0 25px #ffd15c22}
+.ending p{color:var(--muted)}.ending .primary{justify-self:center;margin-top:24px}.ending.clear{background:radial-gradient(circle,#164431,#080d0b 60%)}
+@media(max-width:950px){.trading-grid{grid-template-columns:1fr}.stock-list{display:grid;grid-template-columns:repeat(5,1fr)}.stock-list button{min-width:0;display:block}.news-panel{max-height:260px}.rumor-grid{grid-template-columns:1fr}.room-status{left:10px;right:10px;justify-content:center}.character{left:8%;transform:scale(.8)}.desk{right:2%;width:60%}}
+@media(max-width:600px){.terminal-bar{gap:8px;font-size:10px}.account-strip strong{font-size:14px}.trading-grid{display:block}.stock-list{display:flex;overflow:auto}.stock-list button{min-width:155px}.chart-panel{min-height:500px}.order-bar{flex-wrap:wrap}.news-panel{margin-top:10px}.window{width:70%}.character{display:none}.desk{width:90%;right:5%}}
