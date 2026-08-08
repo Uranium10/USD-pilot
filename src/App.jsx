@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import BgmController from './components/BgmController.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
 import { stageEngine } from './engine/StageEngine.js'
@@ -68,5 +69,5 @@ export default function App() {
   const phase = useGameStore((state) => state.phase)
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
   const ending = phase === 'gameover' || phase === 'clear'
-  return <div className="game-frame"><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div><div style={{ display: screen === 'title' && !ending ? 'block' : 'none' }}><Title /></div><div style={{ display: screen === 'room' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !ending ? 'block' : 'none' }}><MarketDesktop /></div><Overlay /></div>
+  return <div className="game-frame"><BgmController /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div><div style={{ display: screen === 'title' && !ending ? 'block' : 'none' }}><Title /></div><div style={{ display: screen === 'room' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !ending ? 'block' : 'none' }}><MarketDesktop /></div><Overlay /></div>
 }

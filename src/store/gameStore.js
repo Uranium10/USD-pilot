@@ -12,6 +12,8 @@ const initialGame = {
   market: null,
   selectedStockId: null,
   purchasedRumors: [],
+  notepadContent: '',
+  notepadFontSize: 16,
   dailySummaries: [],
   dayStartNetWorth: 12000,
   elapsed: 0,
@@ -45,6 +47,8 @@ const calculateNetWorth = (state) => Object.entries(state.holdings).reduce(
 export const useGameStore = create((set, get) => ({
   ...initialGame,
   setScreen: (screen) => set({ screen }),
+  setNotepadContent: (notepadContent) => set({ notepadContent }),
+  setNotepadFontSize: (size) => set({ notepadFontSize: Math.min(28, Math.max(12, size)) }),
   beginLoading: () => set({ ...initialGame, screen: 'room', phase: 'loading' }),
   loadMarket: (market) => {
     const firstDay = market.days[0]
