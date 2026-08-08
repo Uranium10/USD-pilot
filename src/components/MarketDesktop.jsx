@@ -3,6 +3,7 @@ import { DAY_DURATION_SECONDS } from '../config.js'
 import { playCashRegister } from '../services/audioService.js'
 import { getNetWorth, useGameStore } from '../store/gameStore.js'
 import DayReport from './DayReport.jsx'
+import InformationNotepad from './InformationNotepad.jsx'
 import StockChart from './StockChart.jsx'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
@@ -19,16 +20,6 @@ function Taskbar({ activeApp, setActiveApp, onShutdown }) {
     <button className={activeApp === 'notepad' ? 'active' : ''} onClick={() => setActiveApp('notepad')}>▤ 메모장</button>
     <time>{now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</time>
   </footer>
-}
-
-function InformationNotepad({ rumors }) {
-  return <section className="desktop-window notepad-window">
-    <div className="window-titlebar"><b>구입한 정보 - 메모장</b><span>— □ ×</span></div>
-    <div className="notepad-paper">
-      {rumors.length === 0 && '구입한 정보가 없습니다.'}
-      {rumors.map((rumor, index) => <div key={rumor.id}>[{index + 1}] 출처: {rumor.source}{'\n'}신뢰도: {Math.round(rumor.accuracy * 100)}%{'\n'}{rumor.text}{'\n\n'}</div>)}
-    </div>
-  </section>
 }
 
 function StockGrid({ stocks, prices, onOpen }) {
