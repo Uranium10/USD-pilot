@@ -4,7 +4,9 @@ import BgmController from './components/BgmController.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
 import RoomScene from './components/RoomScene.jsx'
+import { INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
+import { getMinPayment } from './logic/debtSystem.js'
 import { fetchMarketCycle } from './services/marketService.js'
 import { useGameStore } from './store/gameStore.js'
 
@@ -45,18 +47,52 @@ function Premarket() {
 
 function Settlement() {
   const state = useGameStore()
-  const settle = async () => {
-    const result = state.settleCycle()
+  const [extra, setExtra] = useState(0)
+  const minPayment = getMinPayment(state.debt, state.cycle)
+  const maxPayable = Math.max(0, Math.min(state.cash, state.debt))
+  const canPayMin = state.cash >= minPayment
+  const maxExtra = Math.max(0, maxPayable - minPayment)
+  const clampedExtra = Math.min(extra, maxExtra)
+  const payAmount = minPayment + clampedExtra
+  // 지금 payAmount만큼 갚으면 다음 주기로 넘어갈 남은 부채에 이자가 얼마나 붙는지 미리 보여준다.
+  // (최소 상환만 했을 때의 이자와 비교해서 "선상환으로 아끼는 이자"를 계산한다.)
+  const interestIfMinOnly = Math.round(Math.max(0, state.debt - minPayment) * INTEREST_RATE)
+  const interestIfPay = Math.round(Math.max(0, state.debt - payAmount) * INTEREST_RATE)
+  const interestSaved = interestIfMinOnly - interestIfPay
+
+  const settle = async (amount) => {
+    const result = state.settleCycle(amount)
     if (result?.result === 'next') state.loadNextCycle(await fetchMarketCycle(result.cycle))
   }
-  return <section className="modal-card"><p className="eyebrow">WEEKLY COLLECTION</p><h2>7일이 지났습니다.</h2><p>현금 {money(state.cash)} / 상환액 {money(state.debt)}</p><button className="danger" onClick={settle}>{state.cash >= state.debt ? '빚을 갚는다' : '빈 지갑을 내민다'}</button></section>
+
+  return <section className="modal-card settlement-card">
+    <p className="eyebrow">WEEKLY COLLECTION</p>
+    <h2>7일이 지났습니다.</h2>
+    <dl className="settlement-figures">
+      <div><dt>보유 현금</dt><dd>{money(state.cash)}</dd></div>
+      <div><dt>이번 주 최소 상환액</dt><dd>{money(minPayment)}</dd></div>
+      <div><dt>총 부채</dt><dd>{money(state.debt)}</dd></div>
+    </dl>
+    {canPayMin ? <>
+      <label className="extra-payment">
+        <span>추가 상환(선상환) <strong>{money(clampedExtra)}</strong></span>
+        <input type="range" min="0" max={maxExtra} step="100" value={clampedExtra} onChange={(event) => setExtra(Number(event.target.value))} disabled={maxExtra <= 0} />
+      </label>
+      <p className="settlement-preview">이번에 {money(payAmount)} 상환 시 다음 주기 이자 {interestSaved > 0 ? `−${money(interestSaved)}` : money(0)}</p>
+      <div className="settlement-actions">
+        <button className="secondary" onClick={() => settle(minPayment)}>최소 상환</button>
+        <button className="danger" onClick={() => settle(payAmount)}>{clampedExtra > 0 ? `${money(payAmount)} 상환한다` : '상환한다'}</button>
+      </div>
+    </> : <button className="danger" onClick={() => settle(state.cash)}>빈 지갑을 내민다</button>}
+  </section>
 }
 
 function Room() {
   const state = useGameStore()
+  const minPayment = getMinPayment(state.debt, state.cycle)
   return <RoomScene>
     <header className="room-title"><b>U.S.D</b><span>UNPAID SPACE DEBT</span></header>
-    <aside className="room-status"><b>{state.cycle}주차 · {state.day}일차</b><span>현금 {money(state.cash)}</span><span>상환액 {money(state.debt)}</span></aside>
+    <aside className="room-status"><b>{state.cycle}주차 · {state.day}일차</b><span>현금 {money(state.cash)}</span><span>총부채 {money(state.debt)}</span><span>최소상환 {money(minPayment)}</span></aside>
     <NightPanel />
     {state.phase === 'settlement' && <Settlement />}
   </RoomScene>

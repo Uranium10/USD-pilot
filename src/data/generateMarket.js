@@ -147,8 +147,6 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
   return {
     cycle,
     seed,
-    repayment: Math.round(14000 * 1.24 ** (cycle - 1)),
-    interestRate: 0.24,
     days,
   }
 }

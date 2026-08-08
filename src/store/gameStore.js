@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, JOB_ENERGY_COST, JOB_REWARD, MAX_CYCLES, MAX_ENERGY } from '../config.js'
+import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
+import { computeSettlement } from '../logic/debtSystem.js'
 
 const initialGame = {
   screen: 'title',
@@ -7,7 +8,7 @@ const initialGame = {
   cycle: 1,
   day: 1,
   cash: 12000,
-  debt: 14000,
+  debt: INITIAL_DEBT,
   holdings: {},
   market: null,
   selectedStockId: null,
@@ -54,7 +55,6 @@ export const useGameStore = create((set, get) => ({
     const firstDay = market.days[0]
     set({
       market,
-      debt: market.repayment,
       phase: 'premarket',
       selectedStockId: firstDay.stocks[0].id,
       currentPrices: Object.fromEntries(firstDay.stocks.map((stock) => [stock.id, stock.startPrice])),
@@ -148,27 +148,30 @@ export const useGameStore = create((set, get) => ({
       nightMessage: null,
     })
   },
-  settleCycle: () => {
+  // payAmount: 플레이어가 이번 주기에 실제로 낼 금액(최소 상환액 이상, 초과분은 선상환).
+  // 보유 현금을 넘겨 낼 수는 없으므로 여기서 한 번 더 clamp한다.
+  settleCycle: (payAmount) => {
     const state = get()
     if (state.phase !== 'settlement') return null
-    if (state.cash < state.debt) {
+    const amount = Math.min(Math.round(payAmount), state.cash)
+    const result = computeSettlement(state.debt, state.cycle, amount)
+    if (result.gameOver) {
       set({ phase: 'gameover' })
       return { result: 'gameover' }
     }
-    const cash = state.cash - state.debt
-    if (state.cycle >= MAX_CYCLES) {
-      set({ cash, phase: 'clear' })
+    const cash = state.cash - amount
+    if (result.cleared) {
+      set({ cash, debt: 0, phase: 'clear' })
       return { result: 'clear' }
     }
-    set({ cash, phase: 'loading' })
-    return { result: 'next', cycle: state.cycle + 1 }
+    set({ cash, debt: result.debt, phase: 'loading' })
+    return { result: 'next', cycle: result.nextCycle }
   },
   loadNextCycle: (market) => {
     const data = market.days[0]
     set({
       cycle: market.cycle,
       day: 1,
-      debt: market.repayment,
       market,
       phase: 'premarket',
       screen: 'room',

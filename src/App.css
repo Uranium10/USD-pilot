@@ -24,12 +24,24 @@ button:hover { border-color:var(--cyan); background:#1b2b3b; }
 .room-status { position:absolute; top:24px; right:28px; display:flex; gap:18px; padding:12px 16px; border:1px solid var(--line); background:#080d14dd; font:12px 'IBM Plex Mono'; }
 .night-card,.modal-card { position:absolute; z-index:3; left:50%; top:50%; transform:translate(-50%,-50%); width:min(520px,90vw); padding:32px; text-align:center; background:#0c131eec; border:1px solid var(--cyan); box-shadow:0 20px 100px #000; }
 .night-card p:not(.eyebrow),.modal-card p:not(.eyebrow) { color:var(--muted); }.night-card button,.modal-card button { margin-top:14px; }
+.settlement-card{width:min(560px,92vw)}
+.settlement-figures{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:18px 0;background:var(--line);border:1px solid var(--line)}
+.settlement-figures div{padding:12px;background:#0c131e}
+.settlement-figures dt{margin:0;color:var(--muted);font-size:11px}
+.settlement-figures dd{margin:4px 0 0;font-weight:800;font-size:16px}
+.extra-payment{display:flex;flex-direction:column;gap:8px;margin:18px 0;text-align:left}
+.extra-payment span{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.extra-payment strong{color:var(--yellow)}
+.extra-payment input[type=range]{width:100%;accent-color:var(--cyan)}
+.settlement-preview{color:var(--cyan);font-size:13px}
+.settlement-actions{display:flex;gap:10px;justify-content:center;margin-top:14px!important}
+.settlement-actions button{margin-top:0!important}
 .overlay-backdrop { position:fixed; inset:0; background:#0009; z-index:100; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
 .overlay-modal { background:#101722; border:1px solid var(--cyan); padding:32px; max-width:500px; text-align:center; box-shadow:0 10px 50px #000; }
 .overlay-modal h2 { margin:0 0 16px; color:var(--cyan); }.overlay-modal p { color:var(--ink); margin-bottom:24px; }
 .monitor-shell { min-height:100%; height:100%; padding:12px; overflow:auto; background:#080d14; font-family:'IBM Plex Mono',monospace; }
 .terminal-bar { min-height:45px; display:flex; align-items:center; gap:24px; padding:0 14px; border:1px solid var(--line); background:#0d1520; }.terminal-bar b { color:var(--cyan); margin-right:auto; }.terminal-bar button { padding:6px 10px; }
-.account-strip { display:grid; grid-template-columns:repeat(3,1fr); margin:10px 0; border:1px solid var(--line); }.account-strip div { padding:12px 18px; border-right:1px solid var(--line); }.account-strip div:last-child{border:0}.account-strip small,.account-strip strong{display:block}.account-strip small{color:var(--muted);font-size:10px}.account-strip strong{font-size:20px;margin-top:4px}
+.account-strip { display:grid; grid-template-columns:repeat(4,1fr); margin:10px 0; border:1px solid var(--line); }.account-strip div { padding:12px 18px; border-right:1px solid var(--line); }.account-strip div:last-child{border:0}.account-strip small,.account-strip strong{display:block}.account-strip small{color:var(--muted);font-size:10px}.account-strip strong{font-size:20px;margin-top:4px}
 .trading-grid { display:grid; grid-template-columns:250px minmax(400px,1fr) 300px; gap:10px; height:calc(100% - 135px); min-height:0; }
 .stock-list,.chart-panel,.news-panel,.panel { border:1px solid var(--line); background:var(--panel); }
 .stock-list{display:flex;flex-direction:column;overflow:auto}
