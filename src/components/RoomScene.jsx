@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useGameStore } from '../store/gameStore.js'
+import { getNetWorth, useGameStore } from '../store/gameStore.js'
 import SpriteAnimator from './SpriteAnimator.jsx'
 
 // 방 배경은 Tarae 아트 3장(눈 뜸/반쯤 감음/완전히 감음)을 SpriteAnimator로 재생해
@@ -7,7 +7,11 @@ import SpriteAnimator from './SpriteAnimator.jsx'
 // 반쯤→완전히→반쯤→뜸 4프레임을 한 번(loop 없이) 재생하고 다시 멈춘다.
 const frameUrl = (set, frame) => `/imgs/bg/Tarae/room_${set}_${frame}.png`
 const BLINK_FPS = 14
-const ALL_ROOM_IMAGES = ['day', 'night'].flatMap((set) => [1, 2, 3].map((frame) => frameUrl(set, frame)))
+const HAPPY_GROWTH_RATIO = 0.1 // 전날 대비 총자산이 10% 이상 늘었을 때 웃는 얼굴로 바꾼다.
+const ALL_ROOM_IMAGES = [
+  ...['day', 'night'].flatMap((set) => [1, 2, 3].map((frame) => frameUrl(set, frame))),
+  frameUrl('day', 'smile'),
+]
 
 // 쉬는 프레임/깜빡임 프레임으로 전환할 때마다 SpriteAnimator가 새로 마운트되면서
 // <img>가 처음 보는 src를 만나면(브라우저가 아직 못 받아온 이미지) 한 프레임 정도
@@ -38,13 +42,22 @@ const isNightPhase = (phase) => phase === 'night' || phase === 'settlement'
 export default function RoomScene({ children }) {
   const phase = useGameStore((state) => state.phase)
   const setScreen = useGameStore((state) => state.setScreen)
+  const netWorth = useGameStore(getNetWorth)
+  const previousSummary = useGameStore((state) => state.dailySummaries.at(-1))
   const set = isNightPhase(phase) ? 'night' : 'day'
   const [blinking, finishBlink] = useBlink(set)
   usePreloadRoomImages()
   // 낮 동안(정보 구매·거래·일일 보고서)에는 모니터를 눌러 거래소를 열 수 있다.
   // 로딩 중엔 아직 시장이 없고, 밤/정산 중엔 상호작용이 NightPanel/Settlement로 넘어간다.
   const canOpenMonitor = phase === 'premarket' || phase === 'day' || phase === 'dayReport'
-  const restFrames = useMemo(() => [frameUrl(set, 1)], [set])
+  // 전날 마감 총자산 대비 지금 총자산이 10% 이상 늘었으면 낮 쉬는 프레임을 웃는 얼굴로 바꾼다.
+  // 아직 완결된 "전날"이 없으면(1주차 1일차) 비교 기준이 없으니 평소 표정을 쓴다.
+  const isHappy = Boolean(previousSummary) && previousSummary.netWorth > 0
+    && (netWorth - previousSummary.netWorth) / previousSummary.netWorth >= HAPPY_GROWTH_RATIO
+  const restFrames = useMemo(
+    () => [set === 'day' && isHappy ? frameUrl('day', 'smile') : frameUrl(set, 1)],
+    [set, isHappy],
+  )
   const blinkFrames = useMemo(() => [2, 3, 2, 1].map((frame) => frameUrl(set, frame)), [set])
 
   return (

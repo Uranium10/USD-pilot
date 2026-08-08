@@ -112,8 +112,8 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
       const impactPoint = stock.path[impactIndex]
       const previousPoint = stock.path[impactIndex - 1]
       const direction = impactPoint.price >= previousPoint.price ? 'up' : 'down'
-      const twoMinutes = 120 / DAY_DURATION_SECONDS
-      const progress = Math.min(0.99, Math.max(0.01, impactPoint.progress + (random() * 2 - 1) * twoMinutes))
+      const offsetSeconds = -90 + random() * 120
+      const progress = Math.min(0.99, Math.max(0.01, impactPoint.progress + offsetSeconds / DAY_DURATION_SECONDS))
       return {
         id: `c${cycle}-d${dayIndex + 1}-n${index}`,
         progress: round(progress),
