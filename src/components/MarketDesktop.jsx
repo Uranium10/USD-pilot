@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { COIN_ASSET_ID, COIN_TRADE_SPREAD, DAY_DURATION_SECONDS } from '../config.js'
+import { COIN_ASSET_ID, COIN_TRADE_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE } from '../config.js'
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
@@ -23,7 +23,7 @@ function Taskbar({ activeApp, setActiveApp, onShutdown, elapsed, cycle, day }) {
     <button className="shutdown" onClick={onShutdown} title="방으로 돌아가기">◐ 절전</button>
     <button title="U.S.D Market Terminal" className={activeApp === 'market' ? 'active' : ''} onClick={() => setActiveApp('market')}>▥ U.S.D Market Ter...</button>
     <button className={activeApp === 'notepad' ? 'active' : ''} onClick={() => setActiveApp('notepad')}>▤ 정보 모음.txt</button>
-    <span style={{ marginLeft: 'auto', fontSize: '12px', padding: '0 8px' }}>{cycle}주차 {day}일차</span>
+    <span style={{ marginLeft: 'auto', fontSize: '12px', padding: '0 8px' }}>{cycle}주차 {day}/{DAYS_PER_CYCLE}일</span>
     <time title="게임 내 시장 시간" style={{ marginLeft: 0 }}>{marketTime}</time>
   </footer>
 }
