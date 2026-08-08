@@ -12,3 +12,8 @@ export function mineUpgradeCost(tier) {
 export function nextMineTier(tier) {
   return tier + 1
 }
+
+export function minePaybackSeconds(tier) {
+  const additionalRate = mineRate(nextMineTier(tier)) - mineRate(tier)
+  return additionalRate > 0 ? mineUpgradeCost(tier) / additionalRate : Infinity
+}
