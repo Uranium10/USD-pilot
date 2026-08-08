@@ -4,8 +4,8 @@ export const NIGHT_ITEMS = {
     name: '칠리맛 에너지 드링크',
     img: '/imgs/items/chili_energy.png',
     description: '매콤함과 카페인을 같은 캔에 가둔 수상한 음료.',
-    price: 150,
-    energyRestore: 8,
+    price: 50,
+    energyRestore: 20,
   },
 }
 

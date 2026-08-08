@@ -23,15 +23,14 @@ function usePreloadRoomImages() {
   }, [])
 }
 
-function useBlink(set) {
+function useBlink(set, isHappy) {
   const [blinking, setBlinking] = useState(false)
 
   useEffect(() => {
-    // 깜빡이는 동안엔 새 타이머를 걸지 않는다 — SpriteAnimator의 onComplete(finishBlink)가 끝내준다.
-    if (blinking) return undefined
+    if (isHappy || blinking) return undefined
     const timer = window.setTimeout(() => setBlinking(true), 2600 + Math.random() * 3400)
     return () => window.clearTimeout(timer)
-  }, [set, blinking])
+  }, [set, blinking, isHappy])
 
   return [blinking, () => setBlinking(false)]
 }
@@ -45,15 +44,15 @@ export default function RoomScene({ children }) {
   const netWorth = useGameStore(getNetWorth)
   const previousSummary = useGameStore((state) => state.dailySummaries.at(-1))
   const set = isNightPhase(phase) ? 'night' : 'day'
-  const [blinking, finishBlink] = useBlink(set)
-  usePreloadRoomImages()
-  // 낮 동안(정보 구매·거래·일일 보고서)에는 모니터를 눌러 거래소를 열 수 있다.
-  // 로딩 중엔 아직 시장이 없고, 밤/정산 중엔 상호작용이 NightPanel/Settlement로 넘어간다.
-  const canOpenMonitor = phase === 'premarket' || phase === 'day' || phase === 'dayReport'
   // 전날 마감 총자산 대비 지금 총자산이 10% 이상 늘었으면 낮 쉬는 프레임을 웃는 얼굴로 바꾼다.
   // 아직 완결된 "전날"이 없으면(1주차 1일차) 비교 기준이 없으니 평소 표정을 쓴다.
   const isHappy = Boolean(previousSummary) && previousSummary.netWorth > 0
     && (netWorth - previousSummary.netWorth) / previousSummary.netWorth >= HAPPY_GROWTH_RATIO
+  const [blinking, finishBlink] = useBlink(set, isHappy)
+  usePreloadRoomImages()
+  // 낮 동안(정보 구매·거래·일일 보고서)에는 모니터를 눌러 거래소를 열 수 있다.
+  // 로딩 중엔 아직 시장이 없고, 밤/정산 중엔 상호작용이 NightPanel/Settlement로 넘어간다.
+  const canOpenMonitor = phase === 'premarket' || phase === 'day' || phase === 'dayReport'
   const restFrames = useMemo(
     () => [set === 'day' && isHappy ? frameUrl('day', 'smile') : frameUrl(set, 1)],
     [set, isHappy],
