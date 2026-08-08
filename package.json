@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "check:coin": "node scripts/check-coin-balance.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "db:migrate": "node --env-file=.env.local scripts/migrate.js"

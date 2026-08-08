@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { DAY_DURATION_SECONDS } from '../config.js'
+import { COIN_ASSET_ID, COIN_TRADE_SPREAD, DAY_DURATION_SECONDS } from '../config.js'
+import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
 import { playCashRegister } from '../services/audioService.js'
@@ -26,14 +27,15 @@ function Taskbar({ activeApp, setActiveApp, onShutdown, elapsed }) {
   </footer>
 }
 
-function StockGrid({ stocks, prices, onOpen }) {
+function StockGrid({ stocks, prices, onOpen, coinUnlocked }) {
   return <section className="all-stocks-grid">{stocks.map((stock) => {
+    const locked = isCoinAsset(stock) && !coinUnlocked
     const current = prices[stock.id] || stock.startPrice
     const change = (current / stock.startPrice - 1) * 100
-    return <article key={stock.id} className="stock-grid-card" role="button" tabIndex="0" onClick={() => onOpen(stock.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onOpen(stock.id) }}>
-      <header><div><b>{stock.name}</b><small>{stock.sector}</small></div><span className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</span></header>
-      <StockChart stockId={stock.id} compact />
-      <span className="inspect-stock" aria-hidden="true">⌕</span>
+    return <article key={stock.id} className={`stock-grid-card ${locked ? 'coin-locked-card' : ''}`} role={locked ? undefined : 'button'} tabIndex={locked ? undefined : '0'} onClick={locked ? undefined : () => onOpen(stock.id)} onKeyDown={locked ? undefined : (event) => { if (event.key === 'Enter' || event.key === ' ') onOpen(stock.id) }}>
+      <header><div><b>{stock.name}</b><small>{locked ? '채굴기 설치 후 거래 가능' : stock.sector}</small></div>{locked ? <span>LOCKED</span> : <span className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</span>}</header>
+      {locked ? <div className="coin-lock-visual"><b>◆</b><span>암호자산 거래소 잠김</span></div> : <StockChart stockId={stock.id} compact />}
+      {!locked && <span className="inspect-stock" aria-hidden="true">⌕</span>}
     </article>
   })}</section>
 }
@@ -51,7 +53,11 @@ export default function MarketDesktop() {
   const data = state.market?.days[state.day - 1]
   const selected = data ? data.stocks.find((stock) => stock.id === state.selectedStockId) || data.stocks[0] : null
   const currentPrice = selected ? state.currentPrices[selected.id] || selected.startPrice : 0
-  const buyTotal = currentPrice * quantity
+  const selectedIsCoin = isCoinAsset(selected)
+  const coinUnlocked = state.miningTier >= 0
+  const buyPrice = selected ? buyExecutionPrice(selected, currentPrice) : 0
+  const sellPrice = selected ? sellExecutionPrice(selected, currentPrice) : 0
+  const buyTotal = buyPrice * quantity
 
   // 금액 입력칸은 "수량 × 현재가"를 매 렌더마다 다시 계산해 보여주는데, 입력 중에도 그대로
   // 덮어쓰면 한 자리 칠 때마다 값이 되돌아간다(예: 129원짜리 종목에 "500"을 치려고 "5"만
@@ -67,19 +73,31 @@ export default function MarketDesktop() {
 
   const holding = state.holdings[selected.id] || { quantity: 0, average: 0 }
   const sellQuantity = Math.min(quantity, holding.quantity)
-  const sellTotal = currentPrice * sellQuantity
-  const canBuy = quantity > 0 && buyTotal <= state.cash && state.phase === 'day'
-  const canSell = sellQuantity > 0 && state.phase === 'day'
+  const sellTotal = sellPrice * sellQuantity
+  const canTradeSelected = !selectedIsCoin || coinUnlocked
+  const canBuy = canTradeSelected && quantity > 0 && buyTotal <= state.cash && state.phase === 'day'
+  const canSell = canTradeSelected && sellQuantity > 0 && state.phase === 'day'
   const remaining = Math.max(0, DAY_DURATION_SECONDS - state.elapsed)
   const netWorth = getNetWorth(state)
   const previousSummary = state.dailySummaries.at(-1)
   const assetChange = previousSummary ? netWorth - previousSummary.netWorth : 0
-  const profitDiff = holding.quantity > 0 ? currentPrice - holding.average : 0
-  const profitPct = holding.quantity > 0 ? profitDiff / holding.average * 100 : 0
+  const profitDiff = holding.quantity > 0 ? sellPrice - holding.average : 0
+  const profitPct = holding.quantity > 0 && holding.average > 0 ? profitDiff / holding.average * 100 : null
   const minPayment = getMinPayment(state.debt, state.cycle)
   const miningRate = mineRate(state.miningTier)
+  const coinPrice = state.currentPrices[COIN_ASSET_ID] || data.stocks.find((stock) => stock.id === COIN_ASSET_ID)?.startPrice || 0
+  const coinAsset = data.stocks.find((stock) => stock.id === COIN_ASSET_ID)
+  const quantityUnit = selectedIsCoin ? ` ${selected.symbol}` : '주'
+  const quantityButtons = selectedIsCoin ? [0.1, 1, 5, 10] : [1, 5, 10, 100]
 
-  const openStock = (stockId) => { state.selectStock(stockId); setListView(false); setActiveApp('market') }
+  const openStock = (stockId) => {
+    const asset = data.stocks.find((stock) => stock.id === stockId)
+    if (isCoinAsset(asset) && !coinUnlocked) return
+    state.selectStock(stockId)
+    setQuantity(isCoinAsset(asset) ? 0.1 : 1)
+    setListView(false)
+    setActiveApp('market')
+  }
   const toggleListView = () => setListView((isGrid) => !isGrid)
   const sell = () => { const result = state.sell(selected.id, sellQuantity); if (result?.profit > 0) playCashRegister() }
   const handleAmountChange = (event) => {
@@ -87,17 +105,80 @@ export default function MarketDesktop() {
     setAmountDraft(raw)
     if (raw.trim() === '') { setQuantity(0); return }
     const numeric = Number(raw)
-    if (Number.isFinite(numeric)) setQuantity(Math.max(0, Math.floor(numeric / currentPrice)))
+    if (Number.isFinite(numeric)) setQuantity(normalizeTradeQuantity(selected, numeric / buyPrice))
   }
 
   return <main className="desktop-shell">
     <div className="desktop-workspace">
       {activeApp === 'notepad' ? <InformationNotepad rumors={state.purchasedRumors} /> : <section className="desktop-window market-window">
-        <div className="window-titlebar"><b>U.S.D Market Terminal</b><span className={remaining < 60 ? 'red' : ''}>장 마감 {Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}　— □ ×</span></div>
-        <section className="account-strip"><div className="asset-cell"><small>총자산</small><strong>{money(netWorth)}</strong>{previousSummary && <small className={assetChange >= 0 ? 'green' : 'red'}>전일 대비 {assetChange >= 0 ? '+' : ''}{money(assetChange)}</small>}{state.feedback && <div key={state.feedback.id} className={`asset-feedback ${state.feedback.amount >= 0 ? 'gain' : 'loss'}`}>{state.feedback.amount >= 0 ? '+' : ''}{money(state.feedback.amount)}</div>}</div><div><small>현금</small><strong>{money(state.cash)}</strong></div><div className="mining-income"><small>마이닝 {state.miningTier < 0 ? 'OFFLINE' : `T.${state.miningTier}`}</small><strong>{money(state.miningIncomeToday)}</strong><small>{miningRate.toFixed(3)} ₡/초</small></div><div><small>총 부채</small><strong className="red">{money(state.debt)}</strong></div><div><small>이번 주 최소 상환</small><strong className="red">{money(minPayment)}</strong></div></section>
+        <div className="window-titlebar">
+          <b>U.S.D Market Terminal</b>
+          <span className={remaining < 60 ? 'red' : ''}>장 마감 {Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}　— □ ×</span>
+        </div>
+        <section className="account-strip">
+          <div className="asset-cell">
+            <small>총자산</small><strong>{money(netWorth)}</strong>
+            {previousSummary && <small className={assetChange >= 0 ? 'green' : 'red'}>전일 대비 {assetChange >= 0 ? '+' : ''}{money(assetChange)}</small>}
+            {state.feedback && <div key={state.feedback.id} className={`asset-feedback ${state.feedback.amount >= 0 ? 'gain' : 'loss'}`}>{state.feedback.amount >= 0 ? '+' : ''}{money(state.feedback.amount)}</div>}
+          </div>
+          <div><small>현금</small><strong>{money(state.cash)}</strong></div>
+          <div className="mining-income">
+            <small>마이닝 {state.miningTier < 0 ? 'OFFLINE' : `T.${state.miningTier}`}</small>
+            <strong>{formatAssetQuantity(coinAsset, state.minedCoinToday)} DUST</strong>
+            <small>{miningRate.toFixed(4)} DUST/초 · {money(state.minedCoinToday * coinPrice)}</small>
+          </div>
+          <div><small>총 부채</small><strong className="red">{money(state.debt)}</strong></div>
+          <div><small>이번 주 최소 상환</small><strong className="red">{money(minPayment)}</strong></div>
+        </section>
         <div className="trading-grid">
-          <aside className="stock-list">{data.stocks.map((stock) => { const current = state.currentPrices[stock.id] || stock.startPrice; const change = (current / stock.startPrice - 1) * 100; const qty = state.holdings[stock.id]?.quantity || 0; return <button key={stock.id} className={stock.id === selected.id ? 'active' : ''} onClick={() => openStock(stock.id)}><span><b>{stock.name}</b><small>{stock.sector}</small></span><span><b>{money(current)}</b><small className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</small>{qty > 0 && <small>{qty}주 보유</small>}</span></button>})}<button className="list-view-button" onClick={toggleListView}>{listView ? '↩ 이전으로' : '▦ 목록 보기'}</button></aside>
-          {listView ? <StockGrid stocks={data.stocks} prices={state.currentPrices} onOpen={openStock} /> : <section className="chart-panel"><div className="chart-title"><div><small>{selected.sector}</small><h2>{selected.name}</h2></div><strong>{money(currentPrice)}</strong></div><StockChart /><div className="order-bar"><div className="order-info"><span>보유 {holding.quantity}주</span>{holding.quantity > 0 && <span className={profitDiff >= 0 ? 'green' : 'red'}>수익 {profitDiff >= 0 ? '+' : ''}{money(profitDiff * holding.quantity)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%)</span>}</div><div className="order-controls"><div className="quantity-buttons">{[1, 5, 10, 100].map((amount) => <button key={amount} onClick={() => setQuantity((value) => Math.max(0, value + amount))}>+{amount}</button>)}</div><div className="max-buttons"><button onClick={() => setQuantity(Math.max(0, Math.floor(state.cash / currentPrice)))}>최대 매수</button><button onClick={() => setQuantity(holding.quantity)} disabled={!holding.quantity}>최대 매도</button></div><div className="order-fields"><label>수량<input type="number" min="0" value={quantity} onChange={(event) => setQuantity(Math.max(0, Number(event.target.value) || 0))} /></label><label>금액<input type="number" min="0" value={amountDraft} onFocus={() => { editingAmountRef.current = true }} onBlur={() => { editingAmountRef.current = false; setAmountDraft(String(Math.round(buyTotal))) }} onChange={handleAmountChange} /></label></div></div><div className="order-actions"><div className="order-totals"><span className={canBuy ? '' : 'red'}>매수 {quantity}주 · {money(buyTotal)}</span><span className={canSell ? '' : 'red'}>매도 {sellQuantity}주 · {money(sellTotal)}</span></div><div className="order-buttons"><button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button><button className="sell" disabled={!canSell} onClick={sell}>매도</button></div></div></div></section>}
+          <aside className="stock-list">
+            {data.stocks.map((stock) => {
+              const locked = isCoinAsset(stock) && !coinUnlocked
+              const current = state.currentPrices[stock.id] || stock.startPrice
+              const change = (current / stock.startPrice - 1) * 100
+              const qty = state.holdings[stock.id]?.quantity || 0
+              return <button key={stock.id} className={`${stock.id === selected.id ? 'active' : ''} ${locked ? 'coin-locked' : ''}`} disabled={locked} onClick={() => openStock(stock.id)}>
+                <span><b>{locked ? '◆ 암호자산 슬롯' : stock.name}</b><small>{locked ? '채굴기 설치 필요' : stock.sector}</small></span>
+                <span>{locked ? <><b>LOCKED</b><small>상점에서 T.0 설치</small></> : <><b>{money(current)}</b><small className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</small>{qty > 0 && <small>{formatAssetQuantity(stock, qty)}{isCoinAsset(stock) ? ` ${stock.symbol}` : '주'} 보유</small>}</>}</span>
+              </button>
+            })}
+            <button className="list-view-button" onClick={toggleListView}>{listView ? '↩ 이전으로' : '▦ 목록 보기'}</button>
+          </aside>
+          {listView
+            ? <StockGrid stocks={data.stocks} prices={state.currentPrices} onOpen={openStock} coinUnlocked={coinUnlocked} />
+            : <section className="chart-panel">
+              <div className="chart-title">
+                <div><small>{selected.sector}{selectedIsCoin ? ` · 거래 스프레드 ±${(COIN_TRADE_SPREAD * 100).toFixed(1)}%` : ''}</small><h2>{selected.name}</h2></div>
+                <strong>{money(currentPrice)}</strong>
+              </div>
+              <StockChart />
+              <div className="order-bar">
+                <div className="order-info">
+                  <span>보유 {formatAssetQuantity(selected, holding.quantity)}{quantityUnit}</span>
+                  {holding.quantity > 0 && (profitPct === null
+                    ? <span className="green">채굴분 평가액 {money(currentPrice * holding.quantity)}</span>
+                    : <span className={profitDiff >= 0 ? 'green' : 'red'}>수익 {profitDiff >= 0 ? '+' : ''}{money(profitDiff * holding.quantity)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%)</span>)}
+                </div>
+                <div className="order-controls">
+                  <div className="quantity-buttons">{quantityButtons.map((amount) => <button key={amount} onClick={() => setQuantity((value) => normalizeTradeQuantity(selected, value + amount))}>+{amount}</button>)}</div>
+                  <div className="max-buttons">
+                    <button onClick={() => setQuantity(normalizeTradeQuantity(selected, state.cash / buyPrice))}>최대 매수</button>
+                    <button onClick={() => setQuantity(holding.quantity)} disabled={!holding.quantity}>최대 매도</button>
+                  </div>
+                  <div className="order-fields">
+                    <label>수량<input type="number" min="0" step={selectedIsCoin ? 0.0001 : 1} value={quantity} onChange={(event) => setQuantity(normalizeTradeQuantity(selected, event.target.value))} /></label>
+                    <label>금액<input type="number" min="0" value={amountDraft} onFocus={() => { editingAmountRef.current = true }} onBlur={() => { editingAmountRef.current = false; setAmountDraft(String(Math.round(buyTotal))) }} onChange={handleAmountChange} /></label>
+                  </div>
+                </div>
+                <div className="order-actions">
+                  <div className="order-totals">
+                    <span className={canBuy ? '' : 'red'}>매수 {formatAssetQuantity(selected, quantity)}{quantityUnit} · {money(buyTotal)}</span>
+                    <span className={canSell ? '' : 'red'}>매도 {formatAssetQuantity(selected, sellQuantity)}{quantityUnit} · {money(sellTotal)}</span>
+                  </div>
+                  <div className="order-buttons"><button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button><button className="sell" disabled={!canSell} onClick={sell}>매도</button></div>
+                </div>
+              </div>
+            </section>}
           <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const related = data.stocks.find((stock) => stock.id === item.stockId); return <article key={item.id}><small>{formatMarketTime(item.progress)} · {related?.name}</small><p>{item.text}</p></article> })}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
         </div>
       </section>}

@@ -1,22 +1,31 @@
 const viteEnv = import.meta.env || {}
 
-export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 8 * 60
+export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 12 * 60
 export const DAYS_PER_CYCLE = 7
-export const LISTED_STOCK_COUNT = 6
+export const LISTED_COMPANY_COUNT = 5
+export const MARKET_ASSET_COUNT = 6
 export const MAX_CYCLES = 6
 export const TICK_MS = 100
 export const MAX_ENERGY = 100
 export const JOB_ENERGY_COST = 85
 export const JOB_REWARD = 600
 
-export const MINE_BASE_RATE = 0.25
-export const MINE_RATE_GROWTH = 1.18
-export const MINE_INSTALL_COST = 2400
-export const MINE_BASE_COST = 600
-export const MINE_COST_GROWTH = 1.25
+export const COIN_ASSET_ID = 'coin-usd'
+export const COIN_REFERENCE_PRICE = 100
+export const COIN_TRADE_SPREAD = 0.015
+
+// 채굴기는 크레딧이 아니라 코인을 생산한다. T.0의 기준가 환산 생산력은
+// 0.0025 coin/s × ₡100 = 기존의 0.25 credit/s와 같다.
+export const MINE_BASE_RATE = 0.0025
+export const MINE_RATE_GROWTH = 1.2
+export const MINE_INSTALL_COST = 3000
+export const MINE_BASE_COST = 800
+export const MINE_COST_GROWTH = 1.3
+export const MAX_MINE_TIER_BY_CYCLE = [2, 3, 4, 5, 6, 6]
 
 export const INFO_COST_MULTIPLIER = [1, 1.12, 1.28, 1.5, 1.75, 2.05]
 export const VOLATILITY_BY_CYCLE = [1, 1, 1, 1.2, 1.35, 1.5]
+export const COIN_VOLATILITY_BY_CYCLE = [1, 1.05, 1.1, 1.2, 1.3, 1.4]
 
 // 부채 시스템(B 구조) — USD-spec/USD_debt_system.md 참고(실측 검증된 밸런스).
 // "최소 상환액"과 "총 부채"를 분리해, 선상환(초과 상환)이 이자를 줄여 후반을 편하게

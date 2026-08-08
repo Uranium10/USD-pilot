@@ -161,7 +161,7 @@ export default function StockChart({ stockId, compact = false }) {
 
   return (
     <div className={`chart-canvas-wrap ${compact ? 'compact' : ''}`}>
-      <canvas ref={canvasRef} className="stock-chart" aria-label="선택 종목 가격 차트" onPointerMove={compact ? undefined : updateHover} onPointerLeave={compact ? undefined : () => { hoverRatioRef.current = null }} />
+      <canvas ref={canvasRef} className="stock-chart" aria-label="선택 자산 가격 차트" onPointerMove={compact ? undefined : updateHover} onPointerLeave={compact ? undefined : () => { hoverRatioRef.current = null }} />
       {!compact && <div className="zoom-controls">
         <button onClick={() => setZoomLevel((value) => Math.max(1, value - 1))}>-</button>
         <button onClick={() => setZoomLevel((value) => Math.min(10, value + 1))}>+</button>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
+import { COIN_ASSET_ID, COIN_REFERENCE_PRICE, DAY_DURATION_SECONDS, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../data/nightContent.js'
-import { minePaybackSeconds, mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
+import { canUpgradeMine, maxMineTier, minePaybackSeconds, mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
 import { useGameStore } from '../store/gameStore.js'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
@@ -14,7 +14,11 @@ export default function NightPanel() {
   const miningCost = mineUpgradeCost(state.miningTier)
   const currentMiningRate = mineRate(state.miningTier)
   const upgradedMiningRate = mineRate(nextMineTier(state.miningTier))
-  const paybackSeconds = Math.ceil(minePaybackSeconds(state.miningTier))
+  const coinPrice = state.miningTier < 0 ? COIN_REFERENCE_PRICE : state.currentPrices[COIN_ASSET_ID] || COIN_REFERENCE_PRICE
+  const paybackSeconds = Math.ceil(minePaybackSeconds(state.miningTier, coinPrice))
+  const paybackDays = Math.ceil(paybackSeconds / DAY_DURATION_SECONDS)
+  const tierLimit = maxMineTier(state.cycle)
+  const canUpgrade = canUpgradeMine(state.miningTier, state.cycle)
 
   useEffect(() => {
     if (state.nightActivity?.id !== job.id) return undefined
@@ -34,7 +38,26 @@ export default function NightPanel() {
     </nav>
     <div className="night-content">
       {tab === 'activity' && <article className="night-entry"><img src={job.img} alt="" className="item-thumbnail" /><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>}
-      {tab === 'shop' && <div className="night-shop-list"><article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => state.buyNightItem(drink)} disabled={Boolean(state.nightActivity) || state.cash < drink.price || state.dailyDrinkPurchased >= 2}>구입</button></article><article className="night-entry mining-machine"><img src="/imgs/items/mining_machine.png" alt="" className="item-thumbnail" /><div><p className="eyebrow">PASSIVE INCOME MODULE</p><h3>마이닝 머신 {state.miningTier < 0 ? '미보유' : `T.${state.miningTier}`}</h3><p>장 운영 중 크레딧을 천천히 생산하는 단일 채굴기입니다. 업그레이드하면 기존 기계를 대체합니다.</p><dl><div><dt>현재 생산</dt><dd>{currentMiningRate.toFixed(3)} ₡/초</dd></div><div><dt>{state.miningTier < 0 ? '설치 후' : `T.${nextMineTier(state.miningTier)} 생산`}</dt><dd>{upgradedMiningRate.toFixed(3)} ₡/초</dd></div><div><dt>{state.miningTier < 0 ? '설치 비용' : '업그레이드 비용'}</dt><dd>{money(miningCost)}</dd></div></dl><small className="mining-payback">추가 생산량 기준 약 {paybackSeconds.toLocaleString('ko-KR')}초 ({Math.ceil(paybackSeconds / 60).toLocaleString('ko-KR')}분) 후 회수</small></div><button onClick={state.upgradeMiningMachine} disabled={Boolean(state.nightActivity) || state.cash < miningCost}>{state.miningTier < 0 ? 'T.0 설치' : `T.${nextMineTier(state.miningTier)} 업그레이드`}</button></article></div>}
+      {tab === 'shop' && <div className="night-shop-list">
+        <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => state.buyNightItem(drink)} disabled={Boolean(state.nightActivity) || state.cash < drink.price || state.dailyDrinkPurchased >= 2}>구입</button></article>
+        <article className="night-entry mining-machine">
+          <img src="/imgs/items/mining_machine.png" alt="" className="item-thumbnail" />
+          <div>
+            <p className="eyebrow">DUST COIN MINING MODULE</p>
+            <h3>마이닝 머신 {state.miningTier < 0 ? '미보유' : `T.${state.miningTier}`} <small>· 이번 주 한도 T.{tierLimit}</small></h3>
+            <p>장 운영 중 DUST 코인을 생산합니다. T.0을 설치하면 다음 거래일부터 잠긴 암호자산 거래소가 열립니다.</p>
+            <dl>
+              <div><dt>현재 생산</dt><dd>{currentMiningRate.toFixed(4)} DUST/초</dd></div>
+              <div><dt>{state.miningTier < 0 ? '설치 후' : `T.${nextMineTier(state.miningTier)} 생산`}</dt><dd>{upgradedMiningRate.toFixed(4)} DUST/초</dd></div>
+              <div><dt>{state.miningTier < 0 ? '설치 비용' : '업그레이드 비용'}</dt><dd>{money(miningCost)}</dd></div>
+            </dl>
+            {canUpgrade
+              ? <small className="mining-payback">현재 코인값 {money(coinPrice)} 기준 추가 생산분 회수 약 {paybackDays}거래일</small>
+              : <small className="mining-payback">{state.cycle < 5 ? `${state.cycle + 1}주차에 다음 티어 해금` : '파일럿 최고 티어에 도달했습니다.'}</small>}
+          </div>
+          <button onClick={state.upgradeMiningMachine} disabled={Boolean(state.nightActivity) || state.cash < miningCost || !canUpgrade}>{canUpgrade ? (state.miningTier < 0 ? 'T.0 설치' : `T.${nextMineTier(state.miningTier)} 업그레이드`) : '업그레이드 잠김'}</button>
+        </article>
+      </div>}
       {tab === 'inventory' && <>{drinkCount > 0 ? <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name} × {drinkCount}</h3><p>마시면 활동력을 아주 조금 회복한다.</p><small>활동력 +{drink.energyRestore}</small></div><button onClick={() => state.useNightItem(drink)} disabled={Boolean(state.nightActivity) || state.energy >= MAX_ENERGY}>마시기</button></article> : <p className="empty-state">인벤토리가 비어 있습니다.</p>}</>}
     </div>
     <button className="sleep-button" onClick={state.endNight} disabled={Boolean(state.nightActivity)}>자기</button>

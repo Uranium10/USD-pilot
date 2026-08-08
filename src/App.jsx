@@ -4,8 +4,7 @@ import BgmController from './components/BgmController.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
 import RoomScene from './components/RoomScene.jsx'
-import { DAYS_PER_CYCLE } from './config.js'
-import { INTEREST_RATE } from './config.js'
+import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
 import { fetchMarketCycle } from './services/marketService.js'
@@ -63,7 +62,9 @@ function Settlement() {
 
   const settle = async (amount) => {
     const result = state.settleCycle(amount)
-    if (result?.result === 'next') state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds))
+    if (result?.result === 'next') {
+      state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID]))
+    }
   }
 
   return <section className="modal-card settlement-card">

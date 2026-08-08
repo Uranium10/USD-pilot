@@ -1,4 +1,13 @@
-import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INFO_COST_MULTIPLIER, LISTED_STOCK_COUNT, VOLATILITY_BY_CYCLE } from '../config.js'
+import {
+  COIN_ASSET_ID,
+  COIN_REFERENCE_PRICE,
+  COIN_VOLATILITY_BY_CYCLE,
+  DAY_DURATION_SECONDS,
+  DAYS_PER_CYCLE,
+  INFO_COST_MULTIPLIER,
+  LISTED_COMPANY_COUNT,
+  VOLATILITY_BY_CYCLE,
+} from '../config.js'
 
 const companies = [
   ['오비탈 레일', '궤도 건설', 128, 'orbital-rail'],
@@ -43,6 +52,21 @@ const headlines = {
     '유해 물질 검출 논란으로 소비자들의 대규모 집단 소송에 직면했다',
     '예상치 못한 천문학적인 우발 채무가 장부에 반영되었다',
     '주요 납품처의 파산으로 거액의 매출 채권을 떼일 위기에 처했다'
+  ],
+}
+
+const coinHeadlines = {
+  up: [
+    '외곽 정거장 결제망이 준비자산으로 채택했다',
+    '대형 거래소의 콜드월렛 보유량이 급감하며 매수세가 몰렸다',
+    '채굴 난이도 조정 이후 신규 공급량이 예상보다 크게 줄었다',
+    '화성 자유항이 세금 납부 수단으로 시험 도입한다고 발표했다',
+  ],
+  down: [
+    '주요 거래소의 출금 지연으로 유동성 우려가 번졌다',
+    '익명 개발자 지갑에서 대규모 물량이 시장으로 이동했다',
+    '채굴 프로토콜의 중복 지급 취약점이 공개됐다',
+    '궤도 금융감독원이 고위험 암호자산 거래 제한을 예고했다',
   ],
 }
 
@@ -115,7 +139,7 @@ const companyIndexById = new Map(companies.map((company, index) => [company[3], 
 
 function selectCompanies(random, companyIds) {
   const requested = Array.isArray(companyIds) ? [...new Set(companyIds)] : []
-  if (requested.length === LISTED_STOCK_COUNT && requested.every((id) => companyIndexById.has(id))) {
+  if (requested.length === LISTED_COMPANY_COUNT && requested.every((id) => companyIndexById.has(id))) {
     return requested.map((id) => companies[companyIndexById.get(id)])
   }
   const shuffled = [...companies]
@@ -123,7 +147,7 @@ function selectCompanies(random, companyIds) {
     const swapIndex = Math.floor(random() * (index + 1))
     ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
   }
-  return shuffled.slice(0, LISTED_STOCK_COUNT)
+  return shuffled.slice(0, LISTED_COMPANY_COUNT)
 }
 
 function makePath(startPrice, random, cycle) {
@@ -143,17 +167,41 @@ function makePath(startPrice, random, cycle) {
   return points
 }
 
-export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds } = {}) {
+function makeCoinPath(startPrice, random, cycle) {
+  const volatility = COIN_VOLATILITY_BY_CYCLE[cycle - 1] ?? COIN_VOLATILITY_BY_CYCLE.at(-1)
+  const pointCount = 8 + Math.floor(random() * 5)
+  const progresses = Array.from({ length: pointCount - 2 }, () => 0.04 + random() * 0.92).sort((left, right) => left - right)
+  const points = [{ progress: 0, price: startPrice }]
+  let price = startPrice
+
+  for (const progress of [...progresses, 1]) {
+    const meanReversion = clamp(Math.log(COIN_REFERENCE_PRICE / price) * 0.16, -0.1, 0.1)
+    const normalMove = (random() - 0.5) * 0.28 * volatility
+    const shock = random() < 0.22 ? (random() - 0.5) * 0.58 * Math.sqrt(volatility) : 0
+    const move = clamp(meanReversion + normalMove + shock, -0.35, 0.35)
+    price = clamp(price * (1 + move), startPrice * 0.55, startPrice * 1.45)
+    price = clamp(price, COIN_REFERENCE_PRICE * 0.25, COIN_REFERENCE_PRICE * 4)
+    points.push({ progress: round(progress), price: round(price) })
+  }
+  return points
+}
+
+export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, coinStartPrice } = {}) {
   const random = seeded(Number(seed) + cycle * 7919)
   const listedCompanies = selectCompanies(random, companyIds)
   const listedCompanyIds = listedCompanies.map((company) => company[3])
   const previousCloses = listedCompanies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
+  const requestedCoinStart = Number(coinStartPrice)
+  let previousCoinClose = Number.isFinite(requestedCoinStart)
+    ? clamp(requestedCoinStart, COIN_REFERENCE_PRICE * 0.25, COIN_REFERENCE_PRICE * 4)
+    : COIN_REFERENCE_PRICE
   const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
-    const stocks = listedCompanies.map(([name, sector, base, companyId], stockIndex) => {
+    const companyStocks = listedCompanies.map(([name, sector, base, companyId], stockIndex) => {
       const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
       const startPrice = round(referencePrice * (1 + (random() - 0.5) * 0.025))
       const stock = {
         id: `stock-${stockIndex + 1}`,
+        assetType: 'company',
         companyId,
         name,
         sector,
@@ -163,8 +211,23 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds }
       previousCloses[stockIndex] = stock.path.at(-1).price
       return stock
     })
-    const news = Array.from({ length: 5 }, (_, index) => {
-      const stock = stocks[Math.floor(random() * stocks.length)]
+    const coinStart = round(clamp(previousCoinClose * (1 + (random() - 0.5) * 0.08), COIN_REFERENCE_PRICE * 0.25, COIN_REFERENCE_PRICE * 4))
+    const coin = {
+      id: COIN_ASSET_ID,
+      assetType: 'coin',
+      symbol: 'DUST',
+      name: '더스트 코인',
+      sector: '고변동 암호자산',
+      startPrice: coinStart,
+      path: makeCoinPath(coinStart, random, cycle),
+    }
+    previousCoinClose = coin.path.at(-1).price
+    const stocks = [...companyStocks, coin]
+    const newsTargets = [
+      ...Array.from({ length: 4 }, () => companyStocks[Math.floor(random() * companyStocks.length)]),
+      coin,
+    ]
+    const news = newsTargets.map((stock, index) => {
       const impactIndex = 1 + Math.floor(random() * (stock.path.length - 1))
       const impactPoint = stock.path[impactIndex]
       const previousPoint = stock.path[impactIndex - 1]
@@ -177,11 +240,11 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds }
         impactProgress: impactPoint.progress,
         stockId: stock.id,
         direction,
-        text: `${stock.name}, ${pick(headlines[direction], random)}.`,
+        text: `${stock.name}, ${pick(stock.assetType === 'coin' ? coinHeadlines[direction] : headlines[direction], random)}.`,
       }
     }).sort((left, right) => left.progress - right.progress)
     const rumors = Array.from({ length: 3 }, (_, index) => {
-      const stock = stocks[(index + dayIndex) % stocks.length]
+      const stock = companyStocks[(index + dayIndex) % companyStocks.length]
       const wentUp = stock.path.at(-1).price >= stock.startPrice
       const accuracy = round(0.58 + random() * 0.32)
       const truthful = random() <= accuracy

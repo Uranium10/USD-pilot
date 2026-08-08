@@ -17,7 +17,7 @@ export default function DayReport() {
         <dl>
           <div><dt>마감 총자산</dt><dd>{money(summary?.netWorth)}</dd></div>
           <div><dt>현금</dt><dd>{money(summary?.cash)}</dd></div>
-          <div><dt>보유 주식 평가액</dt><dd>{money(holdingsValue)}</dd></div>
+          <div><dt>보유 주식·코인 평가액</dt><dd>{money(holdingsValue)}</dd></div>
           <div><dt>오늘 자산 변동</dt><dd className={summary?.change >= 0 ? 'green' : 'red'}>{summary?.change >= 0 ? '+' : ''}{money(summary?.change)}</dd></div>
         </dl>
         <button className="primary" onClick={state.enterNight}>확인 · 밤으로</button>

@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
+import { COIN_ASSET_ID, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
+import { buyExecutionPrice, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { computeSettlement } from '../logic/debtSystem.js'
-import { mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
+import { canUpgradeMine, mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
 
 const initialGame = {
   screen: 'title',
@@ -30,8 +31,8 @@ const initialGame = {
   nightMessage: null,
   dailyDrinkPurchased: 0,
   miningTier: -1,
-  miningIncomeToday: 0,
-  totalMiningIncome: 0,
+  minedCoinToday: 0,
+  totalMinedCoin: 0,
 }
 
 function interpolate(path, progress) {
@@ -101,7 +102,7 @@ export const useGameStore = create((set, get) => ({
       overlay: null,
       paused: false,
       dayStartNetWorth: calculateNetWorth(state),
-      miningIncomeToday: 0,
+      minedCoinToday: 0,
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
     })
   },
@@ -110,18 +111,30 @@ export const useGameStore = create((set, get) => ({
     if (state.phase !== 'day' || state.paused) return
     const elapsed = Math.min(DAY_DURATION_SECONDS, state.elapsed + deltaSeconds)
     const activeSeconds = elapsed - state.elapsed
-    const miningIncome = mineRate(state.miningTier) * activeSeconds
+    const minedCoin = mineRate(state.miningTier) * activeSeconds
     const progress = elapsed / DAY_DURATION_SECONDS
     const data = dayData(state)
     const currentPrices = Object.fromEntries(data.stocks.map((stock) => [stock.id, interpolate(stock.path, progress)]))
     const visibleNews = data.news.filter((item) => item.progress <= progress)
+    let holdings = state.holdings
+    if (minedCoin > 0) {
+      const previous = holdings[COIN_ASSET_ID] || { quantity: 0, average: 0 }
+      const quantity = previous.quantity + minedCoin
+      holdings = {
+        ...holdings,
+        [COIN_ASSET_ID]: {
+          quantity,
+          average: quantity > 0 ? previous.average * previous.quantity / quantity : 0,
+        },
+      }
+    }
     set({
       elapsed,
       currentPrices,
       visibleNews,
-      cash: state.cash + miningIncome,
-      miningIncomeToday: state.miningIncomeToday + miningIncome,
-      totalMiningIncome: state.totalMiningIncome + miningIncome,
+      holdings,
+      minedCoinToday: state.minedCoinToday + minedCoin,
+      totalMinedCoin: state.totalMinedCoin + minedCoin,
     })
     if (elapsed >= DAY_DURATION_SECONDS) get().finishDay()
   },
@@ -198,18 +211,22 @@ export const useGameStore = create((set, get) => ({
       visibleNews: [],
       elapsed: 0,
       dailyDrinkPurchased: 0,
-      miningIncomeToday: 0,
+      minedCoinToday: 0,
     })
   },
   selectStock: (selectedStockId) => set({ selectedStockId }),
   buy: (stockId, quantity) => {
     const state = get()
     if (state.phase !== 'day') return
-    const price = state.currentPrices[stockId]
-    const cost = price * quantity
-    if (!price || quantity <= 0 || state.cash < cost) return
+    const asset = dayData(state)?.stocks.find((stock) => stock.id === stockId)
+    if (!asset || (isCoinAsset(asset) && state.miningTier < 0)) return
+    const amount = normalizeTradeQuantity(asset, quantity)
+    const marketPrice = state.currentPrices[stockId]
+    const price = buyExecutionPrice(asset, marketPrice)
+    const cost = price * amount
+    if (!price || amount <= 0 || state.cash < cost) return
     const previous = state.holdings[stockId] || { quantity: 0, average: 0 }
-    const nextQuantity = previous.quantity + quantity
+    const nextQuantity = previous.quantity + amount
     const average = (previous.average * previous.quantity + cost) / nextQuantity
     set({
       cash: state.cash - cost,
@@ -221,14 +238,19 @@ export const useGameStore = create((set, get) => ({
   sell: (stockId, quantity) => {
     const state = get()
     if (state.phase !== 'day') return
+    const asset = dayData(state)?.stocks.find((stock) => stock.id === stockId)
+    if (!asset || (isCoinAsset(asset) && state.miningTier < 0)) return
     const owned = state.holdings[stockId]
-    const amount = Math.min(quantity, owned?.quantity || 0)
+    const ownedQuantity = owned?.quantity || 0
+    const requested = Number(quantity) >= ownedQuantity ? ownedQuantity : normalizeTradeQuantity(asset, quantity)
+    const amount = Math.min(requested, ownedQuantity)
     if (amount <= 0) return
-    const proceeds = state.currentPrices[stockId] * amount
+    const price = sellExecutionPrice(asset, state.currentPrices[stockId])
+    const proceeds = price * amount
     const holdings = { ...state.holdings }
     if (owned.quantity === amount) delete holdings[stockId]
     else holdings[stockId] = { ...owned, quantity: owned.quantity - amount }
-    const profit = (state.currentPrices[stockId] - owned.average) * amount
+    const profit = (price - owned.average) * amount
     set({ cash: state.cash + proceeds, holdings, feedback: { amount: profit, id: Date.now(), kind: 'realized' } })
     return { proceeds, profit }
   },
@@ -246,7 +268,7 @@ export const useGameStore = create((set, get) => ({
   upgradeMiningMachine: () => {
     const state = get()
     const cost = mineUpgradeCost(state.miningTier)
-    if (state.phase !== 'night' || state.nightActivity || state.cash < cost) return false
+    if (state.phase !== 'night' || state.nightActivity || state.cash < cost || !canUpgradeMine(state.miningTier, state.cycle)) return false
     set({ cash: state.cash - cost, miningTier: state.miningTier + 1 })
     return true
   },
