@@ -1,3 +1,5 @@
+import { DAY_DURATION_SECONDS } from '../config.js'
+
 const companies = [
   ['오비탈 레일', '궤도 건설', 128],
   ['리본 안드로이드', '폐기물 재활용', 84],
@@ -106,15 +108,21 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
     })
     const news = Array.from({ length: 5 }, (_, index) => {
       const stock = stocks[Math.floor(random() * stocks.length)]
-      const direction = random() > 0.48 ? 'up' : 'down'
+      const impactIndex = 1 + Math.floor(random() * (stock.path.length - 1))
+      const impactPoint = stock.path[impactIndex]
+      const previousPoint = stock.path[impactIndex - 1]
+      const direction = impactPoint.price >= previousPoint.price ? 'up' : 'down'
+      const twoMinutes = 120 / DAY_DURATION_SECONDS
+      const progress = Math.min(0.99, Math.max(0.01, impactPoint.progress + (random() * 2 - 1) * twoMinutes))
       return {
         id: `c${cycle}-d${dayIndex + 1}-n${index}`,
-        progress: round(0.12 + index * 0.17 + random() * 0.08),
+        progress: round(progress),
+        impactProgress: impactPoint.progress,
         stockId: stock.id,
         direction,
         text: `${stock.name}, ${pick(headlines[direction], random)}.`,
       }
-    })
+    }).sort((left, right) => left.progress - right.progress)
     const rumors = Array.from({ length: 3 }, (_, index) => {
       const stock = stocks[(index + dayIndex) % stocks.length]
       const wentUp = stock.path.at(-1).price >= stock.startPrice

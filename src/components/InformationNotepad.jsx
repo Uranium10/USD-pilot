@@ -1,31 +1,41 @@
-import { useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/gameStore.js'
 
 function buildDocument(rumors) {
-  if (rumors.length === 0) return '구입한 정보가 없습니다.'
-  return rumors.map((rumor, index) => [
+  const body = rumors.length === 0 ? '구입한 정보가 없습니다.' : rumors.map((rumor, index) => [
     `[정보 ${index + 1}]`,
     `출처: ${rumor.source}`,
     `신뢰도: ${Math.round(rumor.accuracy * 100)}%`,
     '',
     rumor.text,
-  ].join('\n')).join('\n\n────────────────────────\n\n')
+  ].join('\n')).join('\n\n')
+  return `──────────────────────────────\n\n${body}\n\n──────────────────────────────`
 }
 
 const plainText = (html) => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
 
 export default function InformationNotepad({ rumors }) {
   const editorRef = useRef(null)
-  const content = useGameStore((state) => state.notepadContent)
+  const initialContent = useRef(useGameStore.getState().notepadContent)
+  const [characterCount, setCharacterCount] = useState(() => plainText(initialContent.current).length)
   const fontSize = useGameStore((state) => state.notepadFontSize)
-  const setContent = useGameStore((state) => state.setNotepadContent)
   const setFontSize = useGameStore((state) => state.setNotepadFontSize)
   const purchasedInformation = buildDocument(rumors)
+
+  useLayoutEffect(() => {
+    if (editorRef.current) editorRef.current.innerHTML = initialContent.current
+  }, [])
+
+  const saveContent = () => {
+    const html = editorRef.current?.innerHTML || ''
+    useGameStore.getState().setNotepadContent(html)
+    setCharacterCount(plainText(html).length)
+  }
 
   const format = (command) => {
     editorRef.current?.focus()
     document.execCommand(command, false)
-    setContent(editorRef.current?.innerHTML || '')
+    saveContent()
   }
 
   return <section className="desktop-window notepad-window" aria-label="정보 모음 메모장">
@@ -46,10 +56,7 @@ export default function InformationNotepad({ rumors }) {
       </div>
     </div>
     <div className="notepad-document">
-      <section className="locked-information" aria-label="구입한 정보 읽기 전용">
-        <header><b>구입한 정보</b><span>읽기 전용</span></header>
-        <pre>{purchasedInformation}</pre>
-      </section>
+      <section className="locked-information" aria-label="구입한 정보 읽기 전용"><pre>{purchasedInformation}</pre></section>
       <div
         ref={editorRef}
         className="notepad-editor editable-notes"
@@ -57,10 +64,9 @@ export default function InformationNotepad({ rumors }) {
         suppressContentEditableWarning
         data-placeholder="여기에 메모를 입력하세요..."
         style={{ fontSize: `${fontSize}px` }}
-        onInput={(event) => setContent(event.currentTarget.innerHTML)}
-        dangerouslySetInnerHTML={{ __html: content }}
+        onInput={saveContent}
       />
     </div>
-    <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>{purchasedInformation.length + plainText(content).length}자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
+    <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>{purchasedInformation.length + characterCount}자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
   </section>
 }
