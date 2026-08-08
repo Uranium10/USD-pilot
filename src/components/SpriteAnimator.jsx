@@ -1,0 +1,101 @@
+import React, { useEffect, useState } from 'react'
+
+/**
+ * SpriteAnimator - 2D 애니메이션 재생기
+ * 
+ * @param {Object} props
+ * @param {'strip' | 'frames'} props.type - 'strip': 단일 이미지(스프라이트 시트) / 'frames': 여러 이미지 URL 배열
+ * @param {string | string[]} props.src - 이미지 URL 또는 배열
+ * @param {number} props.width - 한 프레임의 가로 픽셀 크기
+ * @param {number} props.height - 한 프레임의 세로 픽셀 크기
+ * @param {number} [props.fps=12] - 초당 프레임 수
+ * @param {boolean} [props.playing=true] - 재생 여부
+ * @param {boolean} [props.loop=true] - 반복 재생 여부
+ * @param {number} [props.frameCount=0] - 총 프레임 수 (type='strip' 일 때 필수)
+ * @param {number} [props.columns=0] - 가로 열 갯수 (기본값: frameCount, 가로 한 줄짜리 스트립)
+ * @param {Function} [props.onComplete] - 애니메이션 종료 시 콜백 (loop=false 일 때 유효)
+ */
+export default function SpriteAnimator({
+  type = 'strip',
+  src,
+  width,
+  height,
+  fps = 12,
+  playing = true,
+  loop = true,
+  frameCount = 0,
+  columns = 0,
+  onComplete,
+  className = '',
+  style = {}
+}) {
+  const [currentFrame, setCurrentFrame] = useState(0)
+  const totalFrames = type === 'frames' ? (Array.isArray(src) ? src.length : 0) : frameCount
+  const cols = columns || totalFrames
+  
+  useEffect(() => {
+    if (!playing || totalFrames <= 1) return
+    
+    let animationFrameId
+    let lastTime = performance.now()
+    const frameInterval = 1000 / fps
+
+    const updateFrame = (time) => {
+      if (time - lastTime >= frameInterval) {
+        lastTime = time
+        setCurrentFrame((prev) => {
+          const nextFrame = prev + 1
+          if (nextFrame >= totalFrames) {
+            if (onComplete) onComplete()
+            return loop ? 0 : prev
+          }
+          return nextFrame
+        })
+      }
+      animationFrameId = requestAnimationFrame(updateFrame)
+    }
+    
+    animationFrameId = requestAnimationFrame(updateFrame)
+    return () => cancelAnimationFrame(animationFrameId)
+  }, [playing, fps, totalFrames, loop, onComplete])
+
+  if (totalFrames === 0 || !src) return null
+
+  if (type === 'frames') {
+    return (
+      <div 
+        className={`sprite-animator ${className}`} 
+        style={{ width, height, overflow: 'hidden', display: 'inline-block', ...style }}
+      >
+        <img 
+          src={src[currentFrame]} 
+          alt={`frame-${currentFrame}`} 
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        />
+      </div>
+    )
+  }
+
+  // Type: strip (Sprite Sheet)
+  const colIndex = currentFrame % cols
+  const rowIndex = Math.floor(currentFrame / cols)
+  
+  const bgX = -(colIndex * width)
+  const bgY = -(rowIndex * height)
+
+  return (
+    <div 
+      className={`sprite-animator ${className}`}
+      style={{
+        width,
+        height,
+        backgroundImage: `url(${src})`,
+        backgroundPosition: `${bgX}px ${bgY}px`,
+        backgroundSize: cols ? `${cols * width}px auto` : 'auto',
+        backgroundRepeat: 'no-repeat',
+        display: 'inline-block',
+        ...style
+      }}
+    />
+  )
+}

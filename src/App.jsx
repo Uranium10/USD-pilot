@@ -3,6 +3,7 @@ import './App.css'
 import BgmController from './components/BgmController.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
+import RoomScene from './components/RoomScene.jsx'
 import { stageEngine } from './engine/StageEngine.js'
 import { fetchMarketCycle } from './services/marketService.js'
 import { useGameStore } from './store/gameStore.js'
@@ -47,8 +48,11 @@ function Settlement() {
 
 function Room() {
   const state = useGameStore()
-  if (state.phase === 'loading') return <main className="room"><div className="character">◉_◉</div><p>궤도 시장을 도청하는 중…</p></main>
-  return <main className="room"><div className="window"><span>NEO SEOUL // ORBIT 7</span></div><div className="character"><div className="face">{state.phase === 'night' ? '－_－' : '◉_◉'}</div><small>채무자 #0810</small></div><div className="desk"><button className="computer" onClick={() => state.setScreen('monitor')}><span>U.S.D TERMINAL</span><small>{state.phase === 'day' ? '거래 프로그램 실행 중' : '컴퓨터 켜기'}</small></button></div><aside className="room-status"><b>{state.cycle}주차 · {state.day}일차</b><span>현금 {money(state.cash)}</span><span>상환액 {money(state.debt)}</span></aside><NightPanel />{state.phase === 'settlement' && <Settlement />}</main>
+  return <RoomScene>
+    <aside className="room-status"><b>{state.cycle}주차 · {state.day}일차</b><span>현금 {money(state.cash)}</span><span>상환액 {money(state.debt)}</span></aside>
+    <NightPanel />
+    {state.phase === 'settlement' && <Settlement />}
+  </RoomScene>
 }
 
 function Overlay() {
