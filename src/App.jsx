@@ -26,15 +26,21 @@ function Title() {
 
 function Premarket() {
   const state = useGameStore()
-  const [flashingRumorId, setFlashingRumorId] = useState(null)
+  const [selectedRumorIds, setSelectedRumorIds] = useState([])
+  const [flashingRumorIds, setFlashingRumorIds] = useState([])
   if (!state.market) return null
   const data = state.market.days[state.day - 1]
-  const purchase = (rumor) => {
-    if (!state.purchaseRumor(rumor)) return
-    setFlashingRumorId(rumor.id)
-    window.setTimeout(() => setFlashingRumorId(null), 450)
+  const selectedRumors = data.rumors.filter((rumor) => selectedRumorIds.includes(rumor.id))
+  const selectedCost = selectedRumors.reduce((total, rumor) => total + rumor.cost, 0)
+  const toggleRumor = (rumorId) => setSelectedRumorIds((ids) => ids.includes(rumorId) ? ids.filter((id) => id !== rumorId) : [...ids, rumorId])
+  const purchaseSelected = () => {
+    const purchased = state.purchaseRumors(selectedRumors)
+    if (!purchased) return
+    setFlashingRumorIds(purchased.map((rumor) => rumor.id))
+    setSelectedRumorIds([])
+    window.setTimeout(() => setFlashingRumorIds([]), 450)
   }
-  return <section className="panel premarket"><p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p><h2>필요한 정보를 구입하세요.</h2><div className="rumor-grid">{data.rumors.map((rumor) => { const purchased = state.purchasedRumors.some((item) => item.id === rumor.id); return <button key={rumor.id} className={`rumor ${purchased ? 'selected' : ''} ${flashingRumorId === rumor.id ? 'purchase-flash' : ''}`} onClick={() => purchase(rumor)} disabled={purchased || state.cash < rumor.cost}><span>{purchased ? '구입됨' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>내용 및 신뢰도 미상 · {money(rumor.cost)}</small></button> })}</div><p className="purchase-summary">구입 {state.purchasedRumors.length}건 · 남은 현금 {money(state.cash)}</p><button className="primary" onClick={() => state.showOverlay({ type: 'dayBriefing', title: `${state.day}일차 정보 브리핑` })}>구입 완료</button></section>
+  return <section className="panel premarket"><p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p><h2>필요한 정보를 선택하세요.</h2><div className="rumor-grid">{data.rumors.map((rumor) => { const purchased = state.purchasedRumors.some((item) => item.id === rumor.id); const queued = selectedRumorIds.includes(rumor.id); return <button key={rumor.id} className={`rumor ${purchased ? 'selected' : ''} ${queued ? 'queued' : ''} ${flashingRumorIds.includes(rumor.id) ? 'purchase-flash' : ''}`} onClick={() => toggleRumor(rumor.id)} disabled={purchased}><span>{purchased ? '구입됨' : queued ? '구매 선택됨' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>내용 및 신뢰도 미상 · {money(rumor.cost)}</small></button> })}</div><p className="purchase-summary">구입 {state.purchasedRumors.length}건 · 선택 {selectedRumors.length}건 ({money(selectedCost)}) · 남은 현금 {money(state.cash)}</p><div className="premarket-actions"><button className="secondary" onClick={purchaseSelected} disabled={selectedRumors.length === 0 || selectedCost > state.cash}>선택 정보 구입</button><button className="primary" onClick={() => state.showOverlay({ type: 'dayBriefing', title: `${state.day}일차 정보 브리핑` })}>구입 완료</button></div></section>
 }
 
 function Settlement() {

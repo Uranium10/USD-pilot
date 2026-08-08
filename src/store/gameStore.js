@@ -70,6 +70,20 @@ export const useGameStore = create((set, get) => ({
     })
     return true
   },
+  purchaseRumors: (rumors) => {
+    const { cash, purchasedRumors, phase } = get()
+    if (phase !== 'premarket') return false
+    const purchasedIds = new Set(purchasedRumors.map((item) => item.id))
+    const uniqueRumors = rumors.filter((rumor, index, items) => !purchasedIds.has(rumor.id) && items.findIndex((item) => item.id === rumor.id) === index)
+    const totalCost = uniqueRumors.reduce((total, rumor) => total + rumor.cost, 0)
+    if (uniqueRumors.length === 0 || totalCost > cash) return false
+    set({
+      cash: cash - totalCost,
+      purchasedRumors: [...purchasedRumors, ...uniqueRumors],
+      feedback: { amount: -totalCost, id: Date.now() },
+    })
+    return uniqueRumors
+  },
   startDay: () => {
     const state = get()
     const data = dayData(state)
