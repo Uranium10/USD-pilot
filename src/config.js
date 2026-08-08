@@ -25,6 +25,12 @@ export const MAX_MINE_TIER_BY_CYCLE = [2, 3, 4, 5, 6, 6]
 
 export const INFO_COST_MULTIPLIER = [1, 1.12, 1.28, 1.5, 1.75, 2.05]
 export const VOLATILITY_BY_CYCLE = [1, 1, 1, 1.2, 1.35, 1.5]
+export const STOCK_BASE_SIGMA = 0.035
+export const STOCK_SHOCK_CHANCE = 0.12
+export const STOCK_SHOCK_SIGMA = 0.11
+export const STOCK_SEGMENT_MOVE_LIMIT = 0.36
+export const STOCK_DAILY_MIN_MULTIPLIER = 0.5
+export const STOCK_DAILY_MAX_MULTIPLIER = 1.5
 export const COIN_VOLATILITY_BY_CYCLE = [1, 1.05, 1.1, 1.2, 1.3, 1.4]
 
 // 부채 시스템(B 구조) — USD-spec/USD_debt_system.md 참고(실측 검증된 밸런스).

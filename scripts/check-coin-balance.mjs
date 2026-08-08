@@ -8,6 +8,9 @@ import {
   LISTED_COMPANY_COUNT,
   MARKET_ASSET_COUNT,
   MAX_MINE_TIER_BY_CYCLE,
+  STOCK_DAILY_MAX_MULTIPLIER,
+  STOCK_DAILY_MIN_MULTIPLIER,
+  STOCK_SEGMENT_MOVE_LIMIT,
 } from '../src/config.js'
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { minePaybackSeconds, mineRate, mineUpgradeCost } from '../src/logic/miningSystem.js'
@@ -16,10 +19,12 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message)
 }
 const average = (values) => values.reduce((total, value) => total + value, 0) / values.length
+const quantile = (values, ratio) => [...values].sort((left, right) => left - right)[Math.floor(values.length * ratio)]
 const weekSeconds = DAY_DURATION_SECONDS * DAYS_PER_CYCLE
 
 assert(DAY_DURATION_SECONDS === 720, '낮 스테이지는 12분(720초)이어야 합니다.')
 assert(LISTED_COMPANY_COUNT === 5 && MARKET_ASSET_COUNT === 6, '시장 구성은 기업 5 + 코인 1이어야 합니다.')
+assert(STOCK_SEGMENT_MOVE_LIMIT === 0.36, '주식 구간 변동 상한은 ±36%여야 합니다.')
 
 let cumulativeCost = 0
 const tierRows = []
@@ -43,6 +48,8 @@ assert(coverageRows[0].coverage <= 0.31, '1주차 안전망 수입이 최소 상
 assert(coverageRows.every((row, index) => index === 0 || row.coverage <= coverageRows[index - 1].coverage), '주차가 지날수록 안전망 커버율이 낮아져야 합니다.')
 
 const stockRanges = []
+const stockSegmentMoves = []
+const stockDailyReturns = []
 const coinRanges = []
 const finalCoinPrices = []
 const selectedCompanyIds = new Set()
@@ -63,14 +70,54 @@ for (let seed = 1; seed <= 500; seed += 1) {
         assert(Math.max(...prices) <= asset.startPrice * 1.451, '코인 일중 상승 제한을 벗어났습니다.')
       } else {
         stockRanges.push(range)
+        stockDailyReturns.push(asset.path.at(-1).price / asset.startPrice - 1)
+        assert(Math.min(...prices) >= asset.startPrice * (STOCK_DAILY_MIN_MULTIPLIER - 0.001), '주식 일중 하락 제한을 벗어났습니다.')
+        assert(Math.max(...prices) <= asset.startPrice * (STOCK_DAILY_MAX_MULTIPLIER + 0.001), '주식 일중 상승 제한을 벗어났습니다.')
+        for (let index = 1; index < prices.length; index += 1) {
+          stockSegmentMoves.push(Math.abs(prices[index] / prices[index - 1] - 1))
+        }
       }
     }
   }
   finalCoinPrices.push(market.days.at(-1).stocks.find((asset) => asset.id === COIN_ASSET_ID).path.at(-1).price)
 }
+
+const lateStockRanges = []
+const lateStockSegmentMoves = []
+const lateStockDailyReturns = []
+const lateCoinRanges = []
+for (let seed = 1; seed <= 300; seed += 1) {
+  const market = generateMarketCycle({ cycle: 6, seed })
+  for (const day of market.days) {
+    for (const asset of day.stocks) {
+      const prices = asset.path.map((point) => point.price)
+      const range = (Math.max(...prices) - Math.min(...prices)) / asset.startPrice
+      if (asset.assetType === 'coin') {
+        lateCoinRanges.push(range)
+        continue
+      }
+      lateStockRanges.push(range)
+      lateStockDailyReturns.push(asset.path.at(-1).price / asset.startPrice - 1)
+      for (let index = 1; index < prices.length; index += 1) {
+        lateStockSegmentMoves.push(Math.abs(prices[index] / prices[index - 1] - 1))
+      }
+    }
+  }
+}
+
 assert(selectedCompanyIds.size === 12, `기업 풀 일부가 선택되지 않았습니다: ${selectedCompanyIds.size}/12`)
+assert(Math.max(...stockSegmentMoves) <= STOCK_SEGMENT_MOVE_LIMIT + 0.001, '주식 구간 변동이 ±36% 상한을 벗어났습니다.')
+assert(quantile(stockSegmentMoves, 0.5) < 0.04, '가우시안 분포의 중앙 구간이 지나치게 큽니다.')
+assert(quantile(stockSegmentMoves, 0.95) >= 0.08, '가우시안 혼합분포의 꼬리가 충분히 넓지 않습니다.')
+assert(quantile(stockSegmentMoves, 0.99) >= 0.16, '상위 1% 주식 변동이 충분히 크지 않습니다.')
+assert(Math.abs(average(stockDailyReturns)) <= 0.03, '주식 가격 경로에 과도한 상승/하락 편향이 있습니다.')
+assert(Math.max(...lateStockSegmentMoves) <= STOCK_SEGMENT_MOVE_LIMIT + 0.001, '6주차 주식 구간 변동이 ±36% 상한을 벗어났습니다.')
+assert(quantile(lateStockSegmentMoves, 0.99) >= 0.22, '6주차 상위 1% 주식 변동이 충분히 크지 않습니다.')
+assert(Math.abs(average(lateStockDailyReturns)) <= 0.04, '6주차 주식 경로에 과도한 상승/하락 편향이 있습니다.')
 const volatilityRatio = average(coinRanges) / average(stockRanges)
+const lateVolatilityRatio = average(lateCoinRanges) / average(lateStockRanges)
 assert(volatilityRatio >= 2, `코인 변동성이 충분히 크지 않습니다: ${volatilityRatio.toFixed(2)}배`)
+assert(lateVolatilityRatio >= 1.8, `6주차 코인 변동성이 충분히 크지 않습니다: ${lateVolatilityRatio.toFixed(2)}배`)
 assert(average(finalCoinPrices) >= 85 && average(finalCoinPrices) <= 115, '코인 가격에 과도한 장기 방향 편향이 있습니다.')
 
 console.table(tierRows.map((row) => ({
@@ -88,4 +135,7 @@ console.table(coverageRows.map((row) => ({
   coverage: `${(row.coverage * 100).toFixed(1)}%`,
 })))
 console.log(`500개 시드 평균 일중 변동폭: 코인/주식 = ${volatilityRatio.toFixed(2)}배`)
+console.log(`주식 구간 절대변동 P50/P95/P99 = ${(quantile(stockSegmentMoves, 0.5) * 100).toFixed(2)}% / ${(quantile(stockSegmentMoves, 0.95) * 100).toFixed(2)}% / ${(quantile(stockSegmentMoves, 0.99) * 100).toFixed(2)}%`)
+console.log(`주식 일간 평균 수익률 = ${(average(stockDailyReturns) * 100).toFixed(2)}%`)
+console.log(`6주차 코인/주식 일중 변동폭 = ${lateVolatilityRatio.toFixed(2)}배, 주식 P99 = ${(quantile(lateStockSegmentMoves, 0.99) * 100).toFixed(2)}%`)
 console.log(`500개 시드 1주 종료 코인 평균가: ₡${average(finalCoinPrices).toFixed(2)}`)

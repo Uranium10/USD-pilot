@@ -6,6 +6,12 @@ import {
   DAYS_PER_CYCLE,
   INFO_COST_MULTIPLIER,
   LISTED_COMPANY_COUNT,
+  STOCK_BASE_SIGMA,
+  STOCK_DAILY_MAX_MULTIPLIER,
+  STOCK_DAILY_MIN_MULTIPLIER,
+  STOCK_SEGMENT_MOVE_LIMIT,
+  STOCK_SHOCK_CHANCE,
+  STOCK_SHOCK_SIGMA,
   VOLATILITY_BY_CYCLE,
 } from '../config.js'
 
@@ -135,6 +141,14 @@ function seeded(seed) {
   }
 }
 
+function gaussian(random) {
+  let first = 0
+  let second = 0
+  while (first === 0) first = random()
+  while (second === 0) second = random()
+  return Math.sqrt(-2 * Math.log(first)) * Math.cos(2 * Math.PI * second)
+}
+
 const companyIndexById = new Map(companies.map((company, index) => [company[3], index]))
 
 function selectCompanies(random, companyIds) {
@@ -158,10 +172,16 @@ function makePath(startPrice, random, cycle) {
   const points = [{ progress: 0, price: startPrice }]
   let price = startPrice
   for (const progress of [...progresses, 1]) {
-    const normalMove = (random() - 0.5) * 0.11 * volatility
-    const shock = random() < 0.14 ? (random() - 0.5) * 0.32 * Math.sqrt(volatility) : 0
-    const move = clamp(normalMove + shock, -0.22, 0.22)
-    price = Math.max(8, price * (1 + move))
+    const normalMove = gaussian(random) * STOCK_BASE_SIGMA * volatility
+    const shock = random() < STOCK_SHOCK_CHANCE
+      ? gaussian(random) * STOCK_SHOCK_SIGMA * Math.sqrt(volatility)
+      : 0
+    const move = clamp(normalMove + shock, -STOCK_SEGMENT_MOVE_LIMIT, STOCK_SEGMENT_MOVE_LIMIT)
+    price = clamp(
+      price * (1 + move),
+      Math.max(8, startPrice * STOCK_DAILY_MIN_MULTIPLIER),
+      startPrice * STOCK_DAILY_MAX_MULTIPLIER,
+    )
     points.push({ progress: round(progress), price: round(price) })
   }
   return points
