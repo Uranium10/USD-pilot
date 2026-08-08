@@ -101,6 +101,7 @@ function Monitor() {
   
   const addQuantity = (add) => setQuantity((q) => Math.max(0, q + add))
   const setMaxBuy = () => setQuantity(Math.max(0, Math.floor(state.cash / currentPrice)))
+  const setMaxSell = () => setQuantity(Math.max(0, holding.quantity))
 
   return <main className="monitor-shell">
     <header className="terminal-bar"><b>U.S.D // MARKET</b><span>{state.cycle}주차 {state.day}/7일 · 낮</span><span className={remaining < 60 ? 'red' : ''}>{Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}</span><button onClick={() => state.showOverlay({ type: 'purchasedInfo', title: '구입한 정보' })}>구입 정보 {state.purchasedRumors.length}</button><button onClick={() => state.showOverlay({ title: '거래 안내', text: '낮 동안에는 시간이 흐릅니다. 종목과 뉴스를 확인해 매매하세요. 이 안내가 열린 동안 시장은 일시정지됩니다.' })}>도움말</button><button onClick={() => state.setScreen('room')}>방 보기</button></header>
@@ -128,26 +129,33 @@ function Monitor() {
           </div>
           <div className="order-controls">
             <div className="quantity-buttons">
-              <button onClick={() => setQuantity(1)}>1</button>
               <button onClick={() => addQuantity(1)}>+1</button>
               <button onClick={() => addQuantity(5)}>+5</button>
               <button onClick={() => addQuantity(10)}>+10</button>
               <button onClick={() => addQuantity(100)}>+100</button>
-              <button onClick={setMaxBuy}>전부</button>
             </div>
-            <label>수량<input type="number" min="0" value={quantity} onChange={(event) => setQuantity(Math.max(0, Number(event.target.value) || 0))} /></label>
+            <div className="max-buttons">
+              <button onClick={setMaxBuy}>최대 매수</button>
+              <button onClick={setMaxSell} disabled={holding.quantity <= 0}>최대 매도</button>
+            </div>
+            <div className="order-fields">
+              <label>수량<input type="number" min="0" value={quantity} onChange={(event) => setQuantity(Math.max(0, Number(event.target.value) || 0))} /></label>
+              <label>금액<input type="number" min="0" step="1" value={Math.round(buyTotal)} onChange={(event) => setQuantity(Math.max(0, Math.floor((Number(event.target.value) || 0) / currentPrice)))} /></label>
+            </div>
           </div>
           <div className="order-actions">
             <div className="order-totals">
               <span className={canBuy ? '' : 'red'}>매수 {quantity}주 · {money(buyTotal)}</span>
               <span className={canSell ? '' : 'red'}>매도 {sellQuantity}주 · {money(sellTotal)}</span>
             </div>
-            <button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button>
-            <button className="sell" disabled={!canSell} onClick={() => state.sell(selected.id, sellQuantity)}>매도</button>
+            <div className="order-buttons">
+              <button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button>
+              <button className="sell" disabled={!canSell} onClick={() => state.sell(selected.id, sellQuantity)}>매도</button>
+            </div>
           </div>
         </div>
       </section>
-      <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const relatedStock = data.stocks.find((stock) => stock.id === item.stockId); return <article key={item.id}><small>{Math.floor(item.progress * 12)}:{String(Math.floor((item.progress * 12 % 1) * 60)).padStart(2, '0')} · {relatedStock?.name || '시장 속보'}</small><p>{item.text}</p></article> })}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
+      <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const relatedStock = data.stocks.find((stock) => stock.id === item.stockId); const newsSeconds = item.progress * DAY_DURATION_SECONDS; return <article key={item.id}><small>{Math.floor(newsSeconds / 60)}:{String(Math.floor(newsSeconds % 60)).padStart(2, '0')} · {relatedStock?.name || '시장 속보'}</small><p>{item.text}</p></article> })}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
     </div>
     {state.feedback && <div key={state.feedback.id} className={`money-pop ${state.feedback.amount >= 0 ? 'gain' : 'loss'}`}>{state.feedback.amount >= 0 ? '+' : ''}{money(state.feedback.amount)}</div>}
   </main>

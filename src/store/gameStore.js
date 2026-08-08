@@ -141,6 +141,7 @@ export const useGameStore = create((set, get) => ({
       phase: 'premarket',
       screen: 'room',
       purchasedRumors: [],
+      dailySummaries: [],
       selectedStockId: data.stocks[0].id,
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
       visibleNews: [],

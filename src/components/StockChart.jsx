@@ -61,14 +61,32 @@ export default function StockChart() {
 
       const progress = Math.max(0.002, state.elapsed / DAY_DURATION_SECONDS)
       const currentTime = state.day - 1 + progress
-      const windowDays = Math.min(currentTime || 1, 2 / zoomLevel)
-      const startTime = Math.max(0, currentTime - windowDays)
+
+      // 줌 레벨 1(최소 줌)에서는 startTime이 0이 되어 지나온 전체 구간이 보인다.
+      // 줌을 당길수록 timeSpan이 줄어 최근 구간만 보인다.
+      const timeSpan = Math.max(0.002, currentTime / zoomLevel)
+      const startTime = Math.max(0, currentTime - timeSpan)
+
       const series = buildSeries(state, progress)
-      const visible = series.filter((point) => point.time >= startTime)
+      // 화면 왼쪽 경계(startTime)에서 선이 잘려 보이지 않도록, 경계를 가로지르는 구간을
+      // 보간해 정확히 그 위치에 점을 하나 만들어 끼워 넣는다(버퍼링 값으로 대충 자르지 않는다).
+      const cropIndex = series.findIndex((point) => point.time >= startTime)
+      let visible
+      if (cropIndex <= 0) {
+        visible = series
+      } else {
+        const prev = series[cropIndex - 1]
+        const next = series[cropIndex]
+        const ratio = next.time === prev.time ? 0 : (startTime - prev.time) / (next.time - prev.time)
+        const boundaryPoint = { time: startTime, price: prev.price + (next.price - prev.price) * ratio }
+        visible = [boundaryPoint, ...series.slice(cropIndex)]
+      }
+      if (visible.length === 0 && series.length > 0) visible = [series[series.length - 1]]
+
       const prices = visible.map((point) => point.price)
       const min = Math.min(...prices) * 0.98
       const max = Math.max(...prices) * 1.02
-      const timeSpan = Math.max(0.002, currentTime - startTime)
+      
       const toX = (time) => ((time - startTime) / timeSpan) * width
       const toY = (price) => height - ((price - min) / Math.max(1, max - min)) * height
 
@@ -77,6 +95,7 @@ export default function StockChart() {
       context.textAlign = 'right'
       context.fillText(`₡${max.toFixed(2)}`, width - 5, 15)
       context.fillText(`₡${min.toFixed(2)}`, width - 5, height - 20)
+      
       context.textAlign = 'left'
       context.fillText(formatTimeline(startTime), 5, height - 5)
       context.textAlign = 'right'
