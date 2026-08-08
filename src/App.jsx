@@ -63,7 +63,7 @@ function Settlement() {
 
   const settle = async (amount) => {
     const result = state.settleCycle(amount)
-    if (result?.result === 'next') state.loadNextCycle(await fetchMarketCycle(result.cycle))
+    if (result?.result === 'next') state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds))
   }
 
   return <section className="modal-card settlement-card">

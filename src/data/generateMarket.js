@@ -1,11 +1,18 @@
-import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INFO_COST_MULTIPLIER, VOLATILITY_BY_CYCLE } from '../config.js'
+import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INFO_COST_MULTIPLIER, LISTED_STOCK_COUNT, VOLATILITY_BY_CYCLE } from '../config.js'
 
 const companies = [
-  ['오비탈 레일', '궤도 건설', 128],
-  ['리본 안드로이드', '폐기물 재활용', 84],
-  ['셀레네 드릴', '우주 광물', 156],
-  ['네뷸라 바이오', '바이오', 102],
-  ['아레스 다이내믹스', '군수', 191],
+  ['오비탈 레일', '궤도 건설', 128, 'orbital-rail'],
+  ['리본 안드로이드', '폐기물 재활용', 84, 'reborn-android'],
+  ['셀레네 드릴', '우주 광물', 156, 'selene-drill'],
+  ['네뷸라 바이오', '바이오', 102, 'nebula-bio'],
+  ['아레스 다이내믹스', '군수', 191, 'ares-dynamics'],
+  ['헬리오스 그리드', '우주 에너지', 117, 'helios-grid'],
+  ['크레이터 로지스틱스', '우주 물류', 73, 'crater-logistics'],
+  ['제니스 네트워크', '궤도 통신', 139, 'zenith-network'],
+  ['타이탄 푸드랩', '우주 식량', 92, 'titan-foodlab'],
+  ['폴라리스 시큐리티', '사이버 보안', 168, 'polaris-security'],
+  ['이오니아 리조트', '우주 관광', 61, 'ionia-resort'],
+  ['퀀텀 포지', '양자 반도체', 145, 'quantum-forge'],
 ]
 
 const headlines = {
@@ -62,6 +69,34 @@ const rumorEvents = [
     up: ['외곽 식민지 방위체계 교체 사업의 단독 공급자로 지명됐다.', '신형 요격 드론이 실전 모의시험에서 목표를 전부 격추했다.'],
     down: ['신형 요격 드론이 민간 위성을 오인 추적한 사실이 드러났다.', '전쟁범죄 조사위원회가 무기 수출 기록 제출을 명령했다.'],
   },
+  {
+    up: ['수성 궤도 태양광 집광망의 첫 상업 송전에 성공했다.', '노후 핵융합 발전소를 대체할 장기 전력 계약을 체결했다.'],
+    down: ['집광 위성군의 냉각 장치 결함으로 송전 효율이 급락했다.', '에너지 규제국이 독점 요금 산정 방식에 대한 조사를 시작했다.'],
+  },
+  {
+    up: ['라그랑주 항로의 긴급 화물 운송권을 단독으로 확보했다.', '무인 화물선의 회항 시간을 절반으로 줄인 관제 체계를 공개했다.'],
+    down: ['주력 화물선단이 항법 오류로 소행성대에 발이 묶였다.', '밀수 화물 은폐 의혹으로 주요 우주항의 운항 허가가 정지됐다.'],
+  },
+  {
+    up: ['외곽 식민지용 양자 통신 중계망 구축 사업을 수주했다.', '태양폭풍 속에서도 연결을 유지하는 신규 프로토콜을 검증했다.'],
+    down: ['통신 중계 위성에서 대규모 개인정보 유출 흔적이 발견됐다.', '경쟁사의 무료 통신망 개방으로 유료 가입자가 급감하고 있다.'],
+  },
+  {
+    up: ['화성 농업 돔에 장기 배양식 공급 계약을 체결했다.', '저중력 환경에서 식감이 유지되는 단백질 배양 기술을 공개했다.'],
+    down: ['주력 배양육에서 허용치를 넘는 중금속이 검출됐다.', '곡물 합성 공장의 미생물 오염으로 전 제품 회수가 시작됐다.'],
+  },
+  {
+    up: ['궤도 금융망 침해를 막아 정부 보안 계약을 따냈다.', '양자 내성 암호 모듈이 군 통신 보안 인증을 통과했다.'],
+    down: ['자사 보안 관제망이 내부자의 백도어에 뚫린 사실이 드러났다.', '랜섬웨어 협상 대행 과정에서 불법 송금 의혹이 제기됐다.'],
+  },
+  {
+    up: ['토성 고리 전망 호텔의 예약이 개장 전에 매진됐다.', '무중력 레저 시설이 국제 안전 인증을 획득했다.'],
+    down: ['관광 셔틀의 산소 공급 사고로 전 노선 운항이 중단됐다.', '고가 패키지 환불 사태로 단기 유동성 위기가 불거졌다.'],
+  },
+  {
+    up: ['차세대 항법 칩의 수율을 크게 개선해 대량 납품을 시작했다.', '극저온 양자 프로세서가 기존 연산 기록을 경신했다.'],
+    down: ['핵심 웨이퍼 공정의 오염으로 생산 라인이 멈췄다.', '설계 도면 유출로 경쟁사가 동급 칩을 먼저 공개했다.'],
+  },
 ]
 
 const round = (value) => Math.round(value * 100) / 100
@@ -74,6 +109,21 @@ function seeded(seed) {
     value = (value * 1664525 + 1013904223) >>> 0
     return value / 4294967296
   }
+}
+
+const companyIndexById = new Map(companies.map((company, index) => [company[3], index]))
+
+function selectCompanies(random, companyIds) {
+  const requested = Array.isArray(companyIds) ? [...new Set(companyIds)] : []
+  if (requested.length === LISTED_STOCK_COUNT && requested.every((id) => companyIndexById.has(id))) {
+    return requested.map((id) => companies[companyIndexById.get(id)])
+  }
+  const shuffled = [...companies]
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1))
+    ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
+  }
+  return shuffled.slice(0, LISTED_STOCK_COUNT)
 }
 
 function makePath(startPrice, random, cycle) {
@@ -93,15 +143,18 @@ function makePath(startPrice, random, cycle) {
   return points
 }
 
-export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
+export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds } = {}) {
   const random = seeded(Number(seed) + cycle * 7919)
-  const previousCloses = companies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
+  const listedCompanies = selectCompanies(random, companyIds)
+  const listedCompanyIds = listedCompanies.map((company) => company[3])
+  const previousCloses = listedCompanies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
   const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
-    const stocks = companies.map(([name, sector, base], stockIndex) => {
+    const stocks = listedCompanies.map(([name, sector, base, companyId], stockIndex) => {
       const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
       const startPrice = round(referencePrice * (1 + (random() - 0.5) * 0.025))
       const stock = {
         id: `stock-${stockIndex + 1}`,
+        companyId,
         name,
         sector,
         startPrice,
@@ -134,7 +187,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
       const truthful = random() <= accuracy
       const predictedUp = truthful ? wentUp : !wentUp
       const eventDirection = predictedUp ? 'up' : 'down'
-      const stockEvents = rumorEvents[Number(stock.id.split('-')[1]) - 1]
+      const stockEvents = rumorEvents[companyIndexById.get(stock.companyId)]
       return {
         id: `c${cycle}-d${dayIndex + 1}-r${index}`,
         stockId: stock.id,
@@ -151,6 +204,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now() } = {}) {
   return {
     cycle,
     seed,
+    companyIds: listedCompanyIds,
     days,
   }
 }
