@@ -6,4 +6,4 @@ export const MAX_CYCLES = 6
 export const TICK_MS = 100
 export const MAX_ENERGY = 100
 export const JOB_ENERGY_COST = 85
-export const JOB_REWARD = 200
+export const JOB_REWARD = 800

@@ -35,7 +35,7 @@ export default function SpriteAnimator({
   
   useEffect(() => {
     if (!playing || totalFrames <= 1) return
-    
+
     let animationFrameId
     let lastTime = performance.now()
     const frameInterval = 1000 / fps
@@ -43,21 +43,27 @@ export default function SpriteAnimator({
     const updateFrame = (time) => {
       if (time - lastTime >= frameInterval) {
         lastTime = time
+        // onComplete는 여기서 바로 부르지 않는다 — 이 콜백은 setCurrentFrame의 업데이터 함수라
+        // 렌더링 도중 실행될 수 있고, 그 안에서 부모 컴포넌트의 상태를 바꾸면 React가
+        // "다른 컴포넌트 렌더링 중 상태 업데이트" 경고를 낸다. 프레임 값만 갱신하고,
+        // 실제 onComplete 호출은 아래의 별도 effect(커밋 이후)로 미룬다.
         setCurrentFrame((prev) => {
           const nextFrame = prev + 1
-          if (nextFrame >= totalFrames) {
-            if (onComplete) onComplete()
-            return loop ? 0 : prev
-          }
+          if (nextFrame >= totalFrames) return loop ? 0 : prev
           return nextFrame
         })
       }
       animationFrameId = requestAnimationFrame(updateFrame)
     }
-    
+
     animationFrameId = requestAnimationFrame(updateFrame)
     return () => cancelAnimationFrame(animationFrameId)
-  }, [playing, fps, totalFrames, loop, onComplete])
+  }, [playing, fps, totalFrames, loop])
+
+  useEffect(() => {
+    if (loop || totalFrames <= 1) return
+    if (currentFrame === totalFrames - 1) onComplete?.()
+  }, [currentFrame, loop, totalFrames, onComplete])
 
   if (totalFrames === 0 || !src) return null
 
