@@ -49,6 +49,7 @@ function Settlement() {
 function Room() {
   const state = useGameStore()
   return <RoomScene>
+    <header className="room-title"><b>U.S.D</b><span>UNPAID SPACE DEBT</span></header>
     <aside className="room-status"><b>{state.cycle}주차 · {state.day}일차</b><span>현금 {money(state.cash)}</span><span>상환액 {money(state.debt)}</span></aside>
     <NightPanel />
     {state.phase === 'settlement' && <Settlement />}

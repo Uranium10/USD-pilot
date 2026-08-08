@@ -1,17 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/gameStore.js'
 
-function buildDocument(rumors) {
-  const body = rumors.length === 0 ? '구입한 정보가 없습니다.' : rumors.map((rumor, index) => [
-    `[정보 ${index + 1}]`,
-    `출처: ${rumor.source}`,
-    `신뢰도: ${Math.round(rumor.accuracy * 100)}%`,
-    '',
-    rumor.text,
-  ].join('\n')).join('\n\n')
-  return `──────────────────────────────\n\n${body}\n\n──────────────────────────────`
-}
-
+const informationText = (rumors) => rumors.length === 0 ? '구입한 정보가 없습니다.' : rumors.map((rumor, index) => [
+  `[정보 ${index + 1}]`, `출처: ${rumor.source}`, `신뢰도: ${Math.round(rumor.accuracy * 100)}%`, rumor.text,
+].join(' ')).join(' ')
 const plainText = (html) => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
 
 export default function InformationNotepad({ rumors }) {
@@ -20,7 +12,6 @@ export default function InformationNotepad({ rumors }) {
   const [characterCount, setCharacterCount] = useState(() => plainText(initialContent.current).length)
   const fontSize = useGameStore((state) => state.notepadFontSize)
   const setFontSize = useGameStore((state) => state.setNotepadFontSize)
-  const purchasedInformation = buildDocument(rumors)
 
   useLayoutEffect(() => {
     if (editorRef.current) editorRef.current.innerHTML = initialContent.current
@@ -38,6 +29,20 @@ export default function InformationNotepad({ rumors }) {
     saveContent()
   }
 
+  const resizeSelectedLines = (change) => {
+    const editor = editorRef.current
+    const selection = window.getSelection()
+    if (!editor || !selection?.rangeCount || !editor.contains(selection.anchorNode)) return
+    editor.focus()
+    document.execCommand('formatBlock', false, 'div')
+    const range = selection.getRangeAt(0)
+    const blocks = [...editor.children].filter((block) => range.intersectsNode(block))
+    const nextSize = Math.min(28, Math.max(12, fontSize + change))
+    blocks.forEach((block) => { block.style.fontSize = `${nextSize}px` })
+    setFontSize(nextSize)
+    saveContent()
+  }
+
   return <section className="desktop-window notepad-window" aria-label="정보 모음 메모장">
     <div className="notepad-tabbar">
       <span className="notepad-app-icon">▤</span>
@@ -50,23 +55,23 @@ export default function InformationNotepad({ rumors }) {
         <button type="button" onMouseDown={(event) => { event.preventDefault(); format('bold') }} aria-label="굵게"><b>B</b></button>
         <button type="button" onMouseDown={(event) => { event.preventDefault(); format('italic') }} aria-label="기울임"><i>I</i></button>
         <span className="tool-separator" />
-        <button type="button" onClick={() => setFontSize(fontSize - 1)} aria-label="글자 작게">A−</button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); resizeSelectedLines(-1) }} aria-label="선택한 줄 글자 작게">A−</button>
         <span className="font-size-value">{fontSize}px</span>
-        <button type="button" onClick={() => setFontSize(fontSize + 1)} aria-label="글자 크게">A＋</button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); resizeSelectedLines(1) }} aria-label="선택한 줄 글자 크게">A＋</button>
       </div>
     </div>
     <div className="notepad-document">
-      <section className="locked-information" aria-label="구입한 정보 읽기 전용"><pre>{purchasedInformation}</pre></section>
-      <div
-        ref={editorRef}
-        className="notepad-editor editable-notes"
-        contentEditable
-        suppressContentEditableWarning
-        data-placeholder="여기에 메모를 입력하세요..."
-        style={{ fontSize: `${fontSize}px` }}
-        onInput={saveContent}
-      />
+      <section className="locked-information" aria-label="구입한 정보 읽기 전용">
+        <div className="information-divider" />
+        {rumors.length === 0 ? <p className="empty-information">구입한 정보가 없습니다.</p> : rumors.map((rumor, index) => <article className="purchased-information" key={rumor.id}>
+          <h3>[정보 {index + 1}]</h3>
+          <dl><div><dt>출처</dt><dd>{rumor.source}</dd></div><div><dt>신뢰도</dt><dd>{Math.round(rumor.accuracy * 100)}%</dd></div></dl>
+          <p>{rumor.text}</p>
+        </article>)}
+        <div className="information-divider" />
+      </section>
+      <div ref={editorRef} className="notepad-editor editable-notes" contentEditable suppressContentEditableWarning data-placeholder="여기에 메모를 입력하세요..." onInput={saveContent} />
     </div>
-    <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>{purchasedInformation.length + characterCount}자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
+    <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>{informationText(rumors).length + characterCount}자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
   </section>
 }
