@@ -28,15 +28,21 @@ function Title() {
 
 function Premarket() {
   const state = useGameStore()
+  if (!state.market) return null
   const data = state.market.days[state.day - 1]
   return <section className="panel premarket">
     <p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p>
     <h2>오늘의 소문 하나를 사시겠습니까?</h2>
-    <div className="rumor-grid">{data.rumors.map((rumor) => <button key={rumor.id} className={`rumor ${state.selectedRumor?.id === rumor.id ? 'selected' : ''}`} onClick={() => state.selectRumor(rumor)} disabled={Boolean(state.selectedRumor)}>
-      <span>{rumor.direction === 'up' ? '▲ 상승 정보' : '▼ 하락 정보'}</span>
-      <strong>{rumor.text}</strong>
-      <small>신뢰도 {Math.round(rumor.accuracy * 100)}% · {money(rumor.cost)}</small>
-    </button>)}</div>
+    <div className="rumor-grid">{data.rumors.map((rumor) => {
+      const isSelected = state.selectedRumor?.id === rumor.id;
+      const isBought = Boolean(state.selectedRumor);
+      return (
+      <button key={rumor.id} className={`rumor ${isSelected ? 'selected' : ''}`} onClick={() => state.selectRumor(rumor)} disabled={isBought && !isSelected}>
+        <span>{isSelected ? '정보 해독 완료' : '암호화된 정보'}</span>
+        <strong>{isSelected ? rumor.text : `출처: ${rumor.source}`}</strong>
+        <small>{isSelected ? `출처 ${rumor.source} · 신뢰도 ${Math.round(rumor.accuracy * 100)}%` : '내용 및 신뢰도 미상'} · {money(rumor.cost)}</small>
+      </button>
+    )})}</div>
     <button className="primary" onClick={state.startDay}>{state.selectedRumor ? '정보 확인 · 장 시작' : '정보 없이 장 시작'}</button>
   </section>
 }
@@ -68,16 +74,72 @@ function Settlement() {
 function Monitor() {
   const state = useGameStore()
   const [quantity, setQuantity] = useState(1)
+  if (!state.market) return null
   const data = state.market.days[state.day - 1]
-  const selected = data.stocks.find((stock) => stock.id === state.selectedStockId)
+  const selected = data.stocks.find((stock) => stock.id === state.selectedStockId) || data.stocks[0]
+  const currentPrice = state.currentPrices[selected.id] || selected.startPrice
+  const holding = state.holdings[selected.id] || { quantity: 0, average: 0 }
+  const buyTotal = currentPrice * quantity
+  const sellQuantity = Math.min(quantity, holding.quantity)
+  const sellTotal = currentPrice * sellQuantity
+  const canBuy = quantity > 0 && buyTotal <= state.cash
+  const canSell = sellQuantity > 0
   const remaining = Math.max(0, DAY_DURATION_SECONDS - state.elapsed)
   const netWorth = getNetWorth(state)
+  
+  const profitDiff = holding.quantity > 0 ? (currentPrice - holding.average) : 0
+  const profitPct = holding.quantity > 0 ? (profitDiff / holding.average) * 100 : 0
+  
+  const addQuantity = (add) => setQuantity((q) => Math.max(1, q + add))
+  const setMaxBuy = () => setQuantity(Math.max(1, Math.floor(state.cash / currentPrice)))
+  const setMaxSell = () => setQuantity(Math.max(1, holding.quantity))
+
   return <main className="monitor-shell">
-    <header className="terminal-bar"><b>U.S.D // MARKET</b><span>{state.cycle}주차 {state.day}/7일 · 낮</span><span className={remaining < 60 ? 'red' : ''}>{Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}</span><button onClick={() => state.setScreen('room')}>방 보기</button></header>
+    <header className="terminal-bar"><b>U.S.D // MARKET</b><span>{state.cycle}주차 {state.day}/7일 · 낮</span><span className={remaining < 60 ? 'red' : ''}>{Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}</span><button onClick={() => state.showOverlay({ title: '거래 안내', text: '낮 동안에는 시간이 흐릅니다. 종목과 뉴스를 확인해 매매하세요. 이 안내가 열린 동안 시장은 일시정지됩니다.' })}>도움말</button><button onClick={() => state.setScreen('room')}>방 보기</button></header>
     <section className="account-strip"><div><small>총자산</small><strong>{money(netWorth)}</strong></div><div><small>현금</small><strong>{money(state.cash)}</strong></div><div><small>이번 주 상환</small><strong className="red">{money(state.debt)}</strong></div></section>
     <div className="trading-grid">
-      <aside className="stock-list">{data.stocks.map((stock) => { const current = state.currentPrices[stock.id] || stock.startPrice; const change = (current / stock.startPrice - 1) * 100; return <button key={stock.id} className={stock.id === selected.id ? 'active' : ''} onClick={() => state.selectStock(stock.id)}><span><b>{stock.name}</b><small>{stock.sector}</small></span><span><b>{money(current)}</b><small className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</small></span></button> })}</aside>
-      <section className="chart-panel"><div className="chart-title"><div><small>{selected.sector}</small><h2>{selected.name}</h2></div><strong>{money(state.currentPrices[selected.id])}</strong></div><StockChart /><div className="order-bar"><label>수량<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label><span>보유 {state.holdings[selected.id]?.quantity || 0}주</span><button className="buy" onClick={() => state.buy(selected.id, quantity)}>매수</button><button className="sell" onClick={() => state.sell(selected.id, quantity)}>매도</button></div></section>
+      <aside className="stock-list">{data.stocks.map((stock) => { 
+        const current = state.currentPrices[stock.id] || stock.startPrice; 
+        const change = (current / stock.startPrice - 1) * 100; 
+        const qty = state.holdings[stock.id]?.quantity || 0;
+        return <button key={stock.id} className={stock.id === selected.id ? 'active' : ''} onClick={() => state.selectStock(stock.id)}>
+          <span><b>{stock.name}</b><small>{stock.sector}</small></span>
+          <span><b>{money(current)}</b><small className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</small>{qty > 0 && <small style={{color: '#a0b0c0'}}>{qty}주 보유</small>}</span>
+        </button> 
+      })}</aside>
+      <section className="chart-panel">
+        <div className="chart-title">
+          <div><small>{selected.sector}</small><h2>{selected.name}</h2></div>
+          <strong>{money(currentPrice)}</strong>
+        </div>
+        <StockChart />
+        <div className="order-bar">
+          <div className="order-info">
+            <span>보유 {holding.quantity}주</span>
+            {holding.quantity > 0 && <span className={profitDiff >= 0 ? 'green' : 'red'}>수익: {profitDiff >= 0 ? '+' : ''}{money(profitDiff * holding.quantity)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%)</span>}
+          </div>
+          <div className="order-controls">
+            <div className="quantity-buttons">
+              <button onClick={() => setQuantity(1)}>1</button>
+              <button onClick={() => addQuantity(1)}>+1</button>
+              <button onClick={() => addQuantity(5)}>+5</button>
+              <button onClick={() => addQuantity(10)}>+10</button>
+              <button onClick={() => addQuantity(100)}>+100</button>
+              <button onClick={setMaxBuy}>전부 매수</button>
+              <button onClick={setMaxSell}>전부 매도</button>
+            </div>
+            <label>수량<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label>
+          </div>
+          <div className="order-actions">
+            <div className="order-totals">
+              <span className={canBuy ? '' : 'red'}>매수 {quantity}주 · {money(buyTotal)}</span>
+              <span className={canSell ? '' : 'red'}>매도 {sellQuantity}주 · {money(sellTotal)}</span>
+            </div>
+            <button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button>
+            <button className="sell" disabled={!canSell} onClick={() => state.sell(selected.id, sellQuantity)}>매도</button>
+          </div>
+        </div>
+      </section>
       <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => <article key={item.id}><small>{item.direction === 'up' ? '호재' : '악재'}</small><p>{item.text}</p></article>)}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
     </div>
     {state.feedback && <div key={state.feedback.id} className={`money-pop ${state.feedback.amount >= 0 ? 'gain' : 'loss'}`}>{state.feedback.amount >= 0 ? '+' : ''}{money(state.feedback.amount)}</div>}
@@ -90,15 +152,55 @@ function Ending() {
   return <main className={`ending ${clear ? 'clear' : ''}`}><p className="eyebrow">{clear ? 'DEBT CLEARED' : 'ACCOUNT LIQUIDATED'}</p><h1>{clear ? '살아남았다.' : '끝났다.'}</h1><p>{clear ? '6주간의 우주 자본주의가 당신을 이기지 못했습니다.' : `${state.cycle}주차, 채권 추심 드론이 문을 두드립니다.`}</p><button className="primary" onClick={state.restart}>다시 시작</button></main>
 }
 
+function Overlay() {
+  const overlay = useGameStore((state) => state.overlay)
+  const close = useGameStore((state) => state.closeOverlay)
+  if (!overlay) return null
+  return (
+    <div className="overlay-backdrop">
+      <div className="overlay-modal">
+        {overlay.title && <h2>{overlay.title}</h2>}
+        {overlay.text && <p>{overlay.text}</p>}
+        <button className="primary" onClick={close}>닫기</button>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const screen = useGameStore((state) => state.screen)
   const phase = useGameStore((state) => state.phase)
+
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
-  if (phase === 'gameover' || phase === 'clear') return <Ending />
-  if (screen === 'title') return <Title />
-  if (screen === 'room') return <Room />
-  if (phase === 'premarket') return <main className="monitor-shell"><Premarket /></main>
-  return <Monitor />
+
+  // market 로딩 중(phase === 'loading')에도 Room이 자체 로딩 화면을 그려야 하므로,
+  // 여기서는 market 유무로 게이팅하지 않는다 — 각 컴포넌트가 필요하면 스스로 가드한다.
+  const showEnding = phase === 'gameover' || phase === 'clear'
+  const showTitle = screen === 'title' && !showEnding
+  const showRoom = screen === 'room' && !showEnding
+  const showPremarket = screen === 'monitor' && phase === 'premarket' && !showEnding
+  const showMonitor = screen === 'monitor' && phase !== 'premarket' && !showEnding
+
+  return (
+    <>
+      <div style={{ display: showEnding ? 'block' : 'none', height: '100%' }}>
+        <Ending />
+      </div>
+      <div style={{ display: showTitle ? 'block' : 'none', height: '100%' }}>
+        <Title />
+      </div>
+      <div style={{ display: showRoom ? 'block' : 'none', height: '100%' }}>
+        <Room />
+      </div>
+      <div style={{ display: showPremarket ? 'block' : 'none', height: '100%' }}>
+        <main className="monitor-shell"><Premarket /></main>
+      </div>
+      <div style={{ display: showMonitor ? 'block' : 'none', height: '100%' }}>
+        <Monitor />
+      </div>
+      <Overlay />
+    </>
+  )
 }
 
 export default App

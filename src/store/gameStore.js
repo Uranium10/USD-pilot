@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { DAY_DURATION_SECONDS, MAX_CYCLES } from '../config.js'
+import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, MAX_CYCLES } from '../config.js'
 
 const initialGame = {
   screen: 'title',
@@ -76,7 +76,7 @@ export const useGameStore = create((set, get) => ({
   endNight: () => {
     const state = get()
     if (state.phase !== 'night') return
-    if (state.day >= 7) {
+    if (state.day >= DAYS_PER_CYCLE) {
       set({ phase: 'settlement' })
       return
     }
@@ -162,4 +162,3 @@ export function getNetWorth(state) {
     state.cash,
   )
 }
-
