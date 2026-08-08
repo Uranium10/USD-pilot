@@ -61,15 +61,18 @@ export default function InformationNotepad({ rumors }) {
       </div>
     </div>
     <div className="notepad-document">
-      <section className="locked-information" aria-label="구입한 정보 읽기 전용">
-        <div className="information-divider" />
-        {rumors.length === 0 ? <p className="empty-information">구입한 정보가 없습니다.</p> : rumors.map((rumor, index) => <article className="purchased-information" key={rumor.id}>
-          <h3>[정보 {index + 1}]</h3>
-          <dl><div><dt>출처</dt><dd>{rumor.source}</dd></div><div><dt>신뢰도</dt><dd>{Math.round(rumor.accuracy * 100)}%</dd></div></dl>
-          <p>{rumor.text}</p>
-        </article>)}
-        <div className="information-divider" />
-      </section>
+      {rumors.length > 0 && <section className="locked-information" aria-label="구입한 정보 읽기 전용" style={{ fontFamily: "Gulim, '굴림', sans-serif", fontSize: '16px' }}>
+        {rumors.map((rumor, index) => (
+          <div key={rumor.id} style={{ marginBottom: '16px' }}>
+            <div>------------------------------</div>
+            <br />
+            <div>[정보 {index + 1}] 출처: {rumor.source} / 신뢰도: {Math.round(rumor.accuracy * 100)}%</div>
+            <div>"{rumor.text}"</div>
+            <br />
+            <div>------------------------------</div>
+          </div>
+        ))}
+      </section>}
       <div ref={editorRef} className="notepad-editor editable-notes" contentEditable suppressContentEditableWarning data-placeholder="여기에 메모를 입력하세요..." onInput={saveContent} />
     </div>
     <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>{informationText(rumors).length + characterCount}자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
