@@ -181,3 +181,9 @@
 - `npm run check:coin`에 1주차 500개·6주차 300개 시드의 구간 상한, 일간 상한, 중앙 분포, 꼬리 변동, 방향 편향 검증을 추가했다. 1주차 주식 절대변동 P50/P95/P99는 2.62%/10.04%/20.05%, 평균 일간 수익률은 -0.17%였고, 코인 일중 변동폭은 주식의 3.03배였다. 6주차 주식 P99는 24.48%, 코인 변동폭은 주식의 2.68배였다.
 - `USD_DEBT_MOD1`, `for_agent_plan.md`, `for_agent_logic.md`, `USD_SPEC.md`, `USD_mining_system.md`에 혼합 가우시안 공식과 ±36% 구간 상한·±50% 일간 상한 및 최신 실측값을 반영했다.
 - 검증: `npm run lint`, `npm run build`, `npm run check:coin`, `git diff --check` 통과.
+
+## 2026-08-09 08:11 KST (Codex)
+
+- Vercel 업데이트를 막던 `src/App.css`의 인코딩 손상을 진단했다. 정상 UTF-8 CSS 뒤에 음표 애니메이션의 UTF-16/UTF-8 혼합 중복본 1,675바이트가 붙어 있었고, PostCSS가 NUL 문자가 섞인 `position` 선언을 해석하지 못해 빌드가 실패했다.
+- 앞부분에 이미 존재하는 정상 음표 애니메이션 규칙은 보존하고 손상된 중복 꼬리만 제거했다. CSS 파일의 NUL 바이트가 817개에서 0개로 줄었으며 다른 소스 변경은 하지 않았다.
+- 검증: `npm run lint`, `npm run build`, `npm run check:coin`, `git diff --check` 통과.
