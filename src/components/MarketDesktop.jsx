@@ -17,13 +17,14 @@ const formatMarketTime = (progress) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
-function Taskbar({ activeApp, setActiveApp, onShutdown, elapsed }) {
+function Taskbar({ activeApp, setActiveApp, onShutdown, elapsed, cycle, day }) {
   const marketTime = formatMarketTime(elapsed / DAY_DURATION_SECONDS)
   return <footer className="taskbar">
     <button className="shutdown" onClick={onShutdown} title="방으로 돌아가기">◐ 절전</button>
     <button title="U.S.D Market Terminal" className={activeApp === 'market' ? 'active' : ''} onClick={() => setActiveApp('market')}>▥ U.S.D Market Ter...</button>
     <button className={activeApp === 'notepad' ? 'active' : ''} onClick={() => setActiveApp('notepad')}>▤ 정보 모음.txt</button>
-    <time title="게임 내 시장 시간">{marketTime}</time>
+    <span style={{ marginLeft: 'auto', fontSize: '12px', padding: '0 8px' }}>{cycle}주차 {day}일차</span>
+    <time title="게임 내 시장 시간" style={{ marginLeft: 0 }}>{marketTime}</time>
   </footer>
 }
 
@@ -183,7 +184,7 @@ export default function MarketDesktop() {
         </div>
       </section>}
     </div>
-    <Taskbar activeApp={activeApp} setActiveApp={setActiveApp} onShutdown={() => state.setScreen('room')} elapsed={state.elapsed} />
+    <Taskbar activeApp={activeApp} setActiveApp={setActiveApp} onShutdown={() => state.setScreen('room')} elapsed={state.elapsed} cycle={state.cycle} day={state.day} />
     <DayReport />
   </main>
 }
