@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, MAX_CYCLES } from '../config.js'
+import { DAY_DURATION_SECONDS, DAYS_PER_CYCLE, JOB_ENERGY_COST, JOB_REWARD, MAX_CYCLES, MAX_ENERGY } from '../config.js'
 
 const initialGame = {
   screen: 'title',
@@ -13,12 +13,17 @@ const initialGame = {
   selectedStockId: null,
   purchasedRumors: [],
   dailySummaries: [],
+  dayStartNetWorth: 12000,
   elapsed: 0,
   currentPrices: {},
   visibleNews: [],
   paused: false,
   overlay: null,
   feedback: null,
+  energy: MAX_ENERGY,
+  inventory: {},
+  nightActivity: null,
+  nightMessage: null,
 }
 
 function interpolate(path, progress) {
@@ -62,8 +67,9 @@ export const useGameStore = create((set, get) => ({
     return true
   },
   startDay: () => {
-    const data = dayData(get())
-    if (!data || get().phase !== 'premarket') return
+    const state = get()
+    const data = dayData(state)
+    if (!data || state.phase !== 'premarket') return
     set({
       phase: 'day',
       screen: 'monitor',
@@ -71,6 +77,7 @@ export const useGameStore = create((set, get) => ({
       visibleNews: [],
       overlay: null,
       paused: false,
+      dayStartNetWorth: calculateNetWorth(state),
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
     })
   },
@@ -87,20 +94,25 @@ export const useGameStore = create((set, get) => ({
   },
   finishDay: () => {
     const state = get()
-    const summary = { cycle: state.cycle, day: state.day, netWorth: calculateNetWorth(state), cash: state.cash }
+    const netWorth = calculateNetWorth(state)
+    const summary = { cycle: state.cycle, day: state.day, netWorth, cash: state.cash, change: netWorth - state.dayStartNetWorth }
     set({
-      phase: 'night',
-      screen: 'room',
-      paused: false,
+      phase: 'dayReport',
+      screen: 'monitor',
+      paused: true,
       overlay: null,
       dailySummaries: [...state.dailySummaries.filter((item) => item.cycle !== state.cycle || item.day !== state.day), summary],
     })
   },
+  enterNight: () => {
+    if (get().phase !== 'dayReport') return
+    set({ phase: 'night', screen: 'room', paused: false, nightActivity: null, nightMessage: null })
+  },
   endNight: () => {
     const state = get()
-    if (state.phase !== 'night') return
+    if (state.phase !== 'night' || state.nightActivity) return
     if (state.day >= DAYS_PER_CYCLE) {
-      set({ phase: 'settlement' })
+      set({ phase: 'settlement', energy: MAX_ENERGY, nightMessage: null })
       return
     }
     const nextDay = state.day + 1
@@ -114,6 +126,8 @@ export const useGameStore = create((set, get) => ({
       visibleNews: [],
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
       selectedStockId: data.stocks[0].id,
+      energy: MAX_ENERGY,
+      nightMessage: null,
     })
   },
   settleCycle: () => {
@@ -161,8 +175,9 @@ export const useGameStore = create((set, get) => ({
     set({
       cash: state.cash - cost,
       holdings: { ...state.holdings, [stockId]: { quantity: nextQuantity, average } },
-      feedback: { amount: -cost, id: Date.now() },
+      feedback: null,
     })
+    return { cost }
   },
   sell: (stockId, quantity) => {
     const state = get()
@@ -174,8 +189,42 @@ export const useGameStore = create((set, get) => ({
     const holdings = { ...state.holdings }
     if (owned.quantity === amount) delete holdings[stockId]
     else holdings[stockId] = { ...owned, quantity: owned.quantity - amount }
-    set({ cash: state.cash + proceeds, holdings, feedback: { amount: proceeds, id: Date.now() } })
+    const profit = (state.currentPrices[stockId] - owned.average) * amount
+    set({ cash: state.cash + proceeds, holdings, feedback: { amount: profit, id: Date.now(), kind: 'realized' } })
+    return { proceeds, profit }
   },
+  buyNightItem: (item) => {
+    const state = get()
+    if (state.phase !== 'night' || state.nightActivity || state.cash < item.price) return false
+    set({ cash: state.cash - item.price, inventory: { ...state.inventory, [item.id]: (state.inventory[item.id] || 0) + 1 } })
+    return true
+  },
+  useNightItem: (item) => {
+    const state = get()
+    const quantity = state.inventory[item.id] || 0
+    if (state.phase !== 'night' || state.nightActivity || quantity <= 0) return false
+    const inventory = { ...state.inventory, [item.id]: quantity - 1 }
+    if (inventory[item.id] <= 0) delete inventory[item.id]
+    set({ inventory, energy: Math.min(MAX_ENERGY, state.energy + item.energyRestore), nightMessage: '적응이 안되는 맛이다...' })
+    return true
+  },
+  startNightJob: () => {
+    const state = get()
+    if (state.phase !== 'night' || state.nightActivity || state.energy < JOB_ENERGY_COST) return false
+    set({ nightActivity: { id: 'convenience-job', startedAt: Date.now() }, nightMessage: null })
+    return true
+  },
+  completeNightJob: () => {
+    const state = get()
+    if (state.nightActivity?.id !== 'convenience-job') return
+    set({
+      nightActivity: null,
+      energy: Math.max(0, state.energy - JOB_ENERGY_COST),
+      cash: state.cash + JOB_REWARD,
+      nightMessage: `편의점 아르바이트를 마쳤다. +₡${JOB_REWARD}`,
+    })
+  },
+  clearNightMessage: () => set({ nightMessage: null }),
   showOverlay: (overlay) => set({ overlay, paused: true }),
   closeOverlay: () => set({ overlay: null, paused: false }),
   restart: () => set({ ...initialGame }),

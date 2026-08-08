@@ -7,8 +7,34 @@ const companies = [
 ]
 
 const headlines = {
-  up: ['대형 계약을 따냈다', '예상 밖의 흑자를 발표했다', '신기술 시험에 성공했다'],
-  down: ['회계 드론이 탈주했다', '핵심 시설이 가동을 멈췄다', '규제국의 압수수색을 받았다'],
+  up: [
+    '대규모 궤도 조달 사업의 우선협상대상자로 선정되었다',
+    '어닝 서프라이즈를 기록하며 시장 기대치를 크게 상회했다',
+    '핵심 기술 특허 소송에서 최종 승소했다',
+    '업계 거물급 인사 영입 소식에 투자자 기대감이 고조되고 있다',
+    '차세대 프로젝트의 베타 테스트를 성공적으로 마무리했다',
+    '대형 벤처 캐피탈로부터 천문학적 규모의 자금을 유치했다',
+    '신규 우주항 인프라 독점 운영권을 확보했다',
+    '공격적인 자사주 매입 및 소각 계획을 기습 발표했다',
+    '비용 구조 혁신에 성공하며 영업이익률이 급등했다',
+    '외곽 항성계 진출을 위한 대형 조인트 벤처를 설립했다',
+    '주력 상품의 판매량이 전년 대비 300% 폭증했다',
+    '정부의 대규모 규제 완화 수혜주로 지목되며 매수세가 몰리고 있다'
+  ],
+  down: [
+    '경영진의 비자금 조성 의혹으로 당국의 강도 높은 내사에 착수했다',
+    '분기 어닝 쇼크를 기록하며 영업이익이 반토막 났다',
+    '안전 규정 위반으로 주요 시설의 무기한 가동 중단 명령을 받았다',
+    '최대 주주의 대규모 블록딜 소식에 투자 심리가 차갑게 얼어붙었다',
+    '신제품에서 치명적인 결함이 발견되어 전량 리콜 사태에 직면했다',
+    '경쟁사의 혁신 신기술 발표로 인해 심각한 시장 점유율 하락이 우려된다',
+    '인수합병(M&A) 협상이 최종 결렬되며 실망 매물이 쏟아지고 있다',
+    '핵심 데이터베이스가 랜섬웨어 공격을 받아 궤도 업무가 전면 마비되었다',
+    '노조의 무기한 총파업 선언으로 주요 생산 라인이 멈춰섰다',
+    '유해 물질 검출 논란으로 소비자들의 대규모 집단 소송에 직면했다',
+    '예상치 못한 천문학적인 우발 채무가 장부에 반영되었다',
+    '주요 납품처의 파산으로 거액의 매출 채권을 떼일 위기에 처했다'
+  ],
 }
 
 const rumorSources = ['익명 해커의 데이터랩', '뒷골목 정보상', '고위 임원의 비서', '블랙마켓 찌라시', '궤도 관제소 첩보']
@@ -48,12 +74,15 @@ function seeded(seed) {
 }
 
 function makePath(startPrice, random) {
+  const pointCount = 4 + Math.floor(random() * 5)
+  const progresses = Array.from({ length: pointCount - 2 }, () => 0.05 + random() * 0.9)
+    .sort((left, right) => left - right)
   const points = [{ progress: 0, price: startPrice }]
   let price = startPrice
-  for (let index = 1; index <= 12; index += 1) {
-    const shock = random() < 0.14 ? (random() - 0.5) * 0.16 : 0
-    price = Math.max(8, price * (1 + (random() - 0.48) * 0.055 + shock))
-    points.push({ progress: index / 12, price: round(price) })
+  for (const progress of [...progresses, 1]) {
+    const shock = random() < 0.14 ? (random() - 0.5) * 0.32 : 0
+    price = Math.max(8, price * (1 + (random() - 0.48) * 0.11 + shock))
+    points.push({ progress: round(progress), price: round(price) })
   }
   return points
 }

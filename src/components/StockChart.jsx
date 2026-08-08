@@ -5,10 +5,10 @@ import { useGameStore } from '../store/gameStore.js'
 const formatClock = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 const formatTimeline = (time) => `${Math.floor(time) + 1}일 ${formatClock((time % 1) * DAY_DURATION_SECONDS)}`
 
-function buildSeries(state, progress) {
+function buildSeries(state, progress, stockId) {
   const series = []
   for (let dayIndex = 0; dayIndex < state.day; dayIndex += 1) {
-    const stock = state.market.days[dayIndex].stocks.find((item) => item.id === state.selectedStockId)
+    const stock = state.market.days[dayIndex].stocks.find((item) => item.id === stockId)
     if (!stock) continue
     const limit = dayIndex < state.day - 1 ? 1 : progress
     stock.path.filter((point) => point.progress <= limit).forEach((point) => {
@@ -21,7 +21,7 @@ function buildSeries(state, progress) {
   return series
 }
 
-export default function StockChart() {
+export default function StockChart({ stockId, compact = false }) {
   const canvasRef = useRef(null)
   const hoverRatioRef = useRef(null)
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -31,7 +31,8 @@ export default function StockChart() {
     const draw = () => {
       const canvas = canvasRef.current
       const state = useGameStore.getState()
-      const stock = state.market?.days[state.day - 1]?.stocks.find((item) => item.id === state.selectedStockId)
+      const targetStockId = stockId || state.selectedStockId
+      const stock = state.market?.days[state.day - 1]?.stocks.find((item) => item.id === targetStockId)
       if (!canvas || !stock) {
         frame = requestAnimationFrame(draw)
         return
@@ -67,7 +68,7 @@ export default function StockChart() {
       const timeSpan = Math.max(0.002, currentTime / zoomLevel)
       const startTime = Math.max(0, currentTime - timeSpan)
 
-      const series = buildSeries(state, progress)
+      const series = buildSeries(state, progress, targetStockId)
       // 화면 왼쪽 경계(startTime)에서 선이 잘려 보이지 않도록, 경계를 가로지르는 구간을
       // 보간해 정확히 그 위치에 점을 하나 만들어 끼워 넣는다(버퍼링 값으로 대충 자르지 않는다).
       const cropIndex = series.findIndex((point) => point.time >= startTime)
@@ -92,14 +93,15 @@ export default function StockChart() {
 
       context.fillStyle = '#8490a5'
       context.font = '10px "IBM Plex Mono"'
-      context.textAlign = 'right'
-      context.fillText(`₡${max.toFixed(2)}`, width - 5, 15)
-      context.fillText(`₡${min.toFixed(2)}`, width - 5, height - 20)
-      
-      context.textAlign = 'left'
-      context.fillText(formatTimeline(startTime), 5, height - 5)
-      context.textAlign = 'right'
-      context.fillText(formatTimeline(currentTime), width - 5, height - 5)
+      if (!compact) {
+        context.textAlign = 'right'
+        context.fillText(`₡${max.toFixed(2)}`, width - 5, 15)
+        context.fillText(`₡${min.toFixed(2)}`, width - 5, height - 20)
+        context.textAlign = 'left'
+        context.fillText(formatTimeline(startTime), 5, height - 5)
+        context.textAlign = 'right'
+        context.fillText(formatTimeline(currentTime), width - 5, height - 5)
+      }
 
       context.beginPath()
       visible.forEach((point, index) => {
@@ -110,13 +112,13 @@ export default function StockChart() {
       })
       const currentPrice = state.currentPrices[stock.id] || stock.startPrice
       context.strokeStyle = currentPrice >= stock.startPrice ? '#4cffb2' : '#ff5277'
-      context.lineWidth = 3
+      context.lineWidth = compact ? 2 : 3
       context.shadowColor = context.strokeStyle
       context.shadowBlur = 10
       context.stroke()
       context.shadowBlur = 0
 
-      if (hoverRatioRef.current !== null && visible.length > 0) {
+      if (!compact && hoverRatioRef.current !== null && visible.length > 0) {
         const hoverTime = startTime + hoverRatioRef.current * timeSpan
         const nearest = visible.reduce((best, point) => Math.abs(point.time - hoverTime) < Math.abs(best.time - hoverTime) ? point : best)
         const x = toX(nearest.time)
@@ -150,7 +152,7 @@ export default function StockChart() {
     }
     frame = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(frame)
-  }, [zoomLevel])
+  }, [compact, stockId, zoomLevel])
 
   const updateHover = (event) => {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -158,12 +160,12 @@ export default function StockChart() {
   }
 
   return (
-    <div className="chart-canvas-wrap">
-      <canvas ref={canvasRef} className="stock-chart" aria-label="선택 종목 가격 차트" onPointerMove={updateHover} onPointerLeave={() => { hoverRatioRef.current = null }} />
-      <div className="zoom-controls">
+    <div className={`chart-canvas-wrap ${compact ? 'compact' : ''}`}>
+      <canvas ref={canvasRef} className="stock-chart" aria-label="선택 종목 가격 차트" onPointerMove={compact ? undefined : updateHover} onPointerLeave={compact ? undefined : () => { hoverRatioRef.current = null }} />
+      {!compact && <div className="zoom-controls">
         <button onClick={() => setZoomLevel((value) => Math.max(1, value - 1))}>-</button>
         <button onClick={() => setZoomLevel((value) => Math.min(10, value + 1))}>+</button>
-      </div>
+      </div>}
     </div>
   )
 }
