@@ -35,11 +35,11 @@ export const SCENES = {
     trigger: { type: 'dayStart', cycle: 1, day: 1 },
     background: null, // null이면 현재 화면을 살짝 어둡게 깔고 그 위에 대화창만 띄운다.
     lines: [
-      { speaker: 'system', text: '방구석. 모니터 세 대가 전부 경고음을 내고 있다.' },
+      { speaker: 'system', text: 'AI작성된 임시 스크립트입니다.' },
+      { speaker: 'system', text: '방구석. 모니터가 경고음을 내고 있다.' },
       { speaker: 'tarae', portrait: 'worried', text: '...상속 승인 완료? 내가 언제 승인했다고.' },
       { speaker: 'tarae', portrait: 'worried', text: '부모님 몫이었던 빚이, 이제 전부 내 이름으로 넘어왔다.' },
       { speaker: 'system', text: '[시지프 인텔리전스 채권관리부] 6주 내 미상환 시, 내부 연구직으로 강제 발령됩니다.' },
-      { speaker: 'tarae', portrait: 'determined', text: '...좋아. G.A.Z.U.A 엔진이나 켜보자.' },
     ],
   },
 }
