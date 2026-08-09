@@ -102,6 +102,7 @@ function bgmManifest() {
       }
       const url = (file) => `/sounds/bgm/${encodeURIComponent(file)}`
       const tracks = {
+        title: files.filter((file) => /^bgm_title.*\.mp3$/i.test(file)).map(url),
         chart: files.filter((file) => /^bgm_chart.*\.mp3$/i.test(file)).map(url),
         night: files.filter((file) => /^bgm_night.*\.mp3$/i.test(file)).map(url),
       }

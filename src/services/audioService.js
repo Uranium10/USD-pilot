@@ -2,6 +2,8 @@ let cashRegisterAudio
 let cashOutAudio
 let newsUpdateAudio
 let marketCountdownAudio
+let titleHoverAudio
+let titleClickAudio
 
 function playReusable(audio, path, volume) {
   const instance = audio || new Audio(path)
@@ -25,4 +27,12 @@ export function playNewsUpdate() {
 
 export function playMarketCountdown() {
   marketCountdownAudio = playReusable(marketCountdownAudio, '/sounds/MarketCloseCountdown.mp3', 0.6)
+}
+
+export function playTitleHover() {
+  titleHoverAudio = playReusable(titleHoverAudio, '/sounds/TitleMouseHover.mp3', 0.28)
+}
+
+export function playTitleClick() {
+  titleClickAudio = playReusable(titleClickAudio, '/sounds/TitleMouseClick.mp3', 0.42)
 }

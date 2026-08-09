@@ -8,7 +8,8 @@ function SpeakerIcon() {
 
 export default function BgmController() {
   const phase = useGameStore((state) => state.phase)
-  const mode = phase === 'premarket' || phase === 'day' || phase === 'dayReport' ? 'chart' : phase === 'night' ? 'night' : null
+  const screen = useGameStore((state) => state.screen)
+  const mode = screen === 'title' ? 'title' : phase === 'premarket' || phase === 'day' || phase === 'dayReport' ? 'chart' : phase === 'night' ? 'night' : null
   const [volume, setVolume] = useState(() => bgmPlayer.getVolume())
   const [muted, setMuted] = useState(() => bgmPlayer.isMuted())
   const [expanded, setExpanded] = useState(false)
@@ -78,8 +79,8 @@ export default function BgmController() {
   const filledSegments = muted ? 0 : Math.ceil(volume * 12)
 
   return <div className={`bgm-control ${muted ? 'muted' : ''}`}>
-    <button type="button" className="bgm-launch" aria-label="볼륨 조절 열기" onClick={() => { cancelClose(); setExpanded(true) }}><SpeakerIcon /></button>
-    <aside className={`bgm-volume ${expanded ? 'expanded' : 'collapsed'} ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨" onMouseEnter={cancelClose} onMouseLeave={scheduleClose} onFocusCapture={() => { focusWithinRef.current = true; cancelClose() }} onBlurCapture={() => { focusWithinRef.current = false; scheduleClose() }}>
+    <button type="button" className="bgm-launch" aria-label="볼륨 조절 열기" onClick={() => { setExpanded(true); scheduleClose() }}><SpeakerIcon /></button>
+    <aside className={`bgm-volume ${expanded ? 'expanded' : 'collapsed'} ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨" onMouseEnter={scheduleClose} onMouseMove={scheduleClose} onMouseLeave={scheduleClose} onFocusCapture={() => { focusWithinRef.current = true; cancelClose() }} onBlurCapture={() => { focusWithinRef.current = false; scheduleClose() }}>
       <div
       ref={sliderRef}
       className="bgm-volume-slider"

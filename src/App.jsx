@@ -11,7 +11,7 @@ import { IntroChoiceOverlay, NightTutorialChoiceOverlay } from './components/Tut
 import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE, SISYPHUS_STOCK_ID } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
-import { playCashOut } from './services/audioService.js'
+import { playCashOut, playTitleClick, playTitleHover } from './services/audioService.js'
 import { fetchMarketCycle, prefetchMarketCycle, resetMarketCycleCache } from './services/marketService.js'
 import { clearSavedSession, getDeviceId, getSavedSession, saveSession } from './services/sessionService.js'
 import { useGameStore } from './store/gameStore.js'
@@ -54,6 +54,7 @@ function Title() {
     }
   }, [])
   const startNew = async () => {
+    playTitleClick()
     setLoading(true)
     setSavedSession(null)
     beginLoading()
@@ -63,6 +64,7 @@ function Title() {
   }
   const continueGame = async () => {
     if (!savedSession) return
+    playTitleClick()
     setLoading(true)
     const world = savedSession.worldState || {}
     const companiesWerePinned = world.companyIdsPinned
@@ -79,7 +81,7 @@ function Title() {
   const summary = savedSession
     ? `${savedSession.cycle}주차 ${savedSession.day}일 · 현금 ${money(savedSession.cash)}`
     : checkingSave ? '저장 데이터 확인 중…' : '진행 중인 저장 없음'
-  return <main className={`title-screen ${glitching ? 'is-glitching' : ''}`}><p className="eyebrow">DEBT SURVIVAL TERMINAL</p><h1 data-text="U.S.D">U.S.D</h1><p className="subtitle">{subtitle}</p><div className="title-actions"><button className="primary large" onClick={startNew} disabled={loading}>{loading ? '시장 연결 중…' : '새로하기'}</button><button className="secondary large" onClick={continueGame} disabled={loading || checkingSave || !savedSession}>이어하기</button></div><p className="save-summary">{summary}</p></main>
+  return <main className={`title-screen ${glitching ? 'is-glitching' : ''}`}><p className="eyebrow">DEBT SURVIVAL TERMINAL</p><h1 data-text="U.S.D">U.S.D</h1><p className="subtitle">{subtitle}</p><div className="title-actions"><button className="primary large" onMouseEnter={() => { if (!loading) playTitleHover() }} onFocus={(event) => { if (!loading && event.currentTarget.matches(':focus-visible')) playTitleHover() }} onClick={startNew} disabled={loading}>{loading ? '시장 연결 중…' : '새로하기'}</button><button className="secondary large" onMouseEnter={() => { if (!loading && !checkingSave && savedSession) playTitleHover() }} onFocus={(event) => { if (!loading && !checkingSave && savedSession && event.currentTarget.matches(':focus-visible')) playTitleHover() }} onClick={continueGame} disabled={loading || checkingSave || !savedSession}>이어하기</button></div><p className="save-summary">{summary}</p></main>
 }
 
 function DayTransition() {
