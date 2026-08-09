@@ -243,4 +243,104 @@ export const CYCLE_SCENARIO_SCHEMA = {
   },
 }
 
+// --- CycleSkeleton (실험용, 2026-08-09) ---
+// CYCLE_SCENARIO_SCHEMA를 "구조 결정"과 "문장 작성"으로 쪼갠 실험적 대안의 앞부분.
+// companyStates/nextWorldState/selfCheck는 그대로 두고, 날짜별 사건·소문은 headline/
+// detail/angle 같은 실제 문장을 안 만들고 구조(eventId, 방향, 규모, 인과관계)와
+// briefNote(본문 작성자에게 줄 한 줄 메모)만 정한다. 이 스켈레톤이 모든 구조적 판단을
+// 끝내기 때문에, 뒤이어 날짜별로 병렬 호출하는 DAY_DETAIL_SCHEMA 쪽은 문장만 쓰면 되고
+// 정합성을 해칠 수 없다. 아직 실제 게임에 연결되지 않았다 — server/ai/cycleScenarioParallel.js
+// 참고, 배경은 USD-spec/agent_workthrough_4.md.
+export const CYCLE_SKELETON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'cycle',
+    'title',
+    'openingNarration',
+    'weeklyTheme',
+    'marketMood',
+    'companyStates',
+    'days',
+    'nextWorldState',
+    'selfCheck',
+  ],
+  properties: {
+    cycle: { type: 'integer', enum: [1, 2, 3, 4, 5, 6] },
+    title: { type: 'string' },
+    openingNarration: { type: 'string' },
+    weeklyTheme: { type: 'string' },
+    marketMood: { type: 'string', enum: ['calm', 'uneasy', 'speculative', 'panic'] },
+    companyStates: CYCLE_SCENARIO_SCHEMA.properties.companyStates,
+    days: {
+      type: 'array',
+      description: '정확히 7개, day 1~7 각각 하나씩. 이 단계는 구조만 정한다 — 문장은 안 씀.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['day', 'dailyTheme', 'eventSlots', 'rumorSlots'],
+        properties: {
+          day: { type: 'integer', enum: [1, 2, 3, 4, 5, 6, 7] },
+          dailyTheme: { type: 'string' },
+          eventSlots: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: [
+                'eventId',
+                'primaryStockId',
+                'relatedStockIds',
+                'direction',
+                'magnitude',
+                'impactProgress',
+                'causeEventId',
+                'briefNote',
+              ],
+              properties: {
+                eventId: { type: 'string' },
+                primaryStockId: { type: 'string', enum: STOCK_SLOT_IDS },
+                relatedStockIds: { type: 'array', items: { type: 'string', enum: STOCK_SLOT_IDS } },
+                direction: { type: 'string', enum: ['up', 'down'] },
+                magnitude: { type: 'string', enum: ['minor', 'medium', 'major'] },
+                impactProgress: {
+                  type: 'number',
+                  description: '0(주 시작)~1(주 마지막) 사이 값.',
+                },
+                causeEventId: {
+                  type: ['string', 'null'],
+                  description: '이 사건을 유발한 이전 eventId. 없으면 null.',
+                },
+                briefNote: {
+                  type: 'string',
+                  description: '본문 작성 모델에게 줄 한 줄 메모. headline/detail 문장 자체가 아님.',
+                },
+              },
+            },
+          },
+          rumorSlots: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['targetEventId', 'sourceArchetype', 'confidence', 'briefNote'],
+              properties: {
+                targetEventId: { type: 'string' },
+                sourceArchetype: {
+                  type: 'string',
+                  enum: ['insider', 'hacker', 'broker', 'regulator', 'worker'],
+                },
+                confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+                briefNote: { type: 'string', description: '본문 작성 모델에게 줄 한 줄 메모.' },
+              },
+            },
+          },
+        },
+      },
+    },
+    nextWorldState: CYCLE_SCENARIO_SCHEMA.properties.nextWorldState,
+    selfCheck: CYCLE_SCENARIO_SCHEMA.properties.selfCheck,
+  },
+}
+
 export { STOCK_SLOT_IDS }

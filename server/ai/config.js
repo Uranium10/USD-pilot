@@ -20,18 +20,20 @@ export const MODEL_TIERS = {
   },
   weekly: {
     provider: 'openai',
-    model: 'gpt-5.5',
+    // 2026-08-09: gpt-5.5 → gpt-5.6-terra로 교체(사용자 지정). 직접 호출로 실존·정상
+    // 응답 확인. 가격도 gpt-5.5($5/$30)보다 낮음($2/$12 per 1M, short context) —
+    // developers.openai.com/api/docs/pricing 조회로 확인.
+    model: 'gpt-5.6-terra',
     role: '주간 검증 모델 — 사이클별 시장 시나리오(CycleScenario) 초안 생성 + 자체 정합성 검증',
   },
   filler: {
     provider: 'google',
-    // 사용자가 지정한 'gemini-2.5-flash'는 이 API 키/프로젝트 기준 404
-    // ("no longer available to new users")로 거부됐고, 대안으로 검토했던
-    // 'gemini-2.5-flash-preview'도 아예 존재하지 않는 모델 ID였다(404, ListModels에도
-    // 없음). 그 다음으로 별칭 gemini-flash-latest를 썼다가, 사용자가 특정 버전에
-    // 고정하고 싶다고 해서 gemini-3.5-flash로 다시 바꿨다 — 직접 generateContent 호출로
-    // 정상 응답 확인함. 검증 로그는 USD-spec/agent_workthrough_1.md 참고.
-    model: 'gemini-3.5-flash',
+    // 'gemini-2.5-flash'(404, 신규 사용자 불가) → 'gemini-2.5-flash-preview'(존재 안 함)
+    // → 'gemini-flash-latest' → 'gemini-3.5-flash'(사용자가 특정 버전 고정 요청)를
+    // 거쳐, 2026-08-09에 다시 'gemini-3.6-flash'로 교체(사용자 지정). 직접 호출로
+    // 실존·정상 응답 확인. 가격도 gemini-3.5-flash($1.5/$9)보다 출력이 저렴함
+    // ($1.5/$7.5 per 1M) — ai.google.dev/gemini-api/docs/pricing 조회로 확인.
+    model: 'gemini-3.6-flash',
     role: '짜잘한 작업 — 4줄 이내 출력(소문 플레이버, 필드 단위 복구 등)',
   },
 }

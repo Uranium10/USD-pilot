@@ -8,6 +8,9 @@
     "build": "vite build",
     "check:coin": "node scripts/check-coin-balance.mjs",
     "check:ai": "node --env-file=.env.local scripts/test-ai-models.mjs",
+    "check:ai-cost": "node --env-file=.env.local scripts/check-ai-cost.mjs",
+    "check:ai-persistence": "node --env-file=.env.local scripts/check-ai-persistence.mjs",
+    "gen:run-plan-pool": "node --env-file=.env.local scripts/generate-run-plan-pool.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "db:migrate": "node --env-file=.env.local scripts/migrate.js"
