@@ -23,5 +23,8 @@ export function normalizeTradeQuantity(asset, quantity) {
 
 export function formatAssetQuantity(asset, quantity) {
   if (!isCoinAsset(asset)) return Math.floor(quantity || 0).toLocaleString('ko-KR')
-  return Number(quantity || 0).toLocaleString('ko-KR', { maximumFractionDigits: 4 })
+  return Number(quantity || 0).toLocaleString('ko-KR', {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })
 }
