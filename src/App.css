@@ -56,6 +56,89 @@
   text-shadow: 0 0 40px #55e7ff55;
 }
 
+.title-screen h1 {
+  position: relative;
+  width: max-content;
+  justify-self: center;
+  isolation: isolate
+}
+
+.title-screen h1::before,
+.title-screen h1::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen
+}
+
+.title-screen h1::before {
+  color: #15eaff;
+  text-shadow: 5px 0 12px #15eaffaa
+}
+
+.title-screen h1::after {
+  color: #ff275d;
+  text-shadow: -5px 0 12px #ff275daa
+}
+
+.title-screen.is-glitching h1 {
+  animation: titleGlitchJolt .11s steps(2, jump-none) infinite
+}
+
+.title-screen.is-glitching h1::before {
+  opacity: .82;
+  animation: titleGlitchCyan .13s steps(2, jump-none) infinite
+}
+
+.title-screen.is-glitching h1::after {
+  opacity: .72;
+  animation: titleGlitchRed .17s steps(2, jump-none) infinite reverse
+}
+
+.title-screen.is-glitching::before {
+  animation: titleScanBurst .09s steps(2, jump-none) infinite
+}
+
+@keyframes titleGlitchJolt {
+  0% { transform: translate(0) skewX(0) }
+  35% { transform: translate(-3px, 1px) skewX(-2deg) }
+  70% { transform: translate(4px, -1px) skewX(1deg) }
+  100% { transform: translate(0) skewX(0) }
+}
+
+@keyframes titleGlitchCyan {
+  0% { transform: translate(-7px, 0); clip-path: inset(7% 0 69% 0) }
+  45% { transform: translate(5px, -2px); clip-path: inset(43% 0 35% 0) }
+  100% { transform: translate(-3px, 2px); clip-path: inset(76% 0 7% 0) }
+}
+
+@keyframes titleGlitchRed {
+  0% { transform: translate(7px, 1px); clip-path: inset(65% 0 13% 0) }
+  50% { transform: translate(-5px, 2px); clip-path: inset(18% 0 57% 0) }
+  100% { transform: translate(4px, -1px); clip-path: inset(47% 0 31% 0) }
+}
+
+@keyframes titleScanBurst {
+  0% { opacity: .45; transform: translateY(-2px) }
+  100% { opacity: .85; transform: translateY(2px) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-screen.is-glitching h1,
+  .title-screen.is-glitching h1::before,
+  .title-screen.is-glitching h1::after,
+  .title-screen.is-glitching::before {
+    animation: none;
+    transform: none
+  }
+
+  .title-screen.is-glitching h1::before,
+  .title-screen.is-glitching h1::after { opacity: 0 }
+}
+
 .subtitle {
   margin: 0 0 42px;
   color: var(--muted);

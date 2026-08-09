@@ -27,12 +27,31 @@ function Title() {
   const [savedSession, setSavedSession] = useState(null)
   const [checkingSave, setCheckingSave] = useState(true)
   const [subtitle] = useState(() => subtitles[Math.floor(Math.random() * subtitles.length)])
+  const [glitching, setGlitching] = useState(false)
   useEffect(() => {
     let active = true
     getSavedSession().then((session) => {
       if (active && session?.status === 'active') setSavedSession(session)
     }).finally(() => { if (active) setCheckingSave(false) })
     return () => { active = false }
+  }, [])
+  useEffect(() => {
+    let burstTimer
+    let releaseTimer
+    const schedule = () => {
+      burstTimer = window.setTimeout(() => {
+        setGlitching(true)
+        releaseTimer = window.setTimeout(() => {
+          setGlitching(false)
+          schedule()
+        }, 140 + Math.random() * 220)
+      }, 2400 + Math.random() * 4600)
+    }
+    schedule()
+    return () => {
+      window.clearTimeout(burstTimer)
+      window.clearTimeout(releaseTimer)
+    }
   }, [])
   const startNew = async () => {
     setLoading(true)
@@ -60,7 +79,7 @@ function Title() {
   const summary = savedSession
     ? `${savedSession.cycle}주차 ${savedSession.day}일 · 현금 ${money(savedSession.cash)}`
     : checkingSave ? '저장 데이터 확인 중…' : '진행 중인 저장 없음'
-  return <main className="title-screen"><p className="eyebrow">DEBT SURVIVAL TERMINAL</p><h1>U.S.D</h1><p className="subtitle">{subtitle}</p><div className="title-actions"><button className="primary large" onClick={startNew} disabled={loading}>{loading ? '시장 연결 중…' : '새로하기'}</button><button className="secondary large" onClick={continueGame} disabled={loading || checkingSave || !savedSession}>이어하기</button></div><p className="save-summary">{summary}</p></main>
+  return <main className={`title-screen ${glitching ? 'is-glitching' : ''}`}><p className="eyebrow">DEBT SURVIVAL TERMINAL</p><h1 data-text="U.S.D">U.S.D</h1><p className="subtitle">{subtitle}</p><div className="title-actions"><button className="primary large" onClick={startNew} disabled={loading}>{loading ? '시장 연결 중…' : '새로하기'}</button><button className="secondary large" onClick={continueGame} disabled={loading || checkingSave || !savedSession}>이어하기</button></div><p className="save-summary">{summary}</p></main>
 }
 
 function DayTransition() {
