@@ -211,6 +211,7 @@ export default function MarketDesktop() {
                   <div className="max-buttons">
                     {!selectedIsCoin && <button onClick={() => setQuantity(normalizeTradeQuantity(selected, state.cash / buyPrice))}>최대 매수</button>}
                     <button onClick={() => setQuantity(holding.quantity)} disabled={!holding.quantity}>최대 매도</button>
+                    <button onClick={() => setQuantity(0)} disabled={quantity <= 0}>초기화</button>
                   </div>
                   <div className="order-fields">
                     <label>수량<input type="number" min="0" step={selectedIsCoin ? 0.0001 : 1} value={quantity} onChange={(event) => setQuantity(normalizeTradeQuantity(selected, event.target.value))} /></label>
