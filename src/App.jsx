@@ -26,7 +26,7 @@ function Title() {
   const [loading, setLoading] = useState(false)
   const [savedSession, setSavedSession] = useState(null)
   const [checkingSave, setCheckingSave] = useState(true)
-  const [subtitle] = useState(() => subtitles[Math.floor(Math.random() * subtitles.length)])
+  const [subtitle, setSubtitle] = useState(() => subtitles[Math.floor(Math.random() * subtitles.length)])
   const [glitching, setGlitching] = useState(false)
   const [leavingTitle, setLeavingTitle] = useState(false)
   useEffect(() => {
@@ -41,6 +41,10 @@ function Title() {
     let releaseTimer
     const schedule = () => {
       burstTimer = window.setTimeout(() => {
+        setSubtitle((current) => {
+          const alternatives = subtitles.filter((item) => item !== current)
+          return alternatives[Math.floor(Math.random() * alternatives.length)]
+        })
         setGlitching(true)
         releaseTimer = window.setTimeout(() => {
           setGlitching(false)
