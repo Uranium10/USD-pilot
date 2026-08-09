@@ -617,3 +617,10 @@
 - 내부 기부 카운터와 저장 로직은 유지하되 첫 번째·두 번째·세 번째 완료 후 서로 다른 급식소 플레이버 텍스트를 보여 이전 방문을 간접적으로 짐작하게 했다.
 - 활동 카드에는 현재 필요한 기부금만 표시한다.
 - `npm run lint`, `npm run build`, `npm run check:story-systems` 통과.
+
+## 2026-08-10 (Codex, 곰인형 침대 배치)
+
+- 인벤토리에 `teddy-bear`가 있으면 방 배경의 침대 오른쪽 이불 위에 `Bear.png`를 표시하도록 RoomScene에 소품 레이어를 추가했다.
+- 방 원본과 같은 1024×768 SVG 좌표계 및 `xMidYMid slice`를 사용해 화면 비율과 배경 크롭이 달라져도 소품 위치가 침대에 고정되게 했다.
+- 비투명 원본의 어두운 사각 배경은 screen 블렌딩으로 섞고, 야간에는 밝기·채도·불투명도를 낮춘 필터와 그림자를 적용했다.
+- `npm run lint`, `npm run build`, `npm run check:story-systems` 통과.

@@ -55,6 +55,7 @@ export default function RoomScene({ children }) {
   const openMonitor = useGameStore((state) => state.openMonitor)
   const endNight = useGameStore((state) => state.endNight)
   const nightActivity = useGameStore((state) => state.nightActivity)
+  const hasTeddyBear = useGameStore((state) => (state.inventory['teddy-bear'] || 0) > 0)
   const netWorth = useGameStore(getNetWorth)
   const previousSummary = useGameStore((state) => state.dailySummaries.at(-1))
   const set = isNightPhase(phase) ? 'night' : 'day'
@@ -97,6 +98,11 @@ export default function RoomScene({ children }) {
         className="room-art"
         style={{ opacity: blinking ? 1 : 0 }}
       />
+      {hasTeddyBear && (
+        <svg className={`room-props ${set}`} viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <image className="room-teddy-bear" href="/imgs/bg/Tarae/Bear.png" x="806" y="338" width="94" height="141" preserveAspectRatio="xMidYMid meet" />
+        </svg>
+      )}
       {set === 'day' && isHappy && <FloatingNotes />}
       {phase === 'loading' && <p className="room-loading-text">궤도 시장을 도청하는 중…</p>}
       {canOpenMonitor && (

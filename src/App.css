@@ -931,6 +931,27 @@ button:hover {
   object-fit: cover !important;
 }
 
+.room-props {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none
+}
+
+.room-teddy-bear {
+  opacity: .96;
+  mix-blend-mode: screen;
+  filter: saturate(.88) contrast(1.04) drop-shadow(0 5px 4px #20140e88)
+}
+
+.room-props.night .room-teddy-bear {
+  opacity: .78;
+  filter: brightness(.58) saturate(.58) contrast(1.12) hue-rotate(9deg) drop-shadow(0 5px 5px #020712cc)
+}
+
 .monitor-hotspot {
   position: absolute;
   left: 23%;
