@@ -16,7 +16,7 @@ export const NIGHT_ITEMS = {
   },
   teddyBear: {
     id: 'teddy-bear',
-    name: '낡은 곰인형',
+    name: '곰돌이',
     img: '/imgs/items/teddy_bear.png',
     description: '폐기 구역 깊숙한 곳에서 발견한 작은 곰인형. 한쪽 눈은 단추로 다시 꿰매져 있다.',
     collectible: true,

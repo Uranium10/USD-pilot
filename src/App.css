@@ -944,12 +944,12 @@ button:hover {
 .room-teddy-bear {
   opacity: .96;
   mix-blend-mode: screen;
-  filter: saturate(.88) contrast(1.04) drop-shadow(0 5px 4px #20140e88)
+  filter: saturate(.88) contrast(1.04)
 }
 
 .room-props.night .room-teddy-bear {
   opacity: .78;
-  filter: brightness(.58) saturate(.58) contrast(1.12) hue-rotate(9deg) drop-shadow(0 5px 5px #020712cc)
+  filter: brightness(.58) saturate(.58) contrast(1.12) hue-rotate(9deg)
 }
 
 .monitor-hotspot {
