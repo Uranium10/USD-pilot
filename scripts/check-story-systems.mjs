@@ -6,6 +6,7 @@ import {
   SISYPHUS_STOCK_ID,
 } from '../src/config.js'
 import { generateMarketCycle } from '../src/data/generateMarket.js'
+import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
 import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
 import { getNightActivityOptions } from '../src/logic/nightActivities.js'
 import { useGameStore } from '../src/store/gameStore.js'
@@ -83,6 +84,14 @@ assert(firstWeekActivities.length === 1 && firstWeekActivities[0].id === 'conven
 const secondWeekActivities = getNightActivityOptions(2, 4, 111)
 assert(secondWeekActivities[0].id === 'convenience-job' && secondWeekActivities.length >= 2 && secondWeekActivities.length <= 3, '2주차 활동 추첨 수가 잘못됐습니다.')
 assert(JSON.stringify(secondWeekActivities) === JSON.stringify(getNightActivityOptions(2, 4, 111)), '같은 날짜의 야간 활동 목록이 다시 계산할 때 바뀝니다.')
+const fourthWeekActivities = getNightActivityOptions(4, 4, 111)
+assert(fourthWeekActivities.length >= 4 && fourthWeekActivities.length <= 5, '4주차 이후에는 편의점 외 활동이 3~4개 나와야 합니다.')
+for (let cycle = 2; cycle <= 6; cycle += 1) {
+  assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.unlockCycle === cycle).length === 4, `${cycle}주차 활동 풀이 4개가 아닙니다.`)
+}
+assert(NIGHT_ITEMS.superCola.energyRestore === 60, '슈퍼 콜라의 활동력 회복량이 잘못됐습니다.')
+assert(NIGHT_ACTIVITIES.stationWalk.reward.itemId === NIGHT_ITEMS.superCola.id, '산책이 슈퍼 콜라를 지급하지 않습니다.')
+assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.reward?.itemId === NIGHT_ITEMS.superCola.id).length === 1, '슈퍼 콜라는 산책에서만 획득할 수 있어야 합니다.')
 
 useGameStore.getState().restart()
 const infoMarket = generateMarketCycle({ cycle: 1, seed: 313 })

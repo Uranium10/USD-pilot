@@ -32,7 +32,8 @@ export function getNightActivityOptions(cycle, day, marketSeed = 0) {
     const target = Math.floor(random() * (index + 1))
     ;[shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]]
   }
-  const randomCount = Math.min(shuffled.length, random() < 0.45 ? 1 : 2)
+  const countRange = cycle >= 4 ? [3, 4] : [1, 2]
+  const randomCount = Math.min(shuffled.length, random() < 0.5 ? countRange[0] : countRange[1])
   return [fixed, ...shuffled.slice(0, randomCount)]
 }
 

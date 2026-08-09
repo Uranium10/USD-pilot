@@ -463,7 +463,7 @@ export const useGameStore = create((set, get) => ({
     if (state.phase !== 'night' || state.nightActivity || quantity <= 0) return false
     const inventory = { ...state.inventory, [item.id]: quantity - 1 }
     if (inventory[item.id] <= 0) delete inventory[item.id]
-    set({ inventory, energy: Math.min(MAX_ENERGY, state.energy + item.energyRestore), nightMessage: '적응이 안되는 맛이다...' })
+    set({ inventory, energy: Math.min(MAX_ENERGY, state.energy + item.energyRestore), nightMessage: `${item.name}를 마셨다. 활동력 +${item.energyRestore}` })
     return true
   },
   startNightActivity: (activityId) => {
@@ -491,7 +491,8 @@ export const useGameStore = create((set, get) => ({
     }
     const rewardParts = []
     if (cashEarned > 0) rewardParts.push(`+₡${cashEarned.toLocaleString('ko-KR')}`)
-    if (itemEarned) rewardParts.push(`+${NIGHT_ITEMS.chiliEnergy.name} 1개`)
+    const rewardItem = Object.values(NIGHT_ITEMS).find((item) => item.id === reward.itemId)
+    if (itemEarned) rewardParts.push(`+${rewardItem?.name || '아이템'} 1개`)
     if (!rewardParts.length) rewardParts.push('별다른 수확은 없었다')
     set({
       nightActivity: null,
