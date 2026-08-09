@@ -131,6 +131,26 @@ assert(lateVolatilityRatio >= 1.8, `6주차 코인 변동성이 충분히 크지
 assert(COIN_SEGMENT_MOVE_LIMIT === 0.45, '코인 구간 변동 상한은 ±45%여야 합니다.')
 assert(average(finalCoinPrices) >= 212.5 && average(finalCoinPrices) <= 287.5, '코인 가격에 과도한 장기 방향 편향이 있습니다.')
 
+// 채굴기를 초반에 설치하고 DUST를 7주차까지 보유하는 전략의 장기 보상을 검증한다.
+// 매 주차 마지막 종가를 다음 주차 시작가로 넘겨 실제 게임과 같은 연속 경로를 만든다.
+const longHoldMultiples = []
+for (let seed = 1; seed <= 300; seed += 1) {
+  let coinPrice = COIN_REFERENCE_PRICE
+  let companyIds
+  for (let cycle = 1; cycle <= 7; cycle += 1) {
+    const market = generateMarketCycle({ cycle, seed: seed * 100 + cycle, companyIds, coinStartPrice: coinPrice })
+    companyIds = market.companyIds
+    coinPrice = market.days.at(-1).stocks.find((asset) => asset.id === COIN_ASSET_ID).path.at(-1).price
+  }
+  longHoldMultiples.push(coinPrice / COIN_REFERENCE_PRICE)
+}
+const longHoldMedian = quantile(longHoldMultiples, 0.5)
+const longHoldLowerDecile = quantile(longHoldMultiples, 0.1)
+const longHoldWinRate = longHoldMultiples.filter((multiple) => multiple > 1).length / longHoldMultiples.length
+assert(longHoldMedian >= 1.8, `7주 장기 보유 중앙값이 1.8배 미만입니다: ${longHoldMedian.toFixed(2)}배`)
+assert(longHoldLowerDecile >= 1.1, `7주 장기 보유 하위 10%가 원금 대비 10% 상승에 못 미칩니다: ${longHoldLowerDecile.toFixed(2)}배`)
+assert(longHoldWinRate >= 0.9, `7주 장기 보유 상승 확률이 90% 미만입니다: ${(longHoldWinRate * 100).toFixed(1)}%`)
+
 const tradeTestMarket = generateMarketCycle({ cycle: 1, seed: 777 })
 useGameStore.getState().loadMarket(tradeTestMarket)
 useGameStore.getState().completeDayIntro()
@@ -163,3 +183,4 @@ console.log(`주식 구간 절대변동 P50/P95/P99 = ${(quantile(stockSegmentMo
 console.log(`주식 일간 평균 수익률 = ${(average(stockDailyReturns) * 100).toFixed(2)}%`)
 console.log(`6주차 코인/주식 일중 변동폭 = ${lateVolatilityRatio.toFixed(2)}배, 주식 P99 = ${(quantile(lateStockSegmentMoves, 0.99) * 100).toFixed(2)}%`)
 console.log(`500개 시드 1주 종료 코인 평균가: ₡${average(finalCoinPrices).toFixed(2)}`)
+console.log(`300개 시드 7주 장기 보유: 중앙값 ${longHoldMedian.toFixed(2)}배 · 하위 10% ${longHoldLowerDecile.toFixed(2)}배 · 상승 확률 ${(longHoldWinRate * 100).toFixed(1)}%`)

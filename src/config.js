@@ -53,6 +53,11 @@ export const STOCK_SEGMENT_MOVE_LIMIT = 0.36
 export const STOCK_DAILY_MIN_MULTIPLIER = 0.5
 export const STOCK_DAILY_MAX_MULTIPLIER = 1.5
 export const COIN_VOLATILITY_BY_CYCLE = [1, 1.05, 1.1, 1.2, 1.3, 1.4]
+// 더스트는 직접 매수할 수 없는 채굴·보유 자산이다. 초기에 채굴기를 설치하고 매도를
+// 미룬 플레이어가 후반에 보상받도록 장기 기준가는 주차마다 상승한다. 단기 급락과 높은
+// 분산은 그대로 유지해 언제 현금화할지에 대한 판단은 남긴다.
+export const COIN_GROWTH_TARGET_BY_CYCLE = [1, 1.13, 1.28, 1.45, 1.64, 1.85, 2.05]
+export const COIN_SEGMENT_DRIFT_BY_CYCLE = [0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018]
 
 // 부채 시스템(B 구조) — USD-spec/USD_debt_system.md 참고(실측 검증된 밸런스).
 // "최소 상환액"과 "총 부채"를 분리해, 선상환(초과 상환)이 이자를 줄여 후반을 편하게

@@ -4,6 +4,8 @@ import {
   COIN_ABSOLUTE_MIN_MULTIPLIER,
   COIN_DAILY_MAX_MULTIPLIER,
   COIN_DAILY_MIN_MULTIPLIER,
+  COIN_GROWTH_TARGET_BY_CYCLE,
+  COIN_SEGMENT_DRIFT_BY_CYCLE,
   COIN_REFERENCE_PRICE,
   COIN_SEGMENT_MOVE_LIMIT,
   COIN_VOLATILITY_BY_CYCLE,
@@ -241,16 +243,18 @@ function makeSisyphusCrashPath(startPrice, random) {
 
 function makeCoinPath(startPrice, random, cycle) {
   const volatility = COIN_VOLATILITY_BY_CYCLE[cycle - 1] ?? COIN_VOLATILITY_BY_CYCLE.at(-1)
+  const growthTarget = COIN_REFERENCE_PRICE * (COIN_GROWTH_TARGET_BY_CYCLE[cycle - 1] ?? COIN_GROWTH_TARGET_BY_CYCLE.at(-1))
+  const trendDrift = COIN_SEGMENT_DRIFT_BY_CYCLE[cycle - 1] ?? COIN_SEGMENT_DRIFT_BY_CYCLE.at(-1)
   const pointCount = 8 + Math.floor(random() * 5)
   const progresses = Array.from({ length: pointCount - 2 }, () => 0.04 + random() * 0.92).sort((left, right) => left - right)
   const points = [{ progress: 0, price: startPrice }]
   let price = startPrice
 
   for (const progress of [...progresses, 1]) {
-    const meanReversion = clamp(Math.log(COIN_REFERENCE_PRICE / price) * 0.16, -0.1, 0.1)
+    const meanReversion = clamp(Math.log(growthTarget / price) * 0.08, -0.07, 0.07)
     const normalMove = (random() - 0.5) * 0.28 * volatility
     const shock = random() < 0.22 ? (random() - 0.5) * 0.58 * Math.sqrt(volatility) : 0
-    const move = clamp(meanReversion + normalMove + shock, -COIN_SEGMENT_MOVE_LIMIT, COIN_SEGMENT_MOVE_LIMIT)
+    const move = clamp(trendDrift + meanReversion + normalMove + shock, -COIN_SEGMENT_MOVE_LIMIT, COIN_SEGMENT_MOVE_LIMIT)
     price = clamp(price * (1 + move), startPrice * COIN_DAILY_MIN_MULTIPLIER, startPrice * COIN_DAILY_MAX_MULTIPLIER)
     price = clamp(price, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MIN_MULTIPLIER, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MAX_MULTIPLIER)
     points.push({ progress: round(progress), price: round(price) })
