@@ -88,7 +88,16 @@ function InfoMock() {
 function NightMock() {
   return <div className="tutorial-night-screen">
     <img src="/imgs/bg/Tarae/room_night_1.png" alt="타래의 밤 방" />
-    <section className="tutorial-night-panel tutorial-focus"><p>NIGHT SHIFT</p><h2>오늘 밤 무엇을 할까?</h2><div><button>아르바이트<br /><small>활동력 1 · 확정 수입</small></button><button>암시장 상점<br /><small>채굴기와 장비 구입</small></button></div><button className="sleep">하루 종료</button></section>
+    <header className="room-title"><b>U.S.D</b><span>UNPAID SPACE DEBT</span></header>
+    <aside className="room-status"><b>1주차 · 1일차</b><span>현금 ₡12,500</span><span>총부채 ₡165,000</span><span>최소상환 ₡20,000</span></aside>
+    <section className="night-desktop tutorial-night-desktop tutorial-focus">
+      <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>1주차 1일차 밤</h2></div><div className="energy-meter"><span>활동력 100/100</span><progress max="100" value="100" /></div></header>
+      <nav className="night-tabs"><button className="active">활동</button><button>상점</button><button>인벤토리 (0)</button></nav>
+      <div className="night-content">
+        <article className="night-entry"><img src="/imgs/items/convenience_job.png" alt="" className="item-thumbnail" /><div><h3>편의점 아르바이트</h3><p>궤도 정거장 편의점의 야간 재고를 정리한다.</p><small>활동력 -85 · 보상 약 ₡600</small></div><button>일하러 가기</button></article>
+      </div>
+    </section>
+    <button className="sleep-button tutorial-sleep-button">자기</button>
   </div>
 }
 

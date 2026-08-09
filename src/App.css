@@ -574,20 +574,22 @@
 
 .tutorial-night-screen { position: relative; height: 100%; overflow: hidden; background: #080d15 }
 .tutorial-night-screen>img { width: 100%; height: 100%; object-fit: cover }
-.tutorial-night-panel { position: absolute; top: 12%; right: 5%; width: min(410px, 42%); padding: 22px; background: #09111ded; border: 1px solid #405472 }
-.tutorial-night-panel>p { color: var(--cyan); font: 11px 'IBM Plex Mono' }
-.tutorial-night-panel h2 { margin: 6px 0 16px }
-.tutorial-night-panel>div { display: grid; grid-template-columns: 1fr 1fr; gap: 9px }
-.tutorial-night-panel button { padding: 14px 10px; color: #e1e9f4; background: #122033; border: 1px solid #405472 }
-.tutorial-night-panel small { color: #91a1b5 }
-.tutorial-night-panel .sleep { width: 100%; margin-top: 12px; border-color: var(--cyan) }
+.tutorial-night-screen .room-title,
+.tutorial-night-screen .room-status { z-index: 2 }
+.tutorial-night-desktop { z-index: 3 }
+.tutorial-night-screen .tutorial-sleep-button {
+  z-index: 5;
+  filter: brightness(1.16) saturate(1.18);
+  outline: 2px solid #55e7ff88;
+  box-shadow: 0 0 22px #55e7ff77
+}
 
 @media (max-width: 760px) {
   .tutorial-account-strip { grid-template-columns: repeat(5, minmax(120px, 1fr)); overflow: hidden }
   .tutorial-market-grid { grid-template-columns: 28% 72% }
   .tutorial-news { display: none }
   .tutorial-coach { bottom: 14px; width: calc(100% - 24px) }
-  .tutorial-night-panel { right: 3%; width: 60% }
+  .tutorial-night-desktop { right: 2%; width: 58% }
 }
 
 .game-frame>.save-indicator {
