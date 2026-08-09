@@ -60,7 +60,7 @@ export const SCENES = {
       { speaker: 'system', text: '상환 기한: **6주.**\n현재 채무: **₡{{debt}} 크레딧**' },
       { speaker: 'tarae', portrait: 'neutral', text: '{{debt}} 크레딧???!! 이건 말도-' },
       { speaker: 'system', sound: '/sounds/UIPopup.mp3', soundVolume: 0.7, text: '저희 팀의 재무 조사 결과, 귀하의 총 보유 자산은 보험금을 포함해 {{cash}} 크레딧으로 추정됩니다만,' },
-      { speaker: 'system', text: '사내 규정에 의거, 미상환 시 시지프 인텔리전스 **내부 연구직**으로 특별 채용 기회가 주어지니, 안심하여 주십시오.' },
+      { speaker: 'system', text: '사내 규정에 의거, 미상환 시 시지프 인텔리전스 **내부 연구직**으로 특별 채용 기회가 주어지니, 안심하시길 바랍니다' },
       { speaker: 'tarae', portrait: 'neutral', text: '엄마 아빠가 **내부 연구직**만큼은 죽어도 하지 말라고 했었는데.' },
       { speaker: 'tarae', portrait: 'neutral', text: '잠깐만 울고 싶지만, 울기에도 6주는 너무 짧네.' },
       { speaker: 'system', text: '채무자의 여건상 **궤도 증권시장** 정도가 현실적인 변제 수단으로 판단됩니다. 단, 투자 손실은 전적으로 고객의 책임입니다.' },
