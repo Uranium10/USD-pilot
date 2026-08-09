@@ -32,6 +32,12 @@ export default function SpriteAnimator({
   const [currentFrame, setCurrentFrame] = useState(0)
   const totalFrames = type === 'frames' ? (Array.isArray(src) ? src.length : 0) : frameCount
   const cols = columns || totalFrames
+
+  useEffect(() => {
+    if (playing) {
+      setCurrentFrame(0)
+    }
+  }, [playing, src])
   
   useEffect(() => {
     if (!playing || totalFrames <= 1) return

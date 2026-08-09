@@ -71,9 +71,28 @@ export default function RoomScene({ children }) {
 
   return (
     <main className="room">
-      {blinking
-        ? <SpriteAnimator key={`blink-${set}`} type="frames" src={blinkFrames} width="100%" height="100%" fps={BLINK_FPS} loop={false} onComplete={finishBlink} className="room-art" />
-        : <SpriteAnimator key={`rest-${set}`} type="frames" src={restFrames} width="100%" height="100%" className="room-art" />}
+      <SpriteAnimator 
+        key={`rest-${set}`} 
+        type="frames" 
+        src={restFrames} 
+        width="100%" 
+        height="100%" 
+        className="room-art" 
+        style={{ opacity: blinking ? 0 : 1, transition: 'opacity 0.05s' }}
+      />
+      <SpriteAnimator 
+        key={`blink-${set}`} 
+        type="frames" 
+        src={blinkFrames} 
+        width="100%" 
+        height="100%" 
+        fps={BLINK_FPS} 
+        loop={false} 
+        playing={blinking} 
+        onComplete={finishBlink} 
+        className="room-art" 
+        style={{ opacity: blinking ? 1 : 0, transition: 'opacity 0.05s' }}
+      />
       {set === 'day' && isHappy && <FloatingNotes />}
       {phase === 'loading' && <p className="room-loading-text">궤도 시장을 도청하는 중…</p>}
       {canOpenMonitor && (
