@@ -19,15 +19,6 @@ export default function BgmController() {
   const closeTimerRef = useRef(null)
 
   useEffect(() => { bgmPlayer.setMode(mode) }, [mode])
-  useEffect(() => {
-    const unlock = () => bgmPlayer.unlock()
-    window.addEventListener('pointerdown', unlock)
-    window.addEventListener('keydown', unlock)
-    return () => {
-      window.removeEventListener('pointerdown', unlock)
-      window.removeEventListener('keydown', unlock)
-    }
-  }, [])
 
   useEffect(() => () => window.clearTimeout(closeTimerRef.current), [])
 

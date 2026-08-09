@@ -22,6 +22,7 @@ function writePreference(key, value) {
 class BgmPlayer {
   constructor() {
     this.audio = new Audio()
+    this.audio.preload = 'auto'
     this.volume = clampVolume(readPreference(VOLUME_KEY, DEFAULT_VOLUME))
     this.muted = readPreference(MUTED_KEY, 'false') === 'true'
     this.audio.volume = this.volume
@@ -31,6 +32,7 @@ class BgmPlayer {
     this.queue = []
     this.lastTrack = null
     this.blocked = false
+    this.unlockListenersInstalled = false
   }
 
   getVolume() {
@@ -77,6 +79,20 @@ class BgmPlayer {
     if (mode) this.playNext()
   }
 
+  installUnlockListeners() {
+    if (this.unlockListenersInstalled) return
+    this.unlockListenersInstalled = true
+    const unlock = () => this.unlock()
+    // 자동재생 정책에 막힌 경우 사용자의 가장 첫 입력에서 즉시 재시도한다.
+    window.addEventListener('pointerdown', unlock, { passive: true })
+    window.addEventListener('keydown', unlock)
+  }
+
+  boot(mode) {
+    this.installUnlockListeners()
+    this.setMode(mode)
+  }
+
   playNext() {
     const available = tracks[this.mode] || []
     if (!this.mode || available.length === 0) return
@@ -84,6 +100,7 @@ class BgmPlayer {
     const nextTrack = this.queue.shift()
     this.lastTrack = nextTrack
     this.audio.src = nextTrack
+    this.audio.load()
     this.audio.play().then(() => { this.blocked = false }).catch(() => { this.blocked = true })
   }
 
