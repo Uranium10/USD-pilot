@@ -2935,13 +2935,13 @@ button:hover {
   justify-content: space-between;
   align-items: flex-end;
   width: min(920px, 92vw);
-  margin-bottom: 18px;
+  margin-bottom: 0;
   pointer-events: none
 }
 
 .dialogue-portrait {
-  width: 180px;
-  height: 260px;
+  width: 200px;
+  height: 286px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -2993,7 +2993,8 @@ button:hover {
   color: var(--ink);
   background: #0b0f16f0;
   border: 1px solid var(--cyan);
-  box-shadow: 0 12px 60px #000c
+  box-shadow: 0 12px 60px #000c;
+  user-select: none
 }
 
 .dialogue-speaker {
