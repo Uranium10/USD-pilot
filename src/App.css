@@ -2969,6 +2969,11 @@ button:hover {
   filter: drop-shadow(0 12px 24px #000a)
 }
 
+/* 초상화 원본은 왼쪽을 바라본다. 왼쪽 슬롯에서만 대화 상대를 향하도록 반전한다. */
+.dialogue-portrait.left img {
+  transform: scaleX(-1)
+}
+
 .dialogue-portrait-placeholder {
   display: grid;
   place-items: center;

@@ -5,14 +5,17 @@
 //   사이버펑크 생존 시뮬레이션. 배후에는 초지능 AI 'Metis'를 키우는 '시지프
 //   인텔리전스'가 있다.
 //
-// 캐릭터 초상화 아트는 아직 없다(public/imgs에 portrait류 없음) — portraits의 경로는
-// 나중에 실제 파일이 들어올 자리이고, DialogueScene.jsx는 이미지 로드 실패 시 이니셜
-// placeholder로 자동 대체한다. 지금 이 파일을 건드리지 않고 이미지만 그 경로에
-// 넣으면 바로 반영된다.
+// 대화 캐릭터 구조:
+//   side: 기본 등장 위치('left' | 'right'). 같은 위치에 다른 캐릭터가 등장하면 교체된다.
+//   portraits: 표정 키와 이미지 경로. 원본 이미지는 왼쪽을 바라보게 제작한다.
+// 대사에서는 { speaker, portrait, side?, text }를 쓴다. side를 생략하면 캐릭터의 기본
+// side를 사용하고, 특정 장면에서만 반대편에 세워야 할 때 대사 단위로 덮어쓸 수 있다.
+// DialogueScene.jsx는 이미지 로드 실패 시 이니셜 placeholder로 자동 대체한다.
 
 export const CHARACTERS = {
   tarae: {
     name: '타래',
+    side: 'left',
     portraits: {
       neutral: '/imgs/portraits/tarae_neutral.png',
       worried: '/imgs/portraits/tarae_worried.png',
@@ -22,6 +25,7 @@ export const CHARACTERS = {
   system: {
     // 나레이션/시스템 메시지 전용. 이름표와 초상화 없이 텍스트만 표시된다.
     name: null,
+    side: null,
     portraits: {},
   },
 }

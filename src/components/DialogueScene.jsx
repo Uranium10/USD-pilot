@@ -2,37 +2,52 @@ import { useEffect, useState } from 'react'
 import { CHARACTERS } from '../data/storyScript.js'
 import { useGameStore } from '../store/gameStore.js'
 
-// gameStore.activeScene이 있을 때만 보이는 대화 연출 레이어. 좌/우 두 개의 초상화
-// 슬롯을 두고, 지금까지 등장한 화자를 순서대로 배정한다 — 새 화자는 빈 슬롯(없으면
-// 가장 오래 안 쓰인 슬롯)에 들어가고, 이미 등장했던 화자는 그 슬롯을 유지한다.
-function computeSlots(lines, uptoIndex) {
+// 좌/우 슬롯은 캐릭터의 side(또는 대사의 side)를 따른다. 같은 쪽에 새 인물이
+// 끼어들면 그 슬롯의 인물과 교체하고, 각 슬롯은 마지막으로 사용한 표정을 유지한다.
+function computePortraitState(lines, uptoIndex) {
   const slots = [null, null]
-  let lastActiveIndex = null
+  let activeIndex = null
   for (let i = 0; i <= uptoIndex; i++) {
-    const speaker = lines[i]?.speaker
-    if (!CHARACTERS[speaker]?.name) continue // 이름 없는 화자(나레이션)는 슬롯을 안 씀
-    const existing = slots.indexOf(speaker)
-    if (existing !== -1) { lastActiveIndex = existing; continue }
-    const emptyIndex = slots.indexOf(null)
-    if (emptyIndex !== -1) {
-      slots[emptyIndex] = speaker
-      lastActiveIndex = emptyIndex
-    } else {
-      const replaceIndex = lastActiveIndex === 0 ? 1 : 0
-      slots[replaceIndex] = speaker
-      lastActiveIndex = replaceIndex
+    const line = lines[i]
+    const character = CHARACTERS[line?.speaker]
+    if (!character?.name) {
+      if (i === uptoIndex) activeIndex = null
+      continue
     }
+
+    const existingIndex = slots.findIndex((slot) => slot?.characterId === line.speaker)
+    const declaredSide = line.side || character.side
+    const declaredIndex = declaredSide === 'right' ? 1 : declaredSide === 'left' ? 0 : -1
+    const emptyIndex = slots.findIndex((slot) => slot === null)
+    const targetIndex = declaredIndex !== -1
+      ? declaredIndex
+      : existingIndex !== -1
+        ? existingIndex
+        : emptyIndex !== -1 ? emptyIndex : 0
+
+    // 대사에서 위치가 바뀐 기존 인물은 이전 슬롯에 중복으로 남기지 않는다.
+    if (existingIndex !== -1 && existingIndex !== targetIndex) slots[existingIndex] = null
+    const previousPortrait = slots[targetIndex]?.characterId === line.speaker
+      ? slots[targetIndex].portraitKey
+      : null
+    slots[targetIndex] = {
+      characterId: line.speaker,
+      portraitKey: line.portrait || previousPortrait || 'neutral',
+    }
+    if (i === uptoIndex) activeIndex = targetIndex
   }
-  return { slots, activeIndex: lastActiveIndex }
+  return { slots, activeIndex }
 }
 
-function Portrait({ characterId, portraitKey, active }) {
+function Portrait({ slot, side, active }) {
+  const characterId = slot?.characterId
+  const portraitKey = slot?.portraitKey
   const [failed, setFailed] = useState(false)
   useEffect(() => setFailed(false), [characterId, portraitKey])
-  if (!characterId) return <div className="dialogue-portrait empty" aria-hidden="true" />
+  if (!characterId) return <div className={`dialogue-portrait ${side} empty`} aria-hidden="true" />
   const character = CHARACTERS[characterId]
   const src = portraitKey && character.portraits[portraitKey]
-  return <div className={`dialogue-portrait ${active ? 'active' : 'dimmed'}`}>
+  return <div className={`dialogue-portrait ${side} ${active ? 'active' : 'dimmed'}`}>
     {src && !failed
       ? <img src={src} alt={character.name || ''} onError={() => setFailed(true)} />
       // 아트가 아직 없거나 로드 실패 시 이니셜 placeholder로 대체 — 나중에 실제
@@ -93,16 +108,14 @@ export default function DialogueScene() {
     else closeScene()
   }
 
-  const { slots, activeIndex } = computeSlots(lines, lineIndex)
+  const { slots, activeIndex } = computePortraitState(lines, lineIndex)
   const speakerName = CHARACTERS[currentLine.speaker]?.name
 
   return <div className="dialogue-backdrop" onClick={advance} role="button" tabIndex={0}
     onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') advance() }}>
     <div className="dialogue-portraits">
-      <Portrait characterId={slots[0]} active={activeIndex === 0}
-        portraitKey={slots[0] === currentLine.speaker ? currentLine.portrait : 'neutral'} />
-      <Portrait characterId={slots[1]} active={activeIndex === 1}
-        portraitKey={slots[1] === currentLine.speaker ? currentLine.portrait : 'neutral'} />
+      <Portrait slot={slots[0]} side="left" active={activeIndex === 0} />
+      <Portrait slot={slots[1]} side="right" active={activeIndex === 1} />
     </div>
     <div className="dialogue-box">
       {speakerName && <b className="dialogue-speaker">{speakerName}</b>}
