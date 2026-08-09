@@ -24,6 +24,7 @@ function buildSeries(state, progress, stockId) {
 export default function StockChart({ stockId, compact = false }) {
   const canvasRef = useRef(null)
   const hoverRatioRef = useRef(null)
+  const priceScaleRef = useRef({ key: '', min: 0, max: 0 })
   const [zoomLevel, setZoomLevel] = useState(1)
 
   useEffect(() => {
@@ -85,8 +86,19 @@ export default function StockChart({ stockId, compact = false }) {
       if (visible.length === 0 && series.length > 0) visible = [series[series.length - 1]]
 
       const prices = visible.map((point) => point.price)
-      const min = Math.min(...prices) * 0.98
-      const max = Math.max(...prices) * 1.02
+      const desiredMin = Math.min(...prices) * 0.98
+      const desiredMax = Math.max(...prices) * 1.02
+      const scaleKey = `${targetStockId}:${state.day}:${zoomLevel}:${compact}`
+      const scale = priceScaleRef.current
+      if (scale.key !== scaleKey || !Number.isFinite(scale.min) || !Number.isFinite(scale.max)) {
+        priceScaleRef.current = { key: scaleKey, min: desiredMin, max: desiredMax }
+      } else {
+        const minBlend = desiredMin < scale.min ? 0.18 : 0.025
+        const maxBlend = desiredMax > scale.max ? 0.18 : 0.025
+        scale.min += (desiredMin - scale.min) * minBlend
+        scale.max += (desiredMax - scale.max) * maxBlend
+      }
+      const { min, max } = priceScaleRef.current
       
       const toX = (time) => ((time - startTime) / timeSpan) * width
       const toY = (price) => height - ((price - min) / Math.max(1, max - min)) * height
