@@ -45,7 +45,7 @@ export const SCENES = {
       { speaker: 'system', text: '방구석. 모니터가 경고음을 내고 있다.' },
       { speaker: 'tarae', portrait: 'neutral', text: '...상속 승인 완료? 내가 언제 승인했다고.' },
       { speaker: 'system', portrait: 'neutral', text: '부모님 몫이었던 빚이, 이제 전부 내 이름으로 넘어왔다.' },
-      { speaker: 'system', text: '[시지프 인텔리전스 채권관리부] 6주내로 채무액을 전부 변제하지 못하면 전적으로 불이익을 받으실 수 있습니다.' },
+      { speaker: 'system', text: '[시지프 인텔리전스 채권관리부] 6주내로 다음 채무액을 전부 변제하지 못하면 전적으로 불이익을 받으실 수 있습니다.' },
       { speaker: 'tarae', portrait: 'neutral', text: '{{debt}}원...???!!' },
       { speaker: 'tarae', portrait: 'neutral', text: '...주...주식이라도 해야 하나..?' },
     ],
