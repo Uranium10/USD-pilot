@@ -3,7 +3,7 @@ import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, 
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
-import { playCashRegister, playMarketCountdown, playNewsUpdate } from '../services/audioService.js'
+import { playCashOut, playCashRegister, playMarketCountdown, playNewsUpdate } from '../services/audioService.js'
 import { getNetWorth, isHiddenEndingEligible, useGameStore } from '../store/gameStore.js'
 import DayReport from './DayReport.jsx'
 import InformationNotepad from './InformationNotepad.jsx'
@@ -139,7 +139,8 @@ export default function MarketDesktop() {
     setActiveApp('market')
   }
   const toggleListView = () => setListView((isGrid) => !isGrid)
-  const sell = () => { const result = state.sell(selected.id, sellQuantity); if (result?.profit > 0) playCashRegister() }
+  const buy = () => { const result = state.buy(selected.id, quantity); if (result) playCashOut() }
+  const sell = () => { const result = state.sell(selected.id, sellQuantity); if (result) playCashRegister() }
   const handleAmountChange = (event) => {
     const raw = event.target.value
     setAmountDraft(raw)
@@ -220,7 +221,7 @@ export default function MarketDesktop() {
                     {!selectedIsCoin && <span className={canBuy ? '' : 'red'}>매수 {formatAssetQuantity(selected, quantity)}{quantityUnit} · {money(buyTotal)}</span>}
                     <span className={canSell ? '' : 'red'}>매도 {formatAssetQuantity(selected, sellQuantity)}{quantityUnit} · {money(sellTotal)}</span>
                   </div>
-                  <div className="order-buttons">{!selectedIsCoin && <button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button>}<button className="sell" disabled={!canSell} onClick={sell}>{selectedIsCoin ? 'DUST 판매' : '매도'}</button></div>
+                  <div className="order-buttons">{!selectedIsCoin && <button className="buy" disabled={!canBuy} onClick={buy}>매수</button>}<button className="sell" disabled={!canSell} onClick={sell}>{selectedIsCoin ? 'DUST 판매' : '매도'}</button></div>
                 </div>
               </div>
             </section>}

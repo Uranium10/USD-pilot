@@ -176,18 +176,26 @@
   animation: market-loading-spin .7s linear infinite
 }
 
-.bgm-volume {
+.bgm-control {
   position: absolute;
   z-index: 240;
   right: 0;
   top: 50%;
+  width: 48px;
+  height: 262px;
+  transform: translateY(-50%);
+  pointer-events: none
+}
+
+.bgm-volume {
+  position: relative;
+  z-index: 2;
   width: 48px;
   padding: 9px 7px 7px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  transform: translateY(-50%);
   color: #f4f8ff;
   background: linear-gradient(180deg, #1a2538ee, #0b1220f2);
   border: 1px solid #465875;
@@ -195,31 +203,60 @@
   border-radius: 14px 0 0 14px;
   box-shadow: -8px 8px 28px #0009, 0 0 18px #ff49bd22;
   backdrop-filter: blur(8px);
-  overflow: hidden;
-  transition: padding .45s ease, box-shadow .45s ease
+  transition: transform .6s cubic-bezier(.22, .75, .18, 1), opacity .45s ease;
+  pointer-events: auto
 }
 
 .bgm-volume.collapsed {
-  padding: 6px;
-  gap: 0;
-  box-shadow: -4px 5px 16px #0008
-}
-
-.bgm-volume.collapsed .bgm-volume-slider,
-.bgm-volume.collapsed output {
-  width: 0;
-  height: 0;
-  min-width: 0;
-  padding: 0;
-  border: 0;
+  transform: translateX(110%);
   opacity: 0;
   pointer-events: none
 }
 
-.bgm-volume.expanded .bgm-volume-slider,
-.bgm-volume.expanded output {
-  opacity: 1;
-  transition: opacity .35s ease .1s
+.bgm-volume.expanded {
+  transform: translateX(0);
+  opacity: 1
+}
+
+.bgm-launch {
+  position: absolute;
+  z-index: 1;
+  right: 7px;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  padding: 5px;
+  transform: translateY(-50%);
+  color: var(--cyan);
+  background: #101b2df2;
+  border: 1px solid #526784;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -5px 5px 18px #0009;
+  pointer-events: auto
+}
+
+.bgm-launch svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round
+}
+
+.bgm-launch .sound-wave,
+.bgm-launch .mute-mark {
+  fill: none
+}
+
+.bgm-control:not(.muted) .bgm-launch .mute-mark,
+.bgm-control.muted .bgm-launch .sound-wave {
+  display: none
+}
+
+.bgm-control.muted .bgm-launch {
+  color: var(--red)
 }
 
 .bgm-volume-slider {

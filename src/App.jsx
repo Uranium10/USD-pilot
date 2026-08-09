@@ -8,6 +8,7 @@ import RoomScene from './components/RoomScene.jsx'
 import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
+import { playCashOut } from './services/audioService.js'
 import { fetchMarketCycle, prefetchMarketCycle, resetMarketCycleCache } from './services/marketService.js'
 import { clearSavedSession, getDeviceId, getSavedSession, saveSession } from './services/sessionService.js'
 import { useGameStore } from './store/gameStore.js'
@@ -128,11 +129,17 @@ function AutoSave() {
     let needsResave = false
     const criticalSignature = (state) => JSON.stringify({
       phase: state.phase,
+      cycle: state.cycle,
+      day: state.day,
       screen: state.screen,
       showMonitorHint: state.showMonitorHint,
       miningTier: state.miningTier,
       hackingDeckLevel: state.hackingDeckLevel,
       inventory: state.inventory,
+      energy: state.energy,
+      cash: state.cash,
+      debt: state.debt,
+      nightActivity: state.nightActivity?.id || null,
       purchasedRumors: state.purchasedRumors.map((rumor) => [rumor.id, rumor.status]),
       playedSceneIds: state.playedSceneIds,
     })
@@ -205,6 +212,7 @@ function Premarket() {
   const purchaseSelected = () => {
     const purchased = state.purchaseRumors(selectedRumors)
     if (!purchased) return
+    playCashOut()
     setFlashingRumorIds(purchased.map((rumor) => rumor.id))
     setSelectedRumorIds([])
     window.setTimeout(() => setFlashingRumorIds([]), 450)
@@ -237,7 +245,9 @@ function Settlement() {
   }, [])
 
   const settle = async (amount) => {
+    const cashBefore = state.cash
     const result = state.settleCycle(amount)
+    if (result && useGameStore.getState().cash < cashBefore) playCashOut()
     if (result?.result === 'next') {
       state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId()))
     } else if (result?.result === 'epilogue') {

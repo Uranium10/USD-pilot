@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { bgmPlayer } from '../services/bgmService.js'
 import { useGameStore } from '../store/gameStore.js'
 
+function SpeakerIcon() {
+  return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 12h6l7-6v20l-7-6H4z" /><path className="sound-wave" d="M21 11c2 2 2 8 0 10M25 8c5 5 5 11 0 16" /><path className="mute-mark" d="m21 12 7 8m0-8-7 8" /></svg>
+}
+
 export default function BgmController() {
   const phase = useGameStore((state) => state.phase)
   const mode = phase === 'premarket' || phase === 'day' || phase === 'dayReport' ? 'chart' : phase === 'night' ? 'night' : null
@@ -73,8 +77,10 @@ export default function BgmController() {
   const toggleMute = () => setMuted(bgmPlayer.toggleMuted())
   const filledSegments = muted ? 0 : Math.ceil(volume * 12)
 
-  return <aside className={`bgm-volume ${expanded ? 'expanded' : 'collapsed'} ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨" onMouseEnter={cancelClose} onMouseLeave={scheduleClose} onFocusCapture={() => { focusWithinRef.current = true; cancelClose() }} onBlurCapture={() => { focusWithinRef.current = false; scheduleClose() }}>
-    <div
+  return <div className={`bgm-control ${muted ? 'muted' : ''}`}>
+    <button type="button" className="bgm-launch" aria-label="볼륨 조절 열기" onClick={() => { cancelClose(); setExpanded(true) }}><SpeakerIcon /></button>
+    <aside className={`bgm-volume ${expanded ? 'expanded' : 'collapsed'} ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨" onMouseEnter={cancelClose} onMouseLeave={scheduleClose} onFocusCapture={() => { focusWithinRef.current = true; cancelClose() }} onBlurCapture={() => { focusWithinRef.current = false; scheduleClose() }}>
+      <div
       ref={sliderRef}
       className="bgm-volume-slider"
       role="slider"
@@ -89,12 +95,11 @@ export default function BgmController() {
       onPointerUp={stopDrag}
       onPointerCancel={stopDrag}
       onKeyDown={changeByKeyboard}
-    >
-      {Array.from({ length: 12 }, (_, index) => <span key={index} className={index < filledSegments ? 'filled' : ''} />)}
-    </div>
-    <output>{Math.round(volume * 100)}</output>
-    <button type="button" className="bgm-mute" aria-label={expanded ? (muted ? '배경음악 음소거 해제' : '배경음악 음소거') : '볼륨 조절 열기'} aria-pressed={muted} onClick={() => { if (expanded) toggleMute(); else { cancelClose(); setExpanded(true) } }}>
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 12h6l7-6v20l-7-6H4z" /><path className="sound-wave" d="M21 11c2 2 2 8 0 10M25 8c5 5 5 11 0 16" /><path className="mute-mark" d="m21 12 7 8m0-8-7 8" /></svg>
-    </button>
-  </aside>
+      >
+        {Array.from({ length: 12 }, (_, index) => <span key={index} className={index < filledSegments ? 'filled' : ''} />)}
+      </div>
+      <output>{Math.round(volume * 100)}</output>
+      <button type="button" className="bgm-mute" aria-label={muted ? '배경음악 음소거 해제' : '배경음악 음소거'} aria-pressed={muted} onClick={toggleMute}><SpeakerIcon /></button>
+    </aside>
+  </div>
 }

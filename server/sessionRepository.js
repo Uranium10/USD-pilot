@@ -54,7 +54,12 @@ export function createSessionRepository({ url, authToken }) {
     async save(payload) {
       const deviceId = assertDeviceId(payload.deviceId)
       const status = ACTIVE_STATUS.has(payload.status) ? payload.status : 'active'
-      const now = Date.now()
+      const revision = Number(payload.updatedAt)
+      const cycle = Number(payload.cycle)
+      const day = Number(payload.day)
+      if (!Number.isSafeInteger(revision) || revision <= 0) throw new Error('invalid save revision')
+      if (!Number.isInteger(cycle) || cycle < 1 || cycle > 7) throw new Error('invalid cycle')
+      if (!Number.isInteger(day) || day < 1 || day > 7) throw new Error('invalid day')
       const holdings = Object.entries(payload.holdings || {}).filter(([, holding]) => (
         Number.isFinite(Number(holding?.quantity)) && Number(holding.quantity) > 0
       ))
@@ -68,23 +73,25 @@ export function createSessionRepository({ url, authToken }) {
           phase=excluded.phase, cycle=excluded.cycle, day=excluded.day,
           market_seed=excluded.market_seed, elapsed=excluded.elapsed, cash=excluded.cash,
           debt=excluded.debt, selected_stock_id=excluded.selected_stock_id,
-          selected_rumor_id=excluded.selected_rumor_id, world_state_json=excluded.world_state_json`,
+          selected_rumor_id=excluded.selected_rumor_id, world_state_json=excluded.world_state_json
+        WHERE excluded.updated_at >= sessions.updated_at`,
         args: [
-          deviceId, status, now, now, payload.screen, payload.phase,
-          payload.cycle, payload.day, payload.marketSeed, payload.elapsed,
+          deviceId, status, revision, revision, payload.screen, payload.phase,
+          cycle, day, payload.marketSeed, payload.elapsed,
           payload.cash, payload.debt, payload.selectedStockId || null,
           payload.selectedRumorId || null, JSON.stringify(payload.worldState || {}),
         ],
       }, {
-        sql: 'DELETE FROM holdings WHERE device_id = ?',
-        args: [deviceId],
+        sql: 'DELETE FROM holdings WHERE device_id = ? AND EXISTS (SELECT 1 FROM sessions WHERE device_id = ? AND updated_at = ?)',
+        args: [deviceId, deviceId, revision],
       }]
       holdings.forEach(([stockId, holding]) => statements.push({
-        sql: 'INSERT INTO holdings (device_id, stock_id, quantity, average) VALUES (?, ?, ?, ?)',
-        args: [deviceId, stockId, Number(holding.quantity), Number(holding.average) || 0],
+        sql: 'INSERT INTO holdings (device_id, stock_id, quantity, average) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM sessions WHERE device_id = ? AND updated_at = ?)',
+        args: [deviceId, stockId, Number(holding.quantity), Number(holding.average) || 0, deviceId, revision],
       }))
       await client.batch(statements, 'write')
-      return { ok: true, updatedAt: now }
+      const saved = await this.get(deviceId)
+      return { ok: saved?.updatedAt === revision && saved?.cycle === cycle && saved?.day === day, updatedAt: saved?.updatedAt, cycle: saved?.cycle, day: saved?.day }
     },
 
     async remove(deviceId) {

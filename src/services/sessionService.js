@@ -1,5 +1,6 @@
 const DEVICE_KEY = 'usd-device-id'
 const SESSION_KEY = 'usd-session-backup'
+let lastSaveRevision = 0
 
 export const getDeviceId = () => {
   let deviceId = window.localStorage.getItem(DEVICE_KEY)
@@ -55,7 +56,7 @@ export function sessionPayload(state) {
       endingType: state.endingType,
       hasSmugglingTicket: state.hasSmugglingTicket,
     },
-    updatedAt: Date.now(),
+    updatedAt: (lastSaveRevision = Math.max(Date.now(), lastSaveRevision + 1)),
   }
 }
 
@@ -82,9 +83,12 @@ export async function saveSession(state) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      keepalive: true,
     })
     if (!response.ok) throw new Error(`session api: ${response.status}`)
+    const result = await response.json()
+    if (!result?.ok || Number(result.updatedAt) !== payload.updatedAt || Number(result.cycle) !== payload.cycle || Number(result.day) !== payload.day) {
+      throw new Error(`session ack mismatch: ${result?.cycle}/${result?.day}`)
+    }
     return true
   } catch (error) {
     console.warn('서버 저장에 실패해 브라우저 백업만 갱신했습니다.', error)

@@ -450,6 +450,7 @@ export const useGameStore = create((set, get) => ({
       cash: state.cash + JOB_REWARD,
       nightMessage: `편의점 아르바이트를 마쳤다. +₡${JOB_REWARD}`,
     })
+    return { rewardEarned: true, cashEarned: JOB_REWARD }
   },
   startCyberRunner: () => {
     const state = get()
@@ -488,6 +489,7 @@ export const useGameStore = create((set, get) => ({
       }
     }
     set({ cash, holdings, nightActivity: null, energy: Math.max(0, state.energy - CYBER_RUNNER_ENERGY_COST), nightMessage: message })
+    return { rewardEarned: true, cashEarned: Math.max(0, cash - state.cash) }
   },
   clearNightMessage: () => set({ nightMessage: null }),
   showOverlay: (overlay) => set({ overlay, paused: true }),
