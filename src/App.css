@@ -515,6 +515,15 @@
   animation: tutorial-pulse 1.5s ease-in-out infinite
 }
 
+.tutorial-static-focus {
+  position: relative;
+  z-index: 3;
+  filter: brightness(1.12) saturate(1.12);
+  outline: 3px solid var(--cyan);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 9999px #00000070, 0 0 34px #55e7ffb8
+}
+
 @keyframes tutorial-pulse {
   50% { box-shadow: 0 0 0 9999px #00000070, 0 0 50px #55e7ffff }
 }
@@ -592,17 +601,10 @@
 .tutorial-taskbar button { height: 28px; color: #d8e2ef; background: #19283b; border: 1px solid #3a506b }
 .tutorial-taskbar span { margin-left: auto; padding-right: 12px; font-size: 11px }
 
-.tutorial-info-screen { height: 100%; padding: 52px 7%; background: linear-gradient(135deg, #0b1420, #101c2c); color: #dce5f3 }
+.tutorial-info-screen { height: 100%; background: linear-gradient(135deg, #0b1420, #101c2c); color: #dce5f3 }
 .tutorial-info-screen>p { color: var(--cyan); font: 11px 'IBM Plex Mono'; letter-spacing: .12em }
 .tutorial-info-screen>h2 { margin: 10px 0 24px; font-size: 28px }
-.tutorial-rumors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 8px }
-.tutorial-rumors article { min-height: 105px; padding: 16px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #35465e; background: #111c2a }
-.tutorial-rumors article:nth-child(2) { border-color: var(--cyan); background: #15313b }
-.tutorial-rumors span { color: var(--cyan); font: 10px 'IBM Plex Mono' }
-.tutorial-rumors small { color: #9ba9bb }
-.tutorial-info-screen>footer { margin-top: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px }
-.tutorial-info-screen>footer span { margin-right: auto }
-.tutorial-info-screen>footer button { padding: 10px 15px }
+.tutorial-info-screen .rumor-grid { flex: 0 0 auto }
 
 .tutorial-notepad-window {
   position: absolute;
@@ -644,7 +646,11 @@
 .tutorial-night-screen>img { width: 100%; height: 100%; object-fit: cover }
 .tutorial-night-screen .room-title,
 .tutorial-night-screen .room-status { z-index: 2 }
-.tutorial-night-desktop { z-index: 3 }
+.tutorial-night-desktop {
+  z-index: 3;
+  animation: none;
+  transform: none
+}
 .tutorial-night-screen .tutorial-sleep-button {
   z-index: 5;
   filter: brightness(1.16) saturate(1.18);

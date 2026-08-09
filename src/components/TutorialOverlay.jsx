@@ -78,11 +78,17 @@ function MarketMock({ target }) {
 }
 
 function InfoMock() {
-  return <div className="tutorial-info-screen">
+  const rumors = [
+    { source: '퇴사한 수석 엔지니어', cost: 352 },
+    { source: '블랙마켓 찌라시', cost: 363, queued: true },
+    { source: '소행성대 밀수업자', cost: 384 },
+  ]
+  return <section className="panel premarket tutorial-info-screen">
     <p>WEEK 1 · DAY 1 · 정보 거래소</p><h2>정보를 구입하세요.</h2>
-    <div className="tutorial-rumors tutorial-focus">{['궤도 산업 내부자', '항만 통신 감청', '기업 연구원 제보'].map((source, index) => <article key={source}><span>{index === 1 ? '구매 선택됨' : '암호화된 정보'}</span><b>출처: {source}</b><small>내용 및 신뢰도 미상 · ₡{450 + index * 150}</small></article>)}</div>
-    <footer><span>선택 1건 (₡600)</span><button>선택 정보 구입</button><button>구입 완료</button></footer>
-  </div>
+    <div className="rumor-grid tutorial-static-focus">{rumors.map((rumor) => <button key={rumor.source} className={`rumor ${rumor.queued ? 'queued' : ''}`}><span>{rumor.queued ? '구매 선택됨' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>내용 및 신뢰도 미상 · ₡{rumor.cost}</small></button>)}</div>
+    <p className="purchase-summary">구입 0건 · 선택 1건 (₡363) · 남은 현금 ₡12,000</p>
+    <div className="premarket-actions"><button className="secondary">선택 정보 구입</button><button className="primary">구입 완료</button></div>
+  </section>
 }
 
 function NotepadMock() {
@@ -114,7 +120,7 @@ function NightMock() {
     <img src="/imgs/bg/Tarae/room_night_1.png" alt="타래의 밤 방" />
     <header className="room-title"><b>U.S.D</b><span>UNPAID SPACE DEBT</span></header>
     <aside className="room-status"><b>1주차 · 1일차</b><span>현금 ₡12,500</span><span>총부채 ₡165,000</span><span>최소상환 ₡20,000</span></aside>
-    <section className="night-desktop tutorial-night-desktop tutorial-focus">
+    <section className="night-desktop tutorial-night-desktop tutorial-static-focus">
       <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>1주차 1일차 밤</h2></div><div className="energy-meter"><span>활동력 100/100</span><progress max="100" value="100" /></div></header>
       <nav className="night-tabs"><button className="active">활동</button><button>상점</button><button>인벤토리 (0)</button></nav>
       <div className="night-content">
