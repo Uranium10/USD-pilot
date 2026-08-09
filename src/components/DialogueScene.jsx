@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CHARACTERS } from '../data/storyScript.js'
 import { useGameStore } from '../store/gameStore.js'
 
@@ -62,6 +62,8 @@ export default function DialogueScene() {
   const [lineIndex, setLineIndex] = useState(0)
   const [typed, setTyped] = useState('')
   const [typingFinished, setTypingFinished] = useState(false)
+  const typingIntervalRef = useRef(null)
+  const typingAudioRef = useRef(null)
 
   const lines = activeScene?.scene.lines || []
   const currentLine = lines[lineIndex]
@@ -85,12 +87,18 @@ export default function DialogueScene() {
       keyboard.play().catch(() => {})
       if (index >= text.length) {
         window.clearInterval(interval)
+        typingIntervalRef.current = null
+        keyboard.pause()
         setTypingFinished(true)
       }
     }, 45)
+    typingIntervalRef.current = interval
+    typingAudioRef.current = keyboard
     return () => {
       window.clearInterval(interval)
       keyboard.pause()
+      if (typingIntervalRef.current === interval) typingIntervalRef.current = null
+      if (typingAudioRef.current === keyboard) typingAudioRef.current = null
     }
     // currentLine.text만 바뀌어도 다시 돌아야 하므로 lineIndex를 키로 쓴다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,6 +108,10 @@ export default function DialogueScene() {
 
   const advance = () => {
     if (!typingFinished) {
+      if (typingIntervalRef.current) window.clearInterval(typingIntervalRef.current)
+      typingIntervalRef.current = null
+      typingAudioRef.current?.pause()
+      typingAudioRef.current = null
       setTyped(currentLine.text)
       setTypingFinished(true)
       return
