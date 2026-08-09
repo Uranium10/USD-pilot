@@ -47,6 +47,8 @@ export function sessionPayload(state) {
       inventory: state.inventory,
       dailyDrinkPurchased: state.dailyDrinkPurchased,
       completedNightActivityIds: state.completedNightActivityIds,
+      donationSchedule: state.donationSchedule,
+      donationCount: state.donationCount,
       miningTier: state.miningTier,
       hackingDeckLevel: state.hackingDeckLevel,
       minedCoinToday: state.minedCoinToday,

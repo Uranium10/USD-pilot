@@ -46,6 +46,20 @@ export const NIGHT_ITEMS = {
 }
 
 export const NIGHT_ACTIVITIES = {
+  donation: {
+    id: 'donation',
+    name: '무료 급식소 기부',
+    img: '/imgs/items/convenience_job.png',
+    description: '정거장 하층의 무료 급식소에 익명으로 식재료 비용을 보탠다.',
+    scheduled: true,
+    unlockCycle: 1,
+    energyCost: 10,
+    cashCosts: [1000, 2000, 3000],
+    reward: { type: 'donation' },
+    actionLabel: '익명으로 기부',
+    loadingTitle: '기부 물품을 전달하는 중…',
+    loadingText: '이름을 남기지 않고 급식소 입구에 상자를 내려놓습니다.',
+  },
   convenienceJob: {
     id: 'convenience-job',
     name: '편의점 아르바이트',

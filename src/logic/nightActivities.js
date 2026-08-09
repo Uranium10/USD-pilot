@@ -20,12 +20,33 @@ function seededRandom(seed) {
   }
 }
 
-export function getNightActivityOptions(cycle, day, marketSeed = 0) {
+export function createDonationSchedule(marketSeed = 0) {
+  const random = seededRandom(hashSeed(`${marketSeed}:donation-schedule`))
+  const cycles = [1, 2, 3, 4, 5]
+  for (let index = cycles.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(random() * (index + 1))
+    ;[cycles[index], cycles[target]] = [cycles[target], cycles[index]]
+  }
+  return cycles.slice(0, 3).sort((left, right) => left - right).map((cycle) => ({
+    cycle,
+    day: 1 + Math.floor(random() * 7),
+  }))
+}
+
+export function nightActivityCashCost(activity, donationCount = 0) {
+  if (!activity?.cashCosts) return 0
+  return activity.cashCosts[Math.max(0, Math.min(activity.cashCosts.length - 1, donationCount))]
+}
+
+export function getNightActivityOptions(cycle, day, marketSeed = 0, donationSchedule = []) {
   const fixed = NIGHT_ACTIVITIES.convenienceJob
-  if (cycle <= 1) return [fixed]
+  const scheduled = donationSchedule.some((entry) => entry.cycle === cycle && entry.day === day)
+    ? [NIGHT_ACTIVITIES.donation]
+    : []
+  if (cycle <= 1) return [fixed, ...scheduled]
 
   const candidates = Object.values(NIGHT_ACTIVITIES)
-    .filter((activity) => !activity.fixed && !activity.requiresHackingDeck && activity.unlockCycle <= cycle)
+    .filter((activity) => !activity.fixed && !activity.scheduled && !activity.requiresHackingDeck && activity.unlockCycle <= cycle)
   const random = seededRandom(hashSeed(`${marketSeed}:${cycle}:${day}:night-activities`))
   const shuffled = [...candidates]
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
@@ -34,7 +55,7 @@ export function getNightActivityOptions(cycle, day, marketSeed = 0) {
   }
   const countRange = cycle >= 4 ? [3, 4] : [1, 2]
   const randomCount = Math.min(shuffled.length, random() < 0.5 ? countRange[0] : countRange[1])
-  return [fixed, ...shuffled.slice(0, randomCount)]
+  return [fixed, ...scheduled, ...shuffled.slice(0, randomCount)]
 }
 
 export function getNightActivity(activityId) {

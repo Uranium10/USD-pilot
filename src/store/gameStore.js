@@ -4,7 +4,7 @@ import { NIGHT_ITEMS } from '../data/nightContent.js'
 import { buyExecutionPrice, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { computeSettlement } from '../logic/debtSystem.js'
 import { canUpgradeMine, mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
-import { getNightActivity, getNightActivityOptions } from '../logic/nightActivities.js'
+import { createDonationSchedule, getNightActivity, getNightActivityOptions, nightActivityCashCost } from '../logic/nightActivities.js'
 import { findMatchingScene } from '../logic/storyTriggers.js'
 
 const initialGame = {
@@ -32,6 +32,8 @@ const initialGame = {
   inventory: {},
   nightActivity: null,
   completedNightActivityIds: [],
+  donationSchedule: [],
+  donationCount: 0,
   nightMessage: null,
   dailyDrinkPurchased: 0,
   miningTier: -1,
@@ -101,6 +103,7 @@ export const useGameStore = create((set, get) => ({
   loadMarket: (market) => {
     const firstDay = market.days[0]
     const currentPhase = get().phase
+    const donationSchedule = get().donationSchedule.length ? get().donationSchedule : createDonationSchedule(market.seed)
     set({
       market,
       phase: ['introChoice', 'prologue', 'tutorial'].includes(currentPhase) ? currentPhase : 'dayIntro',
@@ -110,6 +113,7 @@ export const useGameStore = create((set, get) => ({
       marketReady: true,
       selectedStockId: firstDay.stocks[0].id,
       currentPrices: Object.fromEntries(firstDay.stocks.map((stock) => [stock.id, stock.startPrice])),
+      donationSchedule,
     })
   },
   completeDayIntro: () => {
@@ -160,6 +164,8 @@ export const useGameStore = create((set, get) => ({
       inventory: world.inventory || {},
       dailyDrinkPurchased: Number(world.dailyDrinkPurchased) || 0,
       completedNightActivityIds: Array.isArray(world.completedNightActivityIds) ? world.completedNightActivityIds : [],
+      donationSchedule: Array.isArray(world.donationSchedule) && world.donationSchedule.length ? world.donationSchedule : createDonationSchedule(market.seed),
+      donationCount: Number(world.donationCount) || 0,
       miningTier: Number.isFinite(Number(world.miningTier)) ? Number(world.miningTier) : -1,
       hackingDeckLevel: Number.isFinite(Number(world.hackingDeckLevel)) ? Number(world.hackingDeckLevel) : -1,
       minedCoinToday: Number(world.minedCoinToday) || 0,
@@ -470,7 +476,9 @@ export const useGameStore = create((set, get) => ({
     const state = get()
     const activity = getNightActivity(activityId)
     if (!activity || activity.requiresHackingDeck || state.phase !== 'night' || state.nightActivity) return false
-    if (!getNightActivityOptions(state.cycle, state.day, state.market?.seed).some((option) => option.id === activity.id)) return false
+    if (!getNightActivityOptions(state.cycle, state.day, state.market?.seed, state.donationSchedule).some((option) => option.id === activity.id)) return false
+    const cashCost = nightActivityCashCost(activity, state.donationCount)
+    if (state.cash < cashCost) return false
     if (state.completedNightActivityIds.includes(activity.id) || state.energy < activity.energyCost) return false
     set({ nightActivity: { id: activity.id, startedAt: Date.now() }, nightMessage: null })
     return true
@@ -481,6 +489,7 @@ export const useGameStore = create((set, get) => ({
     if (!activity || activity.requiresHackingDeck) return
     const reward = activity.reward
     let cashEarned = 0
+    const cashSpent = reward.type === 'donation' ? nightActivityCashCost(activity, state.donationCount) : 0
     let itemEarned = false
     const inventory = { ...state.inventory }
     if (reward.type === 'credits') cashEarned = reward.amount
@@ -496,6 +505,7 @@ export const useGameStore = create((set, get) => ({
     }
     const rewardParts = []
     if (cashEarned > 0) rewardParts.push(`+₡${cashEarned.toLocaleString('ko-KR')}`)
+    if (cashSpent > 0) rewardParts.push(`₡${cashSpent.toLocaleString('ko-KR')} 기부 완료`)
     const rewardItem = Object.values(NIGHT_ITEMS).find((item) => item.id === reward.itemId)
     if (itemEarned) rewardParts.push(`+${rewardItem?.name || '아이템'} 1개`)
     const collectibleItem = Object.values(NIGHT_ITEMS).find((item) => item.id === reward.collectibleItemId)
@@ -505,7 +515,8 @@ export const useGameStore = create((set, get) => ({
       nightActivity: null,
       completedNightActivityIds: [...state.completedNightActivityIds, activity.id],
       energy: Math.max(0, state.energy - activity.energyCost),
-      cash: state.cash + cashEarned,
+      cash: state.cash + cashEarned - cashSpent,
+      donationCount: state.donationCount + (reward.type === 'donation' ? 1 : 0),
       inventory,
       nightMessage: `${activity.name} 완료. ${rewardParts.join(' · ')}`,
     })

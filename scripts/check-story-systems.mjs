@@ -8,7 +8,7 @@ import {
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
 import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
-import { getNightActivityOptions } from '../src/logic/nightActivities.js'
+import { createDonationSchedule, getNightActivityOptions, nightActivityCashCost } from '../src/logic/nightActivities.js'
 import { useGameStore } from '../src/store/gameStore.js'
 
 const assert = (condition, message) => {
@@ -93,6 +93,10 @@ assert(NIGHT_ITEMS.superCola.energyRestore === 60, '슈퍼 콜라의 활동력 �
 assert(NIGHT_ITEMS.discardedBurger.energyRestore === 30, '폐기 햄버거의 활동력 회복량이 잘못됐습니다.')
 assert(NIGHT_ACTIVITIES.convenienceJob.reward.itemId === NIGHT_ITEMS.discardedBurger.id && NIGHT_ACTIVITIES.convenienceJob.reward.chance === 0.15, '편의점 폐기 햄버거 보상이 잘못됐습니다.')
 assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.reward?.itemId === NIGHT_ITEMS.discardedBurger.id).length === 1, '폐기 햄버거는 편의점 활동에서만 획득할 수 있어야 합니다.')
+const donationSchedule = createDonationSchedule(111)
+assert(donationSchedule.length === 3 && new Set(donationSchedule.map((entry) => entry.cycle)).size === 3, '기부 활동이 1~5주차 중 서로 다른 세 주에 배정되지 않았습니다.')
+assert(donationSchedule.every((entry) => entry.cycle >= 1 && entry.cycle <= 5 && entry.day >= 1 && entry.day <= 7), '기부 활동 일정이 5주차 또는 7일 범위를 벗어났습니다.')
+assert([0, 1, 2].map((count) => nightActivityCashCost(NIGHT_ACTIVITIES.donation, count)).join(',') === '1000,2000,3000', '기부 순서별 금액이 잘못됐습니다.')
 assert(NIGHT_ACTIVITIES.stationWalk.reward.itemId === NIGHT_ITEMS.superCola.id, '산책이 슈퍼 콜라를 지급하지 않습니다.')
 assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.reward?.itemId === NIGHT_ITEMS.superCola.id).length === 1, '슈퍼 콜라는 산책에서만 획득할 수 있어야 합니다.')
 assert(NIGHT_ACTIVITIES.recyclingRun.reward.collectibleItemId === NIGHT_ITEMS.teddyBear.id, '폐기물 수거에 곰인형 보상이 연결되지 않았습니다.')
@@ -113,6 +117,11 @@ try {
   Math.random = originalRandom
 }
 assert(useGameStore.getState().inventory[NIGHT_ITEMS.teddyBear.id] === 1, '곰인형이 세션에서 중복 획득됐습니다.')
+
+useGameStore.setState({ phase: 'night', cycle: 1, day: 1, cash: 10000, energy: MAX_ENERGY, completedNightActivityIds: [], donationSchedule: [{ cycle: 1, day: 1 }], donationCount: 0 })
+assert(useGameStore.getState().startNightActivity(NIGHT_ACTIVITIES.donation.id), '일정에 배정된 기부 활동을 시작하지 못했습니다.')
+useGameStore.getState().completeNightActivity()
+assert(useGameStore.getState().cash === 9000 && useGameStore.getState().donationCount === 1, '첫 기부 금액 또는 횟수가 잘못 반영됐습니다.')
 
 useGameStore.getState().restart()
 const infoMarket = generateMarketCycle({ cycle: 1, seed: 313 })

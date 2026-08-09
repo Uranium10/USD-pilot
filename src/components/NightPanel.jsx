@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { COIN_ASSET_ID, COIN_REFERENCE_PRICE, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, HACKING_DECK_COSTS, MAX_ENERGY } from '../config.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../data/nightContent.js'
 import { canUpgradeMine, maxMineTier, minePaybackSeconds, mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
-import { getNightActivity, getNightActivityOptions } from '../logic/nightActivities.js'
+import { getNightActivity, getNightActivityOptions, nightActivityCashCost } from '../logic/nightActivities.js'
 import { playCashOut, playCashRegister } from '../services/audioService.js'
 import { useGameStore } from '../store/gameStore.js'
 
@@ -16,7 +16,7 @@ export default function NightPanel() {
   const ticket = NIGHT_ITEMS.smugglingTicket
   const deck = NIGHT_ITEMS.hackingDeck
   const cyberRunner = NIGHT_ACTIVITIES.cyberRunner
-  const activityOptions = getNightActivityOptions(state.cycle, state.day, state.market?.seed)
+  const activityOptions = getNightActivityOptions(state.cycle, state.day, state.market?.seed, state.donationSchedule)
   const miningCost = mineUpgradeCost(state.miningTier)
   const currentMiningRate = mineRate(state.miningTier)
   const upgradedMiningRate = mineRate(nextMineTier(state.miningTier))
@@ -39,7 +39,7 @@ export default function NightPanel() {
   const spend = (action) => { const result = action(); if (result) playCashOut(); return result }
 
   return <section className="night-desktop">
-    <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>{state.cycle}주차 {state.day}일차 밤</h2></div><div className="energy-meter"><span>활동력 {state.energy}/{MAX_ENERGY}</span><progress max={MAX_ENERGY} value={state.energy} /></div></header>
+    <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>{state.cycle}주차 {state.day}일차 밤</h2><p className="donation-count">기부 기록 {state.donationCount} / 3</p></div><div className="energy-meter"><span>활동력 {state.energy}/{MAX_ENERGY}</span><progress max={MAX_ENERGY} value={state.energy} /></div></header>
     <nav className="night-tabs" data-night-tutorial-target="tabs">
       <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>활동</button>
       <button className={tab === 'shop' ? 'active' : ''} onClick={() => setTab('shop')}>상점</button>
@@ -49,12 +49,16 @@ export default function NightPanel() {
       {tab === 'activity' && <>
         {activityOptions.map((activity, index) => {
           const completed = state.completedNightActivityIds.includes(activity.id)
-          const reward = activity.reward.type === 'credits'
+          const cashCost = nightActivityCashCost(activity, state.donationCount)
+          const reward = activity.reward.type === 'donation'
+            ? `기부금 ${money(cashCost)} · 누적 ${state.donationCount}회`
+            : activity.reward.type === 'credits'
             ? `보상 ${money(activity.reward.amount)}`
             : activity.reward.type === 'mixed'
               ? `기본 보상 ${money(activity.reward.credits)}`
               : '뜻밖의 발견 가능'
-          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}</small></div><button onClick={() => state.startNightActivity(activity.id)} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
+          const start = () => { const started = state.startNightActivity(activity.id); if (started && cashCost > 0) playCashOut() }
+          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}</small></div><button onClick={start} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost || state.cash < cashCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
         })}
         {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < CYBER_RUNNER_ENERGY_COST}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
       </>}
