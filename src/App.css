@@ -192,6 +192,47 @@
   background: #020407
 }
 
+.tutorial-overlay-skip {
+  position: absolute;
+  z-index: 8;
+  top: 18px;
+  right: 20px;
+  padding: 8px 13px;
+  color: #ccd7e7;
+  background: #0b121de8;
+  border: 1px solid #52647d;
+  font-size: 11px
+}
+
+.tutorial-choice-backdrop {
+  position: absolute;
+  z-index: 260;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #02060bbd;
+  backdrop-filter: blur(3px)
+}
+
+.tutorial-choice-card {
+  width: min(560px, 92%);
+  padding: 30px 32px;
+  text-align: center;
+  background: #0a121ef5;
+  border: 1px solid #526681;
+  border-top: 3px solid var(--cyan);
+  box-shadow: 0 24px 90px #000, 0 0 32px #55e7ff22
+}
+
+.tutorial-choice-card .eyebrow { color: var(--cyan) }
+.tutorial-choice-card h2 { margin: 10px 0 12px; font-size: 25px }
+.tutorial-choice-card>p:not(.eyebrow) { margin: 0 auto 24px; max-width: 450px; color: #afbccd; font: 14px/1.7 'Noto Sans KR', sans-serif }
+.tutorial-choice-actions { display: flex; justify-content: center; gap: 10px }
+.tutorial-choice-actions button { min-width: 150px; padding: 11px 16px }
+.tutorial-skip-all { margin-top: 14px; padding: 5px 8px; color: #7f8fa5; background: transparent; border: 0; text-decoration: underline; font-size: 11px }
+.tutorial-skip-all:hover { color: #d2dbe8; background: transparent; border: 0 }
+
 .tutorial-demo {
   position: absolute;
   inset: 0;

@@ -94,6 +94,7 @@ export default function TutorialOverlay() {
   const next = () => stepIndex < STEPS.length - 1 ? setStepIndex((index) => index + 1) : completeTutorial()
 
   return <section className="tutorial-backdrop" aria-label="게임 튜토리얼">
+    <button type="button" className="tutorial-overlay-skip" onClick={completeTutorial}>튜토리얼 건너뛰기</button>
     <div className="tutorial-demo" aria-hidden="true">
       {step.screen === 'market' && <MarketMock target={step.target} />}
       {step.screen === 'info' && <InfoMock />}

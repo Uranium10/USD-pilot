@@ -7,6 +7,7 @@ import NightPanel from './components/NightPanel.jsx'
 import NightTutorialOverlay from './components/NightTutorialOverlay.jsx'
 import RoomScene from './components/RoomScene.jsx'
 import TutorialOverlay from './components/TutorialOverlay.jsx'
+import { IntroChoiceOverlay, NightTutorialChoiceOverlay } from './components/TutorialChoiceOverlay.jsx'
 import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
@@ -287,6 +288,7 @@ function Room() {
     <header className="room-title"><b>U.S.D</b><span>UNPAID SPACE DEBT</span></header>
     <aside className="room-status"><b>{state.cycle}주차 · {state.day}일차</b><span>현금 {money(state.cash)}</span><span>총부채 {money(state.debt)}</span><span>최소상환 {money(minPayment)}</span></aside>
     <NightPanel />
+    {state.nightTutorialPrompt && <NightTutorialChoiceOverlay />}
     {state.showNightTutorial && <NightTutorialOverlay />}
     {state.phase === 'settlement' && <Settlement />}
   </RoomScene>
@@ -338,5 +340,5 @@ export default function App() {
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
   const ending = phase === 'gameover' || phase === 'ended'
   const isDayIntro = phase === 'dayIntro' || phase === 'epilogueIntro'
-  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !isDayIntro && phase !== 'tutorial' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !isDayIntro && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{isDayIntro && <DayTransition />}{phase === 'tutorial' && <TutorialOverlay />}<Overlay />{activeScene && <DialogueScene />}</div>
+  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !isDayIntro && phase !== 'tutorial' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !isDayIntro && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{isDayIntro && <DayTransition />}{phase === 'introChoice' && <IntroChoiceOverlay />}{phase === 'tutorial' && <TutorialOverlay />}<Overlay />{activeScene && <DialogueScene />}</div>
 }

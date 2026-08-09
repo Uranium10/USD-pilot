@@ -42,7 +42,9 @@ const initialGame = {
   activeScene: null,
   playedSceneIds: [],
   tutorialCompleted: false,
+  introPrompt: null,
   nightTutorialSeen: false,
+  nightTutorialPrompt: false,
   showNightTutorial: false,
   // 4분기 엔딩 시스템
   epilogue: false, // 6주차 청산 성공 후 부채 없이 진행하는 7주차인지
@@ -91,15 +93,14 @@ export const useGameStore = create((set, get) => ({
   setNotepadContent: (notepadContent) => set({ notepadContent }),
   setNotepadFontSize: (size) => set({ notepadFontSize: Math.min(28, Math.max(12, size)) }),
   beginLoading: () => {
-    set({ ...initialGame, screen: 'room', phase: 'prologue', paused: true, marketReady: false })
-    get().checkStoryTriggers()
+    set({ ...initialGame, screen: 'room', phase: 'introChoice', introPrompt: 'prologue', paused: true, marketReady: false })
   },
   loadMarket: (market) => {
     const firstDay = market.days[0]
     const currentPhase = get().phase
     set({
       market,
-      phase: ['prologue', 'tutorial'].includes(currentPhase) ? currentPhase : 'dayIntro',
+      phase: ['introChoice', 'prologue', 'tutorial'].includes(currentPhase) ? currentPhase : 'dayIntro',
       screen: 'room',
       dayIntroDestination: 'monitor',
       showMonitorHint: false,
@@ -168,7 +169,8 @@ export const useGameStore = create((set, get) => ({
       hasSmugglingTicket: Boolean(world.hasSmugglingTicket),
       tutorialCompleted: true,
       nightTutorialSeen,
-      showNightTutorial: phase === 'night' && cycle === 1 && day === 1 && !nightTutorialSeen,
+      nightTutorialPrompt: phase === 'night' && cycle === 1 && day === 1 && !nightTutorialSeen,
+      showNightTutorial: false,
     })
   },
   purchaseRumor: (rumor) => {
@@ -275,13 +277,18 @@ export const useGameStore = create((set, get) => ({
       const bought = absoluteDay(rumor.purchasedCycle ?? state.cycle, rumor.purchasedDay ?? state.day)
       return today - bought < 1
     })
-    const showNightTutorial = state.cycle === 1 && state.day === 1 && !state.nightTutorialSeen
+    const nightTutorialPrompt = state.cycle === 1 && state.day === 1 && !state.nightTutorialSeen
     set({
       phase: 'night', screen: 'room', paused: false, nightActivity: null, nightMessage: null, purchasedRumors,
-      showNightTutorial,
-      nightTutorialSeen: state.nightTutorialSeen || showNightTutorial,
+      nightTutorialPrompt,
+      showNightTutorial: false,
     })
     get().checkStoryTriggers()
+  },
+  chooseNightTutorial: (show) => {
+    const state = get()
+    if (state.phase !== 'night' || !state.nightTutorialPrompt) return
+    set({ nightTutorialPrompt: false, showNightTutorial: Boolean(show), nightTutorialSeen: true })
   },
   closeNightTutorial: () => set({ showNightTutorial: false, nightTutorialSeen: true }),
   endNight: () => {
@@ -525,7 +532,7 @@ export const useGameStore = create((set, get) => ({
     if (!state.activeScene) return
     const playedSceneIds = [...state.playedSceneIds, state.activeScene.id]
     if (state.phase === 'prologue' && state.activeScene.id === 'prologue-day1') {
-      set({ activeScene: null, phase: 'tutorial', paused: true, playedSceneIds })
+      set({ activeScene: null, phase: 'introChoice', introPrompt: 'tutorial', paused: true, playedSceneIds })
       return
     }
     set({ activeScene: null, paused: false, playedSceneIds })
@@ -535,6 +542,30 @@ export const useGameStore = create((set, get) => ({
     const state = get()
     if (state.phase !== 'tutorial') return
     set({ phase: 'dayIntro', paused: false, tutorialCompleted: true })
+  },
+  choosePrologue: (show) => {
+    const state = get()
+    if (state.phase !== 'introChoice' || state.introPrompt !== 'prologue') return
+    if (show) {
+      set({ phase: 'prologue', introPrompt: null, paused: true })
+      get().checkStoryTriggers()
+      return
+    }
+    const playedSceneIds = state.playedSceneIds.includes('prologue-day1') ? state.playedSceneIds : [...state.playedSceneIds, 'prologue-day1']
+    set({ introPrompt: 'tutorial', playedSceneIds })
+  },
+  chooseTutorial: (show) => {
+    const state = get()
+    if (state.phase !== 'introChoice' || state.introPrompt !== 'tutorial') return
+    set(show
+      ? { phase: 'tutorial', introPrompt: null, paused: true }
+      : { phase: 'dayIntro', introPrompt: null, paused: false, tutorialCompleted: true })
+  },
+  skipIntro: () => {
+    const state = get()
+    if (state.phase !== 'introChoice') return
+    const playedSceneIds = state.playedSceneIds.includes('prologue-day1') ? state.playedSceneIds : [...state.playedSceneIds, 'prologue-day1']
+    set({ phase: 'dayIntro', introPrompt: null, paused: false, tutorialCompleted: true, playedSceneIds })
   },
   triggerHiddenEnding: () => set({ phase: 'ended', endingType: 'hidden' }),
   buySmugglingTicket: (item) => {
