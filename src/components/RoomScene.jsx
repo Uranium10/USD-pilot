@@ -105,7 +105,7 @@ export default function RoomScene({ children }) {
         </button>
       )}
       {phase === 'night' && (
-        <button className="sleep-button" onClick={endNight} disabled={Boolean(nightActivity)}>하루 종료</button>
+        <button className="sleep-button" data-night-tutorial-target="sleep" onClick={endNight} disabled={Boolean(nightActivity)}>하루 종료</button>
       )}
       {children}
     </main>

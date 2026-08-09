@@ -38,14 +38,14 @@ export default function NightPanel() {
 
   return <section className="night-desktop">
     <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>{state.cycle}주차 {state.day}일차 밤</h2></div><div className="energy-meter"><span>활동력 {state.energy}/{MAX_ENERGY}</span><progress max={MAX_ENERGY} value={state.energy} /></div></header>
-    <nav className="night-tabs">
+    <nav className="night-tabs" data-night-tutorial-target="tabs">
       <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>활동</button>
       <button className={tab === 'shop' ? 'active' : ''} onClick={() => setTab('shop')}>상점</button>
       <button className={tab === 'inventory' ? 'active' : ''} onClick={() => setTab('inventory')}>인벤토리 ({drinkCount})</button>
     </nav>
     <div className="night-content">
       {tab === 'activity' && <>
-        <article className="night-entry"><img src={job.img} alt="" className="item-thumbnail" /><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>
+        <article className="night-entry" data-night-tutorial-target="activity"><img src={job.img} alt="" className="item-thumbnail" /><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>
         {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.energy < CYBER_RUNNER_ENERGY_COST}>침투 시작</button></article>}
       </>}
       {tab === 'shop' && <div className="night-shop-list">

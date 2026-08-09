@@ -2335,28 +2335,7 @@ button:hover {
   pointer-events: none;
   border: 3px solid var(--cyan);
   box-shadow: 0 0 0 9999px #000a, 0 0 38px #55e7ffcc;
-  animation: tutorial-pulse 1.5s ease-in-out infinite
-}
-
-.night-tutorial-spotlight.target-activity {
-  top: 29%;
-  right: 4.4%;
-  width: 49%;
-  height: 38%
-}
-
-.night-tutorial-spotlight.target-tabs {
-  top: 23%;
-  right: 4.4%;
-  width: 49%;
-  height: 9%
-}
-
-.night-tutorial-spotlight.target-sleep {
-  right: 20px;
-  bottom: 16px;
-  width: 125px;
-  height: 57px
+  transition: left .2s ease, top .2s ease, width .2s ease, height .2s ease
 }
 
 .night-tutorial-skip {
@@ -2397,8 +2376,6 @@ button:hover {
 
 @media (max-width: 760px) {
   .night-tutorial-coach, .night-tutorial-coach.coach-sleep { left: 3%; top: auto; bottom: 12%; width: 58% }
-  .night-tutorial-spotlight.target-activity { right: 2%; width: 57%; height: 37% }
-  .night-tutorial-spotlight.target-tabs { right: 2%; width: 57% }
 }
 
 .empty-state {
