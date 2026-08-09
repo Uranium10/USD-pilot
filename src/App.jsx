@@ -42,7 +42,7 @@ function Title() {
     const world = savedSession.worldState || {}
     const companiesWerePinned = world.companyIdsPinned
       || (!Object.hasOwn(world, 'companyIdsPinned') && savedSession.cycle > 1)
-    const market = await fetchMarketCycle(
+    const market = world.market || await fetchMarketCycle(
       savedSession.cycle,
       companiesWerePinned ? world.companyIds : undefined,
       world.coinStartPrice,

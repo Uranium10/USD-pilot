@@ -32,6 +32,7 @@ export function sessionPayload(state) {
     selectedRumorId: purchasedRumorIds[0] || null,
     holdings: state.holdings,
     worldState: {
+      market: state.market,
       companyIds: state.market.companyIds,
       companyIdsPinned: state.market.companyIdsPinned,
       coinStartPrice: state.market.coinStartPrice,
