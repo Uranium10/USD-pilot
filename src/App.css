@@ -2225,13 +2225,6 @@ button:hover {
   margin: 3px 0
 }
 
-.donation-count {
-  margin: 5px 0 0;
-  color: #c8a56a;
-  font: 11px 'IBM Plex Mono';
-  letter-spacing: .04em
-}
-
 .energy-meter {
   width: 190px;
   color: var(--yellow);

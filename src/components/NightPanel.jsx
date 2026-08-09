@@ -39,7 +39,7 @@ export default function NightPanel() {
   const spend = (action) => { const result = action(); if (result) playCashOut(); return result }
 
   return <section className="night-desktop">
-    <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>{state.cycle}주차 {state.day}일차 밤</h2><p className="donation-count">기부 기록 {state.donationCount} / 3</p></div><div className="energy-meter"><span>활동력 {state.energy}/{MAX_ENERGY}</span><progress max={MAX_ENERGY} value={state.energy} /></div></header>
+    <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>{state.cycle}주차 {state.day}일차 밤</h2></div><div className="energy-meter"><span>활동력 {state.energy}/{MAX_ENERGY}</span><progress max={MAX_ENERGY} value={state.energy} /></div></header>
     <nav className="night-tabs" data-night-tutorial-target="tabs">
       <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>활동</button>
       <button className={tab === 'shop' ? 'active' : ''} onClick={() => setTab('shop')}>상점</button>
@@ -51,7 +51,7 @@ export default function NightPanel() {
           const completed = state.completedNightActivityIds.includes(activity.id)
           const cashCost = nightActivityCashCost(activity, state.donationCount)
           const reward = activity.reward.type === 'donation'
-            ? `기부금 ${money(cashCost)} · 누적 ${state.donationCount}회`
+            ? `기부금 ${money(cashCost)}`
             : activity.reward.type === 'credits'
             ? `보상 ${money(activity.reward.amount)}`
             : activity.reward.type === 'mixed'

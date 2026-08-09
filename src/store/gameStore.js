@@ -505,7 +505,6 @@ export const useGameStore = create((set, get) => ({
     }
     const rewardParts = []
     if (cashEarned > 0) rewardParts.push(`+₡${cashEarned.toLocaleString('ko-KR')}`)
-    if (cashSpent > 0) rewardParts.push(`₡${cashSpent.toLocaleString('ko-KR')} 기부 완료`)
     const rewardItem = Object.values(NIGHT_ITEMS).find((item) => item.id === reward.itemId)
     if (itemEarned) rewardParts.push(`+${rewardItem?.name || '아이템'} 1개`)
     const collectibleItem = Object.values(NIGHT_ITEMS).find((item) => item.id === reward.collectibleItemId)
@@ -518,7 +517,13 @@ export const useGameStore = create((set, get) => ({
       cash: state.cash + cashEarned - cashSpent,
       donationCount: state.donationCount + (reward.type === 'donation' ? 1 : 0),
       inventory,
-      nightMessage: `${activity.name} 완료. ${rewardParts.join(' · ')}`,
+      nightMessage: reward.type === 'donation'
+        ? [
+          '식재료 상자를 내려놓고 돌아섰다. 문 안쪽에서 늦은 저녁을 알리는 종이 울렸다.',
+          '급식소 직원은 낯이 익다는 표정을 지었지만, 이번에도 이름을 묻지 않았다.',
+          '빈 선반이 다시 채워졌다. 벽의 작은 별표 아래에 누군가 조용히 선 하나를 더 그었다.',
+        ][Math.min(state.donationCount, 2)]
+        : `${activity.name} 완료. ${rewardParts.join(' · ')}`,
     })
     return { rewardEarned: cashEarned > 0 || itemEarned || collectibleEarned, cashEarned, itemEarned, collectibleEarned }
   },
