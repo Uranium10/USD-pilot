@@ -73,7 +73,7 @@ function MarketMock({ target }) {
 function InfoMock() {
   return <div className="tutorial-info-screen">
     <p>WEEK 1 · DAY 1 · 정보 거래소</p><h2>정보를 구입하세요.</h2>
-    <div className="tutorial-rumors tutorial-focus">{['궤도 산업 내부자', '항만 통신 감청', '기업 연구원 제보', '암시장 브로커'].map((source, index) => <article key={source}><span>{index === 1 ? '구매 선택됨' : '암호화된 정보'}</span><b>출처: {source}</b><small>내용 및 신뢰도 미상 · ₡{450 + index * 150}</small></article>)}</div>
+    <div className="tutorial-rumors tutorial-focus">{['궤도 산업 내부자', '항만 통신 감청', '기업 연구원 제보'].map((source, index) => <article key={source}><span>{index === 1 ? '구매 선택됨' : '암호화된 정보'}</span><b>출처: {source}</b><small>내용 및 신뢰도 미상 · ₡{450 + index * 150}</small></article>)}</div>
     <footer><span>선택 1건 (₡600)</span><button>선택 정보 구입</button><button>구입 완료</button></footer>
   </div>
 }

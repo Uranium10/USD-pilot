@@ -236,7 +236,7 @@
 .tutorial-demo {
   position: absolute;
   inset: 0;
-  filter: saturate(.78) brightness(.48);
+  filter: saturate(.92) brightness(.88);
   pointer-events: none
 }
 
@@ -307,15 +307,15 @@
 .tutorial-focus {
   position: relative;
   z-index: 3;
-  filter: brightness(2.1) saturate(1.35);
+  filter: brightness(1.16) saturate(1.18);
   outline: 3px solid var(--cyan);
   outline-offset: -2px;
-  box-shadow: 0 0 0 9999px #0009, 0 0 34px #55e7ffcc;
+  box-shadow: 0 0 0 9999px #00000070, 0 0 34px #55e7ffcc;
   animation: tutorial-pulse 1.5s ease-in-out infinite
 }
 
 @keyframes tutorial-pulse {
-  50% { box-shadow: 0 0 0 9999px #0009, 0 0 50px #55e7ffff }
+  50% { box-shadow: 0 0 0 9999px #00000070, 0 0 50px #55e7ffff }
 }
 
 .tutorial-desktop {
@@ -394,7 +394,7 @@
 .tutorial-info-screen { height: 100%; padding: 52px 7%; background: linear-gradient(135deg, #0b1420, #101c2c); color: #dce5f3 }
 .tutorial-info-screen>p { color: var(--cyan); font: 11px 'IBM Plex Mono'; letter-spacing: .12em }
 .tutorial-info-screen>h2 { margin: 10px 0 24px; font-size: 28px }
-.tutorial-rumors { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 8px }
+.tutorial-rumors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 8px }
 .tutorial-rumors article { min-height: 105px; padding: 16px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #35465e; background: #111c2a }
 .tutorial-rumors article:nth-child(2) { border-color: var(--cyan); background: #15313b }
 .tutorial-rumors span { color: var(--cyan); font: 10px 'IBM Plex Mono' }
