@@ -572,6 +572,30 @@
 .tutorial-info-screen>footer span { margin-right: auto }
 .tutorial-info-screen>footer button { padding: 10px 15px }
 
+.tutorial-notepad-window {
+  position: absolute;
+  inset: 8px 8px 38px;
+  width: auto;
+  height: auto
+}
+
+.tutorial-information-example {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  font: 14px/1.5 Gulim, '굴림', sans-serif
+}
+
+.tutorial-information-example>div+div {
+  padding-left: 18px;
+  border-left: 1px solid #c1ced9
+}
+
+.tutorial-notepad-desktop .tutorial-taskbar .active {
+  background: #32465e;
+  border-color: var(--cyan)
+}
+
 .tutorial-night-screen { position: relative; height: 100%; overflow: hidden; background: #080d15 }
 .tutorial-night-screen>img { width: 100%; height: 100%; object-fit: cover }
 .tutorial-night-screen .room-title,

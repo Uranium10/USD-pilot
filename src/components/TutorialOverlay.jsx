@@ -32,10 +32,10 @@ const STEPS = [
   },
   {
     tag: '05 / 정보 모음',
-    title: '정보는 시장에서 검증됩니다.',
+    title: '구입한 정보를 활용하세요.',
     body: '구입한 정보는 작업 표시줄의 정보 모음 창에서 다시 볼 수 있습니다. 뉴스가 발표되어 해당 정보가 사실로 드러나면 완료 표시가 붙습니다.',
-    screen: 'market',
-    target: 'info-tab',
+    screen: 'notepad',
+    target: 'info-document',
   },
   {
     tag: '06 / 밤 활동',
@@ -85,6 +85,24 @@ function InfoMock() {
   </div>
 }
 
+function NotepadMock() {
+  return <div className="tutorial-desktop tutorial-notepad-desktop">
+    <section className="desktop-window notepad-window tutorial-notepad-window tutorial-focus">
+      <div className="notepad-tabbar"><span className="notepad-app-icon">▤</span><div className="notepad-tab"><b>정보 모음.txt</b><span>×</span></div><button className="new-tab">＋</button><div className="window-buttons"><button>—</button><button>□</button><button>×</button></div></div>
+      <div className="notepad-commandbar"><div className="notepad-tools"><button><b>B</b></button><button><i>I</i></button><span className="tool-separator" /><button>A−</button><span className="font-size-value">16px</span><button>A＋</button></div></div>
+      <div className="notepad-document">
+        <section className="locked-information tutorial-information-example">
+          <div><div>------------------------------</div><br /><div>[정보 1] 출처: 궤도 관제소 첩보 / 신뢰도: 86% <b className="information-completed">(완료됨)</b></div><div>“아레스 다이내믹스의 군수 보급 계약이 장중 공개될 예정이다.”</div><br /><div>------------------------------</div></div>
+          <div><div>------------------------------</div><br /><div>[정보 2] 출처: 익명 해커의 데이터랩 / 신뢰도: 72%</div><div>“퀀텀 포지의 차세대 합금 생산 라인에 공급 차질이 감지됐다.”</div><br /><div>------------------------------</div></div>
+        </section>
+        <div className="notepad-editor editable-notes">오늘의 메모를 여기에 남길 수 있다.</div>
+      </div>
+      <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>184자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
+    </section>
+    <footer className="tutorial-taskbar"><button>◐ 절전</button><button>▥ U.S.D Market Terminal</button><button className="active">▤ 정보 모음.txt</button><span>1주차 1/7일　13:24</span></footer>
+  </div>
+}
+
 function NightMock() {
   return <div className="tutorial-night-screen">
     <img src="/imgs/bg/Tarae/room_night_1.png" alt="타래의 밤 방" />
@@ -114,6 +132,7 @@ export default function TutorialOverlay() {
     <div className="tutorial-demo" aria-hidden="true">
       {step.screen === 'market' && <MarketMock target={step.target} />}
       {step.screen === 'info' && <InfoMock />}
+      {step.screen === 'notepad' && <NotepadMock />}
       {step.screen === 'night' && <NightMock />}
     </div>
     <article className={`tutorial-coach tutorial-coach-${step.target}`}>
