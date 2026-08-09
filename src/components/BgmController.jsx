@@ -7,8 +7,11 @@ export default function BgmController() {
   const mode = phase === 'premarket' || phase === 'day' || phase === 'dayReport' ? 'chart' : phase === 'night' ? 'night' : null
   const [volume, setVolume] = useState(() => bgmPlayer.getVolume())
   const [muted, setMuted] = useState(() => bgmPlayer.isMuted())
+  const [expanded, setExpanded] = useState(false)
   const sliderRef = useRef(null)
   const draggingRef = useRef(false)
+  const focusWithinRef = useRef(false)
+  const closeTimerRef = useRef(null)
 
   useEffect(() => { bgmPlayer.setMode(mode) }, [mode])
   useEffect(() => {
@@ -21,6 +24,15 @@ export default function BgmController() {
     }
   }, [])
 
+  useEffect(() => () => window.clearTimeout(closeTimerRef.current), [])
+
+  const cancelClose = () => window.clearTimeout(closeTimerRef.current)
+  const scheduleClose = () => {
+    cancelClose()
+    if (draggingRef.current || focusWithinRef.current) return
+    closeTimerRef.current = window.setTimeout(() => setExpanded(false), 900)
+  }
+
   const updateFromPointer = (clientY) => {
     const rect = sliderRef.current?.getBoundingClientRect()
     if (!rect?.height) return
@@ -31,6 +43,7 @@ export default function BgmController() {
     setVolume(nextVolume)
   }
   const startDrag = (event) => {
+    cancelClose()
     draggingRef.current = true
     event.currentTarget.setPointerCapture(event.pointerId)
     updateFromPointer(event.clientY)
@@ -41,6 +54,7 @@ export default function BgmController() {
   const stopDrag = (event) => {
     draggingRef.current = false
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    scheduleClose()
   }
   const changeByKeyboard = (event) => {
     let nextVolume = volume
@@ -59,7 +73,7 @@ export default function BgmController() {
   const toggleMute = () => setMuted(bgmPlayer.toggleMuted())
   const filledSegments = muted ? 0 : Math.ceil(volume * 12)
 
-  return <aside className={`bgm-volume ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨">
+  return <aside className={`bgm-volume ${expanded ? 'expanded' : 'collapsed'} ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨" onMouseEnter={cancelClose} onMouseLeave={scheduleClose} onFocusCapture={() => { focusWithinRef.current = true; cancelClose() }} onBlurCapture={() => { focusWithinRef.current = false; scheduleClose() }}>
     <div
       ref={sliderRef}
       className="bgm-volume-slider"
@@ -79,7 +93,7 @@ export default function BgmController() {
       {Array.from({ length: 12 }, (_, index) => <span key={index} className={index < filledSegments ? 'filled' : ''} />)}
     </div>
     <output>{Math.round(volume * 100)}</output>
-    <button type="button" className="bgm-mute" aria-label={muted ? '배경음악 음소거 해제' : '배경음악 음소거'} aria-pressed={muted} onClick={toggleMute}>
+    <button type="button" className="bgm-mute" aria-label={expanded ? (muted ? '배경음악 음소거 해제' : '배경음악 음소거') : '볼륨 조절 열기'} aria-pressed={muted} onClick={() => { if (expanded) toggleMute(); else { cancelClose(); setExpanded(true) } }}>
       <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 12h6l7-6v20l-7-6H4z" /><path className="sound-wave" d="M21 11c2 2 2 8 0 10M25 8c5 5 5 11 0 16" /><path className="mute-mark" d="m21 12 7 8m0-8-7 8" /></svg>
     </button>
   </aside>

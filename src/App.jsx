@@ -70,7 +70,7 @@ function DayTransition() {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
-    const text = epilogue ? '청산 완료. 유예된 하루.' : `${cycle}주차, ${day}일.`
+    const text = epilogue ? `청산 완료. 자유의 7주차, ${day}일.` : `${cycle}주차, ${day}일.`
     const keyboard = new Audio('/sounds/KeyboardPress.mp3')
     keyboard.volume = 0.22
     let index = 0
@@ -131,8 +131,10 @@ function AutoSave() {
       screen: state.screen,
       showMonitorHint: state.showMonitorHint,
       miningTier: state.miningTier,
+      hackingDeckLevel: state.hackingDeckLevel,
       inventory: state.inventory,
-      purchasedRumorIds: state.purchasedRumors.map((rumor) => rumor.id),
+      purchasedRumors: state.purchasedRumors.map((rumor) => [rumor.id, rumor.status]),
+      playedSceneIds: state.playedSceneIds,
     })
     const persist = () => {
       timer = undefined
@@ -238,6 +240,8 @@ function Settlement() {
     const result = state.settleCycle(amount)
     if (result?.result === 'next') {
       state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId()))
+    } else if (result?.result === 'epilogue') {
+      state.loadEpilogueCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId()))
     }
   }
 

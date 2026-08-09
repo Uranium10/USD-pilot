@@ -7,6 +7,12 @@ export const NIGHT_ITEMS = {
     price: 50,
     energyRestore: 20,
   },
+  hackingDeck: {
+    id: 'hacking-deck',
+    name: '해킹 덱 v.0',
+    img: '/imgs/items/mining_machine.png',
+    description: '시지프 내부망에 침투하기 위한 불법 휴대 단말. 개조할수록 회수 가능한 데이터가 늘어난다.',
+  },
   // 진 엔딩(우주 밀항) 전용 — 6주차 청산 성공 후 에필로그(유예일)에만 상점에 노출된다.
   // 구매 즉시 게임이 끝난다(별도 "사용" 단계 없음, gameStore.buySmugglingTicket 참고).
   smugglingTicket: {
@@ -14,7 +20,7 @@ export const NIGHT_ITEMS = {
     name: '밀항선 티켓',
     img: '/imgs/items/mining_machine.png', // TODO: 전용 아트 없음 — 임시로 기존 아이콘 재사용
     description: '이름도 국적도 묻지 않는 화물선의 마지막 남은 좌석 하나.',
-    price: 500000,
+    price: 180000,
   },
 }
 
@@ -24,5 +30,11 @@ export const NIGHT_ACTIVITIES = {
     name: '편의점 아르바이트',
     img: '/imgs/items/convenience_job.png',
     description: '궤도 정거장 편의점의 야간 재고를 정리한다.',
+  },
+  cyberRunner: {
+    id: 'cyber-runner',
+    name: '사이버 러너',
+    img: '/imgs/items/mining_machine.png',
+    description: '해킹 덱으로 시지프의 그림자 계좌와 자산 보관소를 훑는다.',
   },
 }

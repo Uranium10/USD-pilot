@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { COIN_ASSET_ID, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY, SISYPHUS_MAJORITY_SHARES, SISYPHUS_MAX_SHARES, SISYPHUS_STOCK_ID } from '../config.js'
+import { COIN_ASSET_ID, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, EPILOGUE_CYCLE, HACKING_DECK_COSTS, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY, SISYPHUS_MAJORITY_SHARES, SISYPHUS_MAX_SHARES, SISYPHUS_STOCK_ID } from '../config.js'
 import { buyExecutionPrice, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { computeSettlement } from '../logic/debtSystem.js'
 import { canUpgradeMine, mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
@@ -32,6 +32,7 @@ const initialGame = {
   nightMessage: null,
   dailyDrinkPurchased: 0,
   miningTier: -1,
+  hackingDeckLevel: -1,
   minedCoinToday: 0,
   totalMinedCoin: 0,
   dayIntroDestination: 'room',
@@ -41,7 +42,7 @@ const initialGame = {
   activeScene: null,
   playedSceneIds: [],
   // 4분기 엔딩 시스템
-  epilogue: false, // 6주차 청산 성공 후 7일째(에필로그) 유예 기간인지
+  epilogue: false, // 6주차 청산 성공 후 부채 없이 진행하는 7주차인지
   endingType: null, // 'normal' | 'hidden' | 'true' — phase가 'ended'일 때만 의미 있음
   hasSmugglingTicket: false,
 }
@@ -65,6 +66,21 @@ const calculateNetWorth = (state) => Object.entries(state.holdings).reduce(
   (total, [stockId, holding]) => total + (state.currentPrices[stockId] || holding.average) * holding.quantity,
   state.cash,
 )
+
+const absoluteDay = (cycle, day) => (cycle - 1) * DAYS_PER_CYCLE + day
+
+function rumorWasCorrect(day, rumor) {
+  const stock = day?.stocks.find((asset) => asset.id === rumor.stockId)
+  if (!stock?.path?.length) return false
+  if (rumor.resolutionBasis === 'eventMove') {
+    let index = stock.path.findIndex((point) => point.progress >= rumor.resolveProgress)
+    if (index < 1) index = Math.min(1, stock.path.length - 1)
+    const movedUp = stock.path[index].price >= stock.path[index - 1].price
+    return rumor.direction === (movedUp ? 'up' : 'down')
+  }
+  const movedUp = stock.path.at(-1).price >= stock.startPrice
+  return rumor.direction === (movedUp ? 'up' : 'down')
+}
 
 export const useGameStore = create((set, get) => ({
   ...initialGame,
@@ -94,13 +110,14 @@ export const useGameStore = create((set, get) => ({
   openMonitor: () => set({ screen: 'monitor', showMonitorHint: false }),
   restoreSession: (session, market) => {
     const world = session.worldState || {}
-    const cycle = Math.min(6, Math.max(1, Number(session.cycle) || 1))
+    const cycle = Math.min(EPILOGUE_CYCLE, Math.max(1, Number(session.cycle) || 1))
     const day = Math.min(DAYS_PER_CYCLE, Math.max(1, Number(session.day) || 1))
     const data = market.days[day - 1]
     const elapsed = Math.min(DAY_DURATION_SECONDS, Math.max(0, Number(session.elapsed) || 0))
     const progress = elapsed / DAY_DURATION_SECONDS
     const progressed = ['day', 'dayReport', 'night', 'settlement'].includes(session.phase)
     const purchasedIds = new Set(world.purchasedRumorIds || (session.selectedRumorId ? [session.selectedRumorId] : []))
+    const savedRumors = Array.isArray(world.purchasedRumors) ? world.purchasedRumors : null
     const phase = ['premarket', 'day', 'dayReport', 'night', 'settlement', 'epilogueIntro'].includes(session.phase) ? session.phase : 'premarket'
     const screen = phase === 'night' || phase === 'settlement'
       ? 'room'
@@ -116,7 +133,7 @@ export const useGameStore = create((set, get) => ({
       holdings: session.holdings || {},
       market,
       selectedStockId: data.stocks.some((stock) => stock.id === session.selectedStockId) ? session.selectedStockId : data.stocks[0].id,
-      purchasedRumors: data.rumors.filter((rumor) => purchasedIds.has(rumor.id)),
+      purchasedRumors: savedRumors || data.rumors.filter((rumor) => purchasedIds.has(rumor.id)),
       notepadContent: world.notepadContent || '',
       notepadFontSize: Number(world.notepadFontSize) || 16,
       dailySummaries: Array.isArray(world.dailySummaries) ? world.dailySummaries : [],
@@ -131,6 +148,7 @@ export const useGameStore = create((set, get) => ({
       inventory: world.inventory || {},
       dailyDrinkPurchased: Number(world.dailyDrinkPurchased) || 0,
       miningTier: Number.isFinite(Number(world.miningTier)) ? Number(world.miningTier) : -1,
+      hackingDeckLevel: Number.isFinite(Number(world.hackingDeckLevel)) ? Number(world.hackingDeckLevel) : -1,
       minedCoinToday: Number(world.minedCoinToday) || 0,
       totalMinedCoin: Number(world.totalMinedCoin) || 0,
       showMonitorHint: Boolean(world.showMonitorHint),
@@ -143,17 +161,17 @@ export const useGameStore = create((set, get) => ({
     })
   },
   purchaseRumor: (rumor) => {
-    const { cash, purchasedRumors, phase } = get()
+    const { cash, purchasedRumors, phase, cycle, day } = get()
     if (phase !== 'premarket' || purchasedRumors.some((item) => item.id === rumor.id) || cash < rumor.cost) return false
     set({
       cash: cash - rumor.cost,
-      purchasedRumors: [...purchasedRumors, rumor],
+      purchasedRumors: [...purchasedRumors, { ...rumor, purchasedCycle: cycle, purchasedDay: day, status: 'active' }],
       feedback: { amount: -rumor.cost, id: Date.now() },
     })
     return true
   },
   purchaseRumors: (rumors) => {
-    const { cash, purchasedRumors, phase } = get()
+    const { cash, purchasedRumors, phase, cycle, day } = get()
     if (phase !== 'premarket') return false
     const purchasedIds = new Set(purchasedRumors.map((item) => item.id))
     const uniqueRumors = rumors.filter((rumor, index, items) => !purchasedIds.has(rumor.id) && items.findIndex((item) => item.id === rumor.id) === index)
@@ -161,7 +179,7 @@ export const useGameStore = create((set, get) => ({
     if (uniqueRumors.length === 0 || totalCost > cash) return false
     set({
       cash: cash - totalCost,
-      purchasedRumors: [...purchasedRumors, ...uniqueRumors],
+      purchasedRumors: [...purchasedRumors, ...uniqueRumors.map((rumor) => ({ ...rumor, purchasedCycle: cycle, purchasedDay: day, status: 'active' }))],
       feedback: { amount: -totalCost, id: Date.now() },
     })
     return uniqueRumors
@@ -196,6 +214,11 @@ export const useGameStore = create((set, get) => ({
       && nextVisibleNews.every((item, index) => item.id === state.visibleNews[index]?.id)
       ? state.visibleNews
       : nextVisibleNews
+    const purchasedRumors = state.purchasedRumors.map((rumor) => {
+      if (rumor.status === 'completed' || rumor.purchasedCycle !== state.cycle || rumor.purchasedDay !== state.day) return rumor
+      if (progress < (rumor.resolveProgress ?? 1) || !rumorWasCorrect(data, rumor)) return rumor
+      return { ...rumor, status: 'completed', completedCycle: state.cycle, completedDay: state.day }
+    })
     let holdings = state.holdings
     if (minedCoin > 0) {
       const previous = holdings[COIN_ASSET_ID] || { quantity: 0, average: 0 }
@@ -212,6 +235,7 @@ export const useGameStore = create((set, get) => ({
       elapsed,
       currentPrices,
       visibleNews,
+      purchasedRumors,
       holdings,
       minedCoinToday: state.minedCoinToday + minedCoin,
       totalMinedCoin: state.totalMinedCoin + minedCoin,
@@ -232,16 +256,22 @@ export const useGameStore = create((set, get) => ({
     get().checkStoryTriggers()
   },
   enterNight: () => {
-    if (get().phase !== 'dayReport') return
-    set({ phase: 'night', screen: 'room', paused: false, nightActivity: null, nightMessage: null })
+    const state = get()
+    if (state.phase !== 'dayReport') return
+    const today = absoluteDay(state.cycle, state.day)
+    const purchasedRumors = state.purchasedRumors.filter((rumor) => {
+      if (rumor.status === 'completed') return false
+      const bought = absoluteDay(rumor.purchasedCycle ?? state.cycle, rumor.purchasedDay ?? state.day)
+      return today - bought < 1
+    })
+    set({ phase: 'night', screen: 'room', paused: false, nightActivity: null, nightMessage: null, purchasedRumors })
     get().checkStoryTriggers()
   },
   endNight: () => {
     const state = get()
     if (state.phase !== 'night' || state.nightActivity) return
-    // 에필로그(청산 후 유예일)의 밤이 끝나면 정산/다음 날로 넘어가지 않고 바로 결말로
-    // 이어진다 — 밀항선 티켓을 샀으면 진 엔딩, 아니면 노멀 엔딩.
-    if (state.epilogue) {
+    // 부채 없는 7주차의 마지막 밤까지 마치면 노멀 엔딩으로 이어진다.
+    if (state.epilogue && state.day >= DAYS_PER_CYCLE) {
       set({ phase: 'ended', endingType: state.hasSmugglingTicket ? 'true' : 'normal' })
       return
     }
@@ -258,7 +288,6 @@ export const useGameStore = create((set, get) => ({
       dayIntroDestination: 'monitor',
       showMonitorHint: false,
       marketReady: true,
-      purchasedRumors: [],
       elapsed: 0,
       visibleNews: [],
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
@@ -282,18 +311,13 @@ export const useGameStore = create((set, get) => ({
     }
     const cash = state.cash - amount
     if (result.cleared) {
-      // 청산 성공 — 곧바로 끝내지 않고 1일짜리 에필로그(유예 기간)로 진입한다. 새 시장을
-      // 따로 생성하지 않고 이번 사이클 마지막 날의 시세/뉴스/소문 데이터를 그대로
-      // 재사용한다(밸런스·AI 스키마를 사이클 7까지 확장하지 않기 위한 의도적 단순화).
-      const epilogueDay = state.market.days[DAYS_PER_CYCLE - 1]
       set({
-        cash, debt: 0, phase: 'epilogueIntro', epilogue: true, day: 1, screen: 'room',
-        dayIntroDestination: 'monitor', showMonitorHint: false, marketReady: true,
-        purchasedRumors: [], elapsed: 0, visibleNews: [], dailyDrinkPurchased: 0, minedCoinToday: 0,
-        currentPrices: Object.fromEntries(epilogueDay.stocks.map((stock) => [stock.id, stock.startPrice])),
-        selectedStockId: epilogueDay.stocks[0].id,
+        cash, debt: 0, cycle: EPILOGUE_CYCLE, phase: 'epilogueIntro', epilogue: true, day: 1, screen: 'room',
+        dayIntroDestination: 'monitor', showMonitorHint: false, marketReady: false,
+        purchasedRumors: state.purchasedRumors, elapsed: 0, visibleNews: [], dailyDrinkPurchased: 0, minedCoinToday: 0,
+        currentPrices: {}, selectedStockId: null,
       })
-      return { result: 'epilogue' }
+      return { result: 'epilogue', cycle: EPILOGUE_CYCLE }
     }
     set({ cash, debt: result.debt, cycle: result.nextCycle, day: 1, phase: 'dayIntro', screen: 'room', marketReady: false })
     get().checkStoryTriggers()
@@ -309,7 +333,7 @@ export const useGameStore = create((set, get) => ({
       screen: 'room',
       dayIntroDestination: 'monitor',
       showMonitorHint: false,
-      purchasedRumors: [],
+      purchasedRumors: get().purchasedRumors,
       dailySummaries: [],
       selectedStockId: data.stocks[0].id,
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
@@ -318,6 +342,16 @@ export const useGameStore = create((set, get) => ({
       dailyDrinkPurchased: 0,
       minedCoinToday: 0,
       marketReady: true,
+    })
+  },
+  loadEpilogueCycle: (market) => {
+    const data = market.days[0]
+    set({
+      cycle: EPILOGUE_CYCLE, day: 1, market, phase: 'epilogueIntro', epilogue: true,
+      screen: 'room', dayIntroDestination: 'monitor', showMonitorHint: false,
+      purchasedRumors: get().purchasedRumors, dailySummaries: [], selectedStockId: data.stocks[0].id,
+      currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
+      visibleNews: [], elapsed: 0, dailyDrinkPurchased: 0, minedCoinToday: 0, marketReady: true,
     })
   },
   selectStock: (selectedStockId) => set({ selectedStockId }),
@@ -384,6 +418,14 @@ export const useGameStore = create((set, get) => ({
     set({ cash: state.cash - cost, miningTier: state.miningTier + 1 })
     return true
   },
+  upgradeHackingDeck: () => {
+    const state = get()
+    const nextLevel = state.hackingDeckLevel + 1
+    const cost = HACKING_DECK_COSTS[nextLevel]
+    if (state.phase !== 'night' || state.nightActivity || !Number.isFinite(cost) || state.cash < cost) return false
+    set({ cash: state.cash - cost, hackingDeckLevel: nextLevel })
+    return true
+  },
   useNightItem: (item) => {
     const state = get()
     const quantity = state.inventory[item.id] || 0
@@ -409,6 +451,44 @@ export const useGameStore = create((set, get) => ({
       nightMessage: `편의점 아르바이트를 마쳤다. +₡${JOB_REWARD}`,
     })
   },
+  startCyberRunner: () => {
+    const state = get()
+    if (state.phase !== 'night' || state.nightActivity || state.hackingDeckLevel < 0 || state.energy < CYBER_RUNNER_ENERGY_COST) return false
+    set({ nightActivity: { id: 'cyber-runner', startedAt: Date.now() }, nightMessage: null })
+    return true
+  },
+  completeCyberRunner: () => {
+    const state = get()
+    if (state.nightActivity?.id !== 'cyber-runner') return
+    const level = state.hackingDeckLevel
+    const roll = Math.random()
+    const scale = level + 1
+    const holdings = { ...state.holdings }
+    let cash = state.cash
+    let message
+    if (roll < 0.45) {
+      const credits = Math.round((700 + Math.random() * 800) * scale)
+      cash += credits
+      message = `시지프의 유령 계좌를 비웠다. +₡${credits.toLocaleString('ko-KR')}`
+    } else if (roll < 0.75) {
+      const quantity = Math.round((0.35 + Math.random() * 0.45) * scale * 10000) / 10000
+      const previous = holdings[COIN_ASSET_ID] || { quantity: 0, average: 0 }
+      holdings[COIN_ASSET_ID] = { quantity: previous.quantity + quantity, average: previous.average }
+      message = `폐기된 지갑 키를 복구했다. +${quantity.toFixed(4)} DUST`
+    } else {
+      const previous = holdings[SISYPHUS_STOCK_ID] || { quantity: 0, average: 0 }
+      const quantity = Math.min(SISYPHUS_MAX_SHARES - previous.quantity, Math.floor(4 + Math.random() * 5) * scale)
+      if (quantity > 0) {
+        holdings[SISYPHUS_STOCK_ID] = { quantity: previous.quantity + quantity, average: previous.average }
+        message = `명의가 지워진 주권을 회수했다. 시지프 인텔리전스 +${quantity}주`
+      } else {
+        const credits = 1000 * scale
+        cash += credits
+        message = `주권 보관소가 비어 있어 추적 방지 예치금만 회수했다. +₡${credits.toLocaleString('ko-KR')}`
+      }
+    }
+    set({ cash, holdings, nightActivity: null, energy: Math.max(0, state.energy - CYBER_RUNNER_ENERGY_COST), nightMessage: message })
+  },
   clearNightMessage: () => set({ nightMessage: null }),
   showOverlay: (overlay) => set({ overlay, paused: true }),
   closeOverlay: () => set({ overlay: null, paused: false }),
@@ -425,6 +505,7 @@ export const useGameStore = create((set, get) => ({
     const state = get()
     if (!state.activeScene) return
     set({ activeScene: null, paused: false, playedSceneIds: [...state.playedSceneIds, state.activeScene.id] })
+    queueMicrotask(() => get().checkStoryTriggers())
   },
   triggerHiddenEnding: () => set({ phase: 'ended', endingType: 'hidden' }),
   buySmugglingTicket: (item) => {

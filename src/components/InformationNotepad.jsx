@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/gameStore.js'
 
 const informationText = (rumors) => rumors.length === 0 ? '구입한 정보가 없습니다.' : rumors.map((rumor, index) => [
-  `[정보 ${index + 1}]`, `출처: ${rumor.source}`, `신뢰도: ${Math.round(rumor.accuracy * 100)}%`, rumor.text,
+  `[정보 ${index + 1}${rumor.status === 'completed' ? ' · 완료됨' : ''}]`, `출처: ${rumor.source}`, `신뢰도: ${Math.round(rumor.accuracy * 100)}%`, rumor.text,
 ].join(' ')).join(' ')
 const plainText = (html) => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
 
@@ -66,7 +66,7 @@ export default function InformationNotepad({ rumors }) {
           <div key={rumor.id} style={{ marginBottom: '16px' }}>
             <div>------------------------------</div>
             <br />
-            <div>[정보 {index + 1}] 출처: {rumor.source} / 신뢰도: {Math.round(rumor.accuracy * 100)}%</div>
+            <div>[정보 {index + 1}] 출처: {rumor.source} / 신뢰도: {Math.round(rumor.accuracy * 100)}% {rumor.status === 'completed' && <b className="information-completed">(완료됨)</b>}</div>
             <div>"{rumor.text}"</div>
             <br />
             <div>------------------------------</div>

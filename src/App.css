@@ -194,7 +194,32 @@
   border-right: 0;
   border-radius: 14px 0 0 14px;
   box-shadow: -8px 8px 28px #0009, 0 0 18px #ff49bd22;
-  backdrop-filter: blur(8px)
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: padding .45s ease, box-shadow .45s ease
+}
+
+.bgm-volume.collapsed {
+  padding: 6px;
+  gap: 0;
+  box-shadow: -4px 5px 16px #0008
+}
+
+.bgm-volume.collapsed .bgm-volume-slider,
+.bgm-volume.collapsed output {
+  width: 0;
+  height: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none
+}
+
+.bgm-volume.expanded .bgm-volume-slider,
+.bgm-volume.expanded output {
+  opacity: 1;
+  transition: opacity .35s ease .1s
 }
 
 .bgm-volume-slider {
@@ -291,6 +316,38 @@
 
 .bgm-volume.muted .bgm-mute {
   color: var(--red)
+}
+
+.stock-list button.asset-sisyphus,
+.stock-grid-card.asset-sisyphus {
+  border-left: 3px solid #a96cff;
+  background-color: #1a1428
+}
+
+.stock-list button.asset-sisyphus b,
+.stock-grid-card.asset-sisyphus header b,
+.chart-panel.asset-sisyphus .chart-title h2,
+.chart-panel.asset-sisyphus .chart-title>strong,
+.news-panel article.asset-sisyphus small {
+  color: #c69aff
+}
+
+.stock-list button.asset-coin,
+.stock-grid-card.asset-coin {
+  border-left: 3px solid var(--yellow);
+  background-color: #25200f
+}
+
+.stock-list button.asset-coin b,
+.stock-grid-card.asset-coin header b,
+.chart-panel.asset-coin .chart-title h2,
+.chart-panel.asset-coin .chart-title>strong,
+.news-panel article.asset-coin small {
+  color: var(--yellow)
+}
+
+.information-completed {
+  color: #138a55
 }
 
 button {

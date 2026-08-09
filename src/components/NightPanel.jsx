@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { COIN_ASSET_ID, COIN_REFERENCE_PRICE, DAY_DURATION_SECONDS, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
+import { COIN_ASSET_ID, COIN_REFERENCE_PRICE, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, HACKING_DECK_COSTS, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../data/nightContent.js'
 import { canUpgradeMine, maxMineTier, minePaybackSeconds, mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
 import { useGameStore } from '../store/gameStore.js'
@@ -11,7 +11,9 @@ export default function NightPanel() {
   const [tab, setTab] = useState('activity')
   const drink = NIGHT_ITEMS.chiliEnergy
   const ticket = NIGHT_ITEMS.smugglingTicket
+  const deck = NIGHT_ITEMS.hackingDeck
   const job = NIGHT_ACTIVITIES.convenienceJob
+  const cyberRunner = NIGHT_ACTIVITIES.cyberRunner
   const miningCost = mineUpgradeCost(state.miningTier)
   const currentMiningRate = mineRate(state.miningTier)
   const upgradedMiningRate = mineRate(nextMineTier(state.miningTier))
@@ -22,10 +24,12 @@ export default function NightPanel() {
   const canUpgrade = canUpgradeMine(state.miningTier, state.cycle)
 
   useEffect(() => {
-    if (state.nightActivity?.id !== job.id) return undefined
-    const timer = window.setTimeout(state.completeNightJob, 1400)
+    const activityId = state.nightActivity?.id
+    if (![job.id, cyberRunner.id].includes(activityId)) return undefined
+    const complete = activityId === job.id ? state.completeNightJob : state.completeCyberRunner
+    const timer = window.setTimeout(complete, 1400)
     return () => window.clearTimeout(timer)
-  }, [job.id, state.completeNightJob, state.nightActivity?.id])
+  }, [cyberRunner.id, job.id, state.completeCyberRunner, state.completeNightJob, state.nightActivity?.id])
 
   if (state.phase !== 'night') return null
   const drinkCount = state.inventory[drink.id] || 0
@@ -38,9 +42,13 @@ export default function NightPanel() {
       <button className={tab === 'inventory' ? 'active' : ''} onClick={() => setTab('inventory')}>인벤토리 ({drinkCount})</button>
     </nav>
     <div className="night-content">
-      {tab === 'activity' && <article className="night-entry"><img src={job.img} alt="" className="item-thumbnail" /><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>}
+      {tab === 'activity' && <>
+        <article className="night-entry"><img src={job.img} alt="" className="item-thumbnail" /><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>
+        {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.energy < CYBER_RUNNER_ENERGY_COST}>침투 시작</button></article>}
+      </>}
       {tab === 'shop' && <div className="night-shop-list">
         <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => state.buyNightItem(drink)} disabled={Boolean(state.nightActivity) || state.cash < drink.price || state.dailyDrinkPurchased >= 2}>구입</button></article>
+        {state.hackingDeckLevel < HACKING_DECK_COSTS.length - 1 && <article className="night-entry hacking-deck"><img src={deck.img} alt="" className="item-thumbnail" /><div><h3>{state.hackingDeckLevel < 0 ? deck.name : `해킹 덱 v.${state.hackingDeckLevel + 1} 개조`}</h3><p>{deck.description}</p><small>{money(HACKING_DECK_COSTS[state.hackingDeckLevel + 1])} · 보상량 배율 ×{state.hackingDeckLevel + 2}</small></div><button onClick={state.upgradeHackingDeck} disabled={Boolean(state.nightActivity) || state.cash < HACKING_DECK_COSTS[state.hackingDeckLevel + 1]}>{state.hackingDeckLevel < 0 ? '구입' : '업그레이드'}</button></article>}
         {state.epilogue && <article className="night-entry smuggling-ticket"><img src={ticket.img} alt="" className="item-thumbnail" /><div><h3>{ticket.name}</h3><p>{ticket.description}</p><small>{money(ticket.price)} · 구매 즉시 우주로 도주합니다(되돌릴 수 없음)</small></div><button onClick={() => state.buySmugglingTicket(ticket)} disabled={Boolean(state.nightActivity) || state.cash < ticket.price}>구입하고 탈출한다</button></article>}
         <article className="night-entry mining-machine">
           <img src="/imgs/items/mining_machine.png" alt="" className="item-thumbnail" />
@@ -62,7 +70,7 @@ export default function NightPanel() {
       </div>}
       {tab === 'inventory' && <>{drinkCount > 0 ? <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name} × {drinkCount}</h3><p>마시면 활동력을 아주 조금 회복한다.</p><small>활동력 +{drink.energyRestore}</small></div><button onClick={() => state.useNightItem(drink)} disabled={Boolean(state.nightActivity) || state.energy >= MAX_ENERGY}>마시기</button></article> : <p className="empty-state">인벤토리가 비어 있습니다.</p>}</>}
     </div>
-    {state.nightActivity && <div className="activity-loading"><div className="loading-spinner" /><h3>편의점 야간 근무 중…</h3><p>재고 수량과 삶의 의미를 세는 중입니다.</p></div>}
+    {state.nightActivity && <div className="activity-loading"><div className="loading-spinner" /><h3>{state.nightActivity.id === cyberRunner.id ? '시지프 내부망 침투 중…' : '편의점 야간 근무 중…'}</h3><p>{state.nightActivity.id === cyberRunner.id ? '추적 방화벽을 우회하고 자산 키를 복호화하는 중입니다.' : '재고 수량과 삶의 의미를 세는 중입니다.'}</p></div>}
     {state.nightMessage && <div className="night-dialogue"><p>{state.nightMessage}</p><button onClick={state.clearNightMessage}>확인</button></div>}
   </section>
 }

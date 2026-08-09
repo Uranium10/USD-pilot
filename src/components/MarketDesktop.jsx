@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE } from '../config.js'
+import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, SISYPHUS_STOCK_ID } from '../config.js'
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
@@ -11,6 +11,8 @@ import ShareholderMail from './ShareholderMail.jsx'
 import StockChart from './StockChart.jsx'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
+const assetClass = (stock) => stock?.id === SISYPHUS_STOCK_ID ? 'asset-sisyphus' : stock?.id === COIN_ASSET_ID ? 'asset-coin' : ''
+const newsBody = (text) => String(text || '').replace(/^[^,，:：]{1,30}[,，:：]\s*/, '')
 const formatMarketTime = (progress) => {
   const totalMinutes = 9 * 60 + Math.min(1, Math.max(0, progress)) * 9 * 60
   const hours = Math.floor(totalMinutes / 60)
@@ -35,7 +37,7 @@ function StockGrid({ stocks, prices, onOpen, coinUnlocked }) {
     const locked = isCoinAsset(stock) && !coinUnlocked
     const current = prices[stock.id] || stock.startPrice
     const change = (current / stock.startPrice - 1) * 100
-    return <article key={stock.id} className={`stock-grid-card ${locked ? 'coin-locked-card' : ''}`} role={locked ? undefined : 'button'} tabIndex={locked ? undefined : '0'} onClick={locked ? undefined : () => onOpen(stock.id)} onKeyDown={locked ? undefined : (event) => { if (event.key === 'Enter' || event.key === ' ') onOpen(stock.id) }}>
+    return <article key={stock.id} className={`stock-grid-card ${assetClass(stock)} ${locked ? 'coin-locked-card' : ''}`} role={locked ? undefined : 'button'} tabIndex={locked ? undefined : '0'} onClick={locked ? undefined : () => onOpen(stock.id)} onKeyDown={locked ? undefined : (event) => { if (event.key === 'Enter' || event.key === ' ') onOpen(stock.id) }}>
       <header><div><b>{stock.name}</b><small>{locked ? '채굴기 설치 후 거래 가능' : stock.sector}</small></div>{locked ? <span>LOCKED</span> : <span className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</span>}</header>
       {locked ? <div className="coin-lock-visual"><b>◆</b><span>암호자산 거래소 잠김</span></div> : <StockChart stockId={stock.id} compact />}
       {!locked && <span className="inspect-stock" aria-hidden="true">⌕</span>}
@@ -58,6 +60,10 @@ export default function MarketDesktop() {
   // 있어야 한다. market 로딩 전에는 안전한 기본값(0)으로 둔다.
   const data = state.market?.days[state.day - 1]
   const selected = data ? data.stocks.find((stock) => stock.id === state.selectedStockId) || data.stocks[0] : null
+  const orderedStocks = data ? [...data.stocks].sort((left, right) => {
+    const rank = (stock) => stock.id === COIN_ASSET_ID ? 2 : stock.id === SISYPHUS_STOCK_ID ? 1 : 0
+    return rank(left) - rank(right)
+  }) : []
   const currentPrice = selected ? state.currentPrices[selected.id] || selected.startPrice : 0
   const selectedIsCoin = isCoinAsset(selected)
   const coinUnlocked = state.miningTier >= 0
@@ -168,12 +174,12 @@ export default function MarketDesktop() {
         </section>
         <div className="trading-grid">
           <aside className="stock-list">
-            {data.stocks.map((stock) => {
+            {orderedStocks.map((stock) => {
               const locked = isCoinAsset(stock) && !coinUnlocked
               const current = state.currentPrices[stock.id] || stock.startPrice
               const change = (current / stock.startPrice - 1) * 100
               const qty = state.holdings[stock.id]?.quantity || 0
-              return <button key={stock.id} className={`${stock.id === selected.id ? 'active' : ''} ${locked ? 'coin-locked' : ''}`} disabled={locked} onClick={() => openStock(stock.id)}>
+              return <button key={stock.id} className={`${assetClass(stock)} ${stock.id === selected.id ? 'active' : ''} ${locked ? 'coin-locked' : ''}`} disabled={locked} onClick={() => openStock(stock.id)}>
                 <span><b>{locked ? '◆ 암호자산 슬롯' : stock.name}</b><small>{locked ? '채굴기 설치 필요' : stock.sector}</small></span>
                 <span>{locked ? <><b>LOCKED</b><small>상점에서 T.0 설치</small></> : <><b>{money(current)}</b><small className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</small>{qty > 0 && <small>{formatAssetQuantity(stock, qty)}{isCoinAsset(stock) ? ` ${stock.symbol}` : '주'} 보유</small>}</>}</span>
               </button>
@@ -181,8 +187,8 @@ export default function MarketDesktop() {
             <button className="list-view-button" onClick={toggleListView}>{listView ? '↩ 이전으로' : '▦ 목록 보기'}</button>
           </aside>
           {listView
-            ? <StockGrid stocks={data.stocks} prices={state.currentPrices} onOpen={openStock} coinUnlocked={coinUnlocked} />
-            : <section className="chart-panel">
+            ? <StockGrid stocks={orderedStocks} prices={state.currentPrices} onOpen={openStock} coinUnlocked={coinUnlocked} />
+            : <section className={`chart-panel ${assetClass(selected)}`}>
               {countdown !== null && <div className="market-countdown" aria-live="polite">{countdown}</div>}
               <div className="chart-title">
                 <div><small>{selected.sector}{selectedIsCoin ? ` · 채굴·판매 전용 · 판매 비용 ${(COIN_SELL_SPREAD * 100).toFixed(1)}%` : ''}</small><h2>{selected.name}</h2></div>
@@ -218,7 +224,7 @@ export default function MarketDesktop() {
                 </div>
               </div>
             </section>}
-          <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const related = data.stocks.find((stock) => stock.id === item.stockId); return <article key={item.id} className={newestNewsIds.includes(item.id) ? 'news-new' : ''}><small>{formatMarketTime(item.progress)} · {related?.name}</small><p>{item.text}</p></article> })}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
+          <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const related = data.stocks.find((stock) => stock.id === item.stockId); if (!related) return null; return <article key={item.id} className={`${assetClass(related)} ${newestNewsIds.includes(item.id) ? 'news-new' : ''}`}><small>{formatMarketTime(item.progress)} · {related.name}</small><p>{newsBody(item.text)}</p></article> })}{state.visibleNews.every((item) => !data.stocks.some((stock) => stock.id === item.stockId)) && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
         </div>
       </section>}
     </div>

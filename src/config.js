@@ -5,10 +5,13 @@ export const DAYS_PER_CYCLE = 7
 export const LISTED_COMPANY_COUNT = 5
 export const MARKET_ASSET_COUNT = 7 // 기업 5 + 코인 1 + 시지프 인텔리전스 1 (2026-08-10)
 export const MAX_CYCLES = 6
+export const EPILOGUE_CYCLE = MAX_CYCLES + 1
 export const TICK_MS = 100
 export const MAX_ENERGY = 100
 export const JOB_ENERGY_COST = 85
 export const JOB_REWARD = 600
+export const CYBER_RUNNER_ENERGY_COST = 70
+export const HACKING_DECK_COSTS = [6000, 12000, 24000, 48000]
 
 // 시지프 인텔리전스 — 상시 상장된 7번째 특수 자산(작업지시서/STORY.md 반영, 2026-08-10).
 // stock-1~stock-5(AI 서사가 참조하는 슬롯, server/ai/schemas.js STOCK_SLOT_IDS)와
@@ -20,6 +23,7 @@ export const SISYPHUS_MAJORITY_SHARES = 510 // 51% — 히든 엔딩(적대적 M
 // 요구사항 반영. 사이클마다 회사들(연 2.5%)보다 가파르게(연 4%) 성장한다. 밸런싱 필요.
 export const SISYPHUS_BASE_PRICE = 4200
 export const SISYPHUS_CYCLE_GROWTH = 0.04
+export const SISYPHUS_EPILOGUE_TARGET_PRICE = 320
 
 export const COIN_ASSET_ID = 'coin-usd'
 export const COIN_REFERENCE_PRICE = 250
@@ -31,7 +35,7 @@ export const COIN_ABSOLUTE_MIN_MULTIPLIER = 0.2
 export const COIN_ABSOLUTE_MAX_MULTIPLIER = 5
 
 // 채굴기는 크레딧이 아니라 코인을 생산한다. T.0의 기준가 환산 생산력은
-// 0.0015 DUST/s × ₡250 × 480초 = 하루 ₡180. 12분장 시절의 하루 ₡180과 같아
+// 0.0015 DUST/s × ₡250 × 480초 = 하루 ₡180. 거래일 길이가 바뀌어도 기존 경제 규모를
 // 거래일 기준 투자 회수기간은 유지된다.
 export const MINE_BASE_RATE = 0.0015
 export const MINE_RATE_GROWTH = 1.2

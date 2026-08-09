@@ -28,6 +28,7 @@ function computeSlots(lines, uptoIndex) {
 
 function Portrait({ characterId, portraitKey, active }) {
   const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [characterId, portraitKey])
   if (!characterId) return <div className="dialogue-portrait empty" aria-hidden="true" />
   const character = CHARACTERS[characterId]
   const src = portraitKey && character.portraits[portraitKey]

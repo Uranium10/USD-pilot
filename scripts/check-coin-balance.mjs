@@ -14,6 +14,8 @@ import {
   STOCK_DAILY_MAX_MULTIPLIER,
   STOCK_DAILY_MIN_MULTIPLIER,
   STOCK_SEGMENT_MOVE_LIMIT,
+  SISYPHUS_STOCK_ID,
+  SISYPHUS_EPILOGUE_TARGET_PRICE,
 } from '../src/config.js'
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { minePaybackSeconds, mineRate, mineUpgradeCost } from '../src/logic/miningSystem.js'
@@ -65,6 +67,10 @@ for (let seed = 1; seed <= 500; seed += 1) {
     assert(day.stocks.length === MARKET_ASSET_COUNT, '하루 시장 자산 개수가 잘못됐습니다.')
     const coin = day.stocks.find((asset) => asset.id === COIN_ASSET_ID)
     assert(coin?.assetType === 'coin', '코인 자산이 없습니다.')
+    assert(day.stocks.at(-2)?.id === SISYPHUS_STOCK_ID && day.stocks.at(-1)?.id === COIN_ASSET_ID, '시지프는 더스트 코인 바로 위에 표시되어야 합니다.')
+    assert(day.news.every((item) => day.stocks.some((asset) => asset.id === item.stockId)), '상장되지 않은 회사의 뉴스가 생성됐습니다.')
+    assert(day.news.some((item) => item.stockId === SISYPHUS_STOCK_ID), '시지프 전용 뉴스가 없습니다.')
+    assert(day.rumors.some((item) => item.stockId === SISYPHUS_STOCK_ID), '시지프 전용 정보가 없습니다.')
     for (const asset of day.stocks) {
       const prices = asset.path.map((point) => point.price)
       const range = (Math.max(...prices) - Math.min(...prices)) / asset.startPrice
@@ -132,6 +138,11 @@ useGameStore.getState().startDay()
 useGameStore.setState({ miningTier: 0, cash: 100000 })
 useGameStore.getState().buy(COIN_ASSET_ID, 1)
 assert(!useGameStore.getState().holdings[COIN_ASSET_ID], 'DUST는 시장에서 매수할 수 없어야 합니다.')
+
+const epilogueMarket = generateMarketCycle({ cycle: 7, seed: 777, companyIds: tradeTestMarket.companyIds })
+const epilogueSisyphus = epilogueMarket.days[0].stocks.find((asset) => asset.id === SISYPHUS_STOCK_ID)
+assert(epilogueSisyphus.path.at(-1).price <= SISYPHUS_EPILOGUE_TARGET_PRICE * 1.2, '7주차 시지프 종가가 매집 가능 가격까지 폭락하지 않았습니다.')
+assert(epilogueMarket.days[0].news.some((item) => item.id === 'c7-d1-sisyphus-collapse'), '7주차 시지프 대폭락 뉴스가 없습니다.')
 
 console.table(tierRows.map((row) => ({
   tier: `T.${row.tier}`,

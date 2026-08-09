@@ -13,6 +13,7 @@ import {
   LISTED_COMPANY_COUNT,
   SISYPHUS_BASE_PRICE,
   SISYPHUS_CYCLE_GROWTH,
+  SISYPHUS_EPILOGUE_TARGET_PRICE,
   SISYPHUS_STOCK_ID,
   STOCK_BASE_SIGMA,
   STOCK_DAILY_MAX_MULTIPLIER,
@@ -227,6 +228,17 @@ function makePath(startPrice, random, cycle) {
   return points
 }
 
+function makeSisyphusCrashPath(startPrice, random) {
+  const target = SISYPHUS_EPILOGUE_TARGET_PRICE * (0.94 + random() * 0.12)
+  return [
+    { progress: 0, price: startPrice },
+    { progress: 0.12, price: round(startPrice * (0.97 + random() * 0.02)) },
+    { progress: 0.3, price: round(target) },
+    { progress: 0.58, price: round(target * (0.9 + random() * 0.16)) },
+    { progress: 1, price: round(target * (0.92 + random() * 0.18)) },
+  ]
+}
+
 function makeCoinPath(startPrice, random, cycle) {
   const volatility = COIN_VOLATILITY_BY_CYCLE[cycle - 1] ?? COIN_VOLATILITY_BY_CYCLE.at(-1)
   const pointCount = 8 + Math.floor(random() * 5)
@@ -302,15 +314,28 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
       name: '시지프 인텔리전스',
       sector: '초지능 AI',
       startPrice: sisyphusStart,
-      path: makePath(sisyphusStart, random, cycle),
+      path: cycle === 7 && dayIndex === 0
+        ? makeSisyphusCrashPath(sisyphusStart, random)
+        : makePath(sisyphusStart, random, cycle),
     }
     previousSisyphusClose = sisyphus.path.at(-1).price
-    const stocks = [...companyStocks, coin, sisyphus]
+    const stocks = [...companyStocks, sisyphus, coin]
     const newsTargets = [
       ...Array.from({ length: 4 }, () => companyStocks[Math.floor(random() * companyStocks.length)]),
       coin,
+      sisyphus,
     ]
     const news = newsTargets.map((stock, index) => {
+      if (cycle === 7 && dayIndex === 0 && stock.id === SISYPHUS_STOCK_ID) {
+        return {
+          id: 'c7-d1-sisyphus-collapse',
+          progress: 0.2,
+          impactProgress: 0.3,
+          stockId: SISYPHUS_STOCK_ID,
+          direction: 'down',
+          text: '시지프 인텔리전스, 메티스 핵심 연구 기록 유출과 채권 조작 수사로 거래가 붕괴.',
+        }
+      }
       const impactIndex = 1 + Math.floor(random() * (stock.path.length - 1))
       const impactPoint = stock.path[impactIndex]
       const previousPoint = stock.path[impactIndex - 1]
@@ -340,9 +365,26 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
         direction: predictedUp ? 'up' : 'down',
         cost: Math.round((100 + accuracy * 350) * (INFO_COST_MULTIPLIER[cycle - 1] ?? INFO_COST_MULTIPLIER.at(-1))),
         accuracy,
+        resolveProgress: 1,
+        resolutionBasis: 'dayClose',
         source: pick(rumorSources, random),
         text: `${stock.name}: ${pick(stockEvents[eventDirection], random)}`,
       }
+    })
+    const sisyphusWentUp = sisyphus.path.at(-1).price >= sisyphus.startPrice
+    const sisyphusAccuracy = round(0.62 + random() * 0.28)
+    const sisyphusTruthful = random() <= sisyphusAccuracy
+    const sisyphusPredictedUp = sisyphusTruthful ? sisyphusWentUp : !sisyphusWentUp
+    rumors.push({
+      id: `c${cycle}-d${dayIndex + 1}-r-sisyphus`,
+      stockId: SISYPHUS_STOCK_ID,
+      direction: sisyphusPredictedUp ? 'up' : 'down',
+      cost: Math.round((220 + sisyphusAccuracy * 520) * (INFO_COST_MULTIPLIER[cycle - 1] ?? INFO_COST_MULTIPLIER.at(-1))),
+      accuracy: sisyphusAccuracy,
+      resolveProgress: 1,
+      resolutionBasis: 'dayClose',
+      source: pick(rumorSources, random),
+      text: `시지프 인텔리전스: ${sisyphusPredictedUp ? '메티스 연산 자원 증설안이 비공개 이사회를 통과했다' : '메티스 연구동의 전력 배정이 예고 없이 축소됐다'}`,
     })
     return { day: dayIndex + 1, stocks, news, rumors }
   })

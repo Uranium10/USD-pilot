@@ -84,7 +84,8 @@ function compileScenario(market, scenario) {
         text: event.headline || event.detail,
       })
     }
-    if (generatedNews.length) day.news = generatedNews.sort((a, b) => a.progress - b.progress)
+    const fixedNews = day.news.filter((item) => item.stockId === 'stock-sisyphus')
+    if (generatedNews.length) day.news = [...generatedNews, ...fixedNews].sort((a, b) => a.progress - b.progress)
     const eventsById = new Map((scenarioDay.events || []).map((event) => [event.eventId, event]))
     const generatedRumors = (scenarioDay.rumorSeeds || []).map((seed, index) => {
       const event = eventsById.get(seed.targetEventId)
@@ -96,11 +97,14 @@ function compileScenario(market, scenario) {
         direction: event.direction,
         cost: Math.round((100 + accuracy * 350) * (1 + (market.cycle - 1) * 0.2)),
         accuracy,
+        resolveProgress: clamp(Number(event.impactProgress) || 0.5, 0.04, 0.98),
+        resolutionBasis: 'eventMove',
         source: seed.sourceArchetype,
         text: seed.angle,
       }
     }).filter(Boolean)
-    if (generatedRumors.length) day.rumors = generatedRumors
+    const fixedRumors = day.rumors.filter((item) => item.stockId === 'stock-sisyphus')
+    if (generatedRumors.length) day.rumors = [...generatedRumors, ...fixedRumors]
   }
   return { ...market, aiGenerated: true, scenarioTitle: scenario.title }
 }
@@ -110,6 +114,9 @@ function compileScenario(market, scenario) {
  */
 export async function generateAiMarketCycle(options) {
   const fallback = generateMarketCycle(options)
+  // 7주차는 부채를 모두 갚은 뒤의 에필로그다. 6주 서사 아크를 벗어나므로 AI 스키마를
+  // 억지로 확장하지 않고 검증된 로컬 시장 생성기를 사용한다.
+  if (options.cycle > 6) return fallback
   const enabled = process.env.AI_MARKET_ENABLED !== 'false'
   const keysReady = process.env.ANTHROPIC_API_KEY && process.env.OPENAI_API_KEY
   const dbReady = process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN

@@ -1,7 +1,7 @@
 import { generateAiMarketCycle } from '../server/ai/aiMarketCycle.js'
 
 export default async function handler(request, response) {
-  const cycle = Math.min(6, Math.max(1, Number(request.query?.cycle) || 1))
+  const cycle = Math.min(7, Math.max(1, Number(request.query?.cycle) || 1))
   const companies = Array.isArray(request.query?.companies) ? request.query.companies[0] : request.query?.companies
   const companyIds = companies ? companies.split(',').filter(Boolean) : undefined
   const coinPriceQuery = Array.isArray(request.query?.coinPrice) ? request.query.coinPrice[0] : request.query?.coinPrice
