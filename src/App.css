@@ -187,6 +187,13 @@
   pointer-events: none
 }
 
+.game-frame>.save-indicator {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: 7px 10px
+}
+
 .bgm-volume {
   position: relative;
   z-index: 2;
