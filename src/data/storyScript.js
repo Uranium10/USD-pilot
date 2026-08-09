@@ -63,7 +63,7 @@ export const SCENES = {
       { speaker: 'system', text: '사내 규정에 의거, 미상환 시 시지프 인텔리전스 **내부 연구직**으로 특별 채용 기회가 주어지니,\n염려 마시고 부디 긍정적으로 검토하시길 바랍니다.' },
       { speaker: 'tarae', portrait: 'neutral', text: '엄마 아빠가 **내부 연구직**만큼은 죽어도 하지 말라고 했었는데.' },
       { speaker: 'tarae', portrait: 'neutral', text: '평생 벌 수 있을 지도 모르는 돈인데, 6주는 너무 짧은걸...' },
-      { speaker: 'system', text: '채무자의 여건상 **궤도 증권시장** 정도가 현실적인 변제 수단으로 판단됩니다. 단, 투자 손실은 전적으로 고객의 책임입니다.' },
+      { speaker: 'system', text: '채무자의 여건상 **궤도 증권시장** 정도가 현실적인 변제 수단으로 판단됩니다. 단, 투자 손실은 전적으로 본인의 책임입니다.' },
       { speaker: 'tarae', portrait: 'neutral', text: '주식으로 빚을 갚으라니. 인터넷 사기 광고도 이것보단 양심이 있는데.' },
       { speaker: 'tarae', portrait: 'neutral', text: '그래도 내가 끌려가 버리면... 부모님을 계속 찾을 사람도 없어.' },
       { speaker: 'tarae', portrait: 'neutral', text: '무섭지만 해보자. **빚을 갚고, 살아남고, 부모님을 찾는 거야.**' },
