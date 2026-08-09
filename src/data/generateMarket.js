@@ -1,6 +1,11 @@
 import {
   COIN_ASSET_ID,
+  COIN_ABSOLUTE_MAX_MULTIPLIER,
+  COIN_ABSOLUTE_MIN_MULTIPLIER,
+  COIN_DAILY_MAX_MULTIPLIER,
+  COIN_DAILY_MIN_MULTIPLIER,
   COIN_REFERENCE_PRICE,
+  COIN_SEGMENT_MOVE_LIMIT,
   COIN_VOLATILITY_BY_CYCLE,
   DAY_DURATION_SECONDS,
   DAYS_PER_CYCLE,
@@ -230,9 +235,9 @@ function makeCoinPath(startPrice, random, cycle) {
     const meanReversion = clamp(Math.log(COIN_REFERENCE_PRICE / price) * 0.16, -0.1, 0.1)
     const normalMove = (random() - 0.5) * 0.28 * volatility
     const shock = random() < 0.22 ? (random() - 0.5) * 0.58 * Math.sqrt(volatility) : 0
-    const move = clamp(meanReversion + normalMove + shock, -0.35, 0.35)
-    price = clamp(price * (1 + move), startPrice * 0.55, startPrice * 1.45)
-    price = clamp(price, COIN_REFERENCE_PRICE * 0.25, COIN_REFERENCE_PRICE * 4)
+    const move = clamp(meanReversion + normalMove + shock, -COIN_SEGMENT_MOVE_LIMIT, COIN_SEGMENT_MOVE_LIMIT)
+    price = clamp(price * (1 + move), startPrice * COIN_DAILY_MIN_MULTIPLIER, startPrice * COIN_DAILY_MAX_MULTIPLIER)
+    price = clamp(price, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MIN_MULTIPLIER, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MAX_MULTIPLIER)
     points.push({ progress: round(progress), price: round(price) })
   }
   return points
@@ -248,7 +253,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
   const previousCloses = listedCompanies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
   const requestedCoinStart = Number(coinStartPrice)
   const cycleCoinStartPrice = Number.isFinite(requestedCoinStart)
-    ? clamp(requestedCoinStart, COIN_REFERENCE_PRICE * 0.25, COIN_REFERENCE_PRICE * 4)
+    ? clamp(requestedCoinStart, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MIN_MULTIPLIER, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MAX_MULTIPLIER)
     : COIN_REFERENCE_PRICE
   let previousCoinClose = cycleCoinStartPrice
   const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
@@ -267,7 +272,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
       previousCloses[stockIndex] = stock.path.at(-1).price
       return stock
     })
-    const coinStart = round(clamp(previousCoinClose * (1 + (random() - 0.5) * 0.08), COIN_REFERENCE_PRICE * 0.25, COIN_REFERENCE_PRICE * 4))
+    const coinStart = round(clamp(previousCoinClose * (1 + (random() - 0.5) * 0.08), COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MIN_MULTIPLIER, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MAX_MULTIPLIER))
     const coin = {
       id: COIN_ASSET_ID,
       assetType: 'coin',

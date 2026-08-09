@@ -224,3 +224,9 @@
 - 사용자가 대안으로 제시한 `gemini-2.5-flash-preview`도 같은 방식으로 직접 호출해 검증했으나, 이 문자열은 `404 not found`로 아예 존재하지 않는 모델 ID임을 확인했다(`ai.models.list()` 결과에도 없음, `-preview-tts`/`-native-audio-preview` 음성 변형만 존재). filler 티어는 기존 `gemini-flash-latest`를 그대로 유지한다.
 - `npm run check:ai`를 claude-opus-4-6 기준으로 재실행해 3티어 전부 성공을 재확인했다 — weekly(gpt-5.5) 단계가 RunPlan의 미확정 아크(landingCycle 불일치)를 여전히 정확히 인식·반영함을 재검증했다.
 - `USD-spec/agent_workthrough_1.md`에 정정 내역과 재검증 로그, 최종 모델 표를 추가했다.
+
+## 2026-08-09 20:14 KST (Claude, 10차)
+
+- filler 티어를 별칭 `gemini-flash-latest`에서 사용자 요청에 따라 특정 버전 `gemini-3.5-flash`로 고정했다. 직접 `generateContent` 호출로 정상 응답 확인 후 `server/ai/config.js`에 반영했다.
+- `npm run check:ai`를 최종 모델 조합(claude-opus-4-6 / gpt-5.5 / gemini-3.5-flash) 기준으로 재실행해 3티어 전부 성공을 재확인했다.
+- `USD-spec/agent_workthrough_1.md`에 정정 2 및 최종 모델 표를 갱신했다.

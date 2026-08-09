@@ -26,13 +26,12 @@ export const MODEL_TIERS = {
   filler: {
     provider: 'google',
     // 사용자가 지정한 'gemini-2.5-flash'는 이 API 키/프로젝트 기준 404
-    // ("no longer available to new users")로 실제 호출이 거부됐다. 대안으로 검토했던
-    // 'gemini-2.5-flash-preview'도 실제로 호출해보니 존재하지 않는 모델 ID였다
-    // (404 "is not found ... or is not supported for generateContent" —
-    // ListModels 결과에도 없음, -preview-tts/-native-audio-preview 변형만 존재).
-    // 그래서 항상 현재 권장되는 flash 모델을 가리키는 별칭(alias)인
-    // gemini-flash-latest로 대체했다. 검증 근거는 USD-spec/agent_workthrough_1.md 참고.
-    model: 'gemini-flash-latest',
+    // ("no longer available to new users")로 거부됐고, 대안으로 검토했던
+    // 'gemini-2.5-flash-preview'도 아예 존재하지 않는 모델 ID였다(404, ListModels에도
+    // 없음). 그 다음으로 별칭 gemini-flash-latest를 썼다가, 사용자가 특정 버전에
+    // 고정하고 싶다고 해서 gemini-3.5-flash로 다시 바꿨다 — 직접 generateContent 호출로
+    // 정상 응답 확인함. 검증 로그는 USD-spec/agent_workthrough_1.md 참고.
+    model: 'gemini-3.5-flash',
     role: '짜잘한 작업 — 4줄 이내 출력(소문 플레이버, 필드 단위 복구 등)',
   },
 }

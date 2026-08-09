@@ -35,6 +35,7 @@ const initialGame = {
   totalMinedCoin: 0,
   dayIntroDestination: 'room',
   showMonitorHint: false,
+  marketReady: false,
 }
 
 function interpolate(path, progress) {
@@ -62,7 +63,7 @@ export const useGameStore = create((set, get) => ({
   setScreen: (screen) => set({ screen }),
   setNotepadContent: (notepadContent) => set({ notepadContent }),
   setNotepadFontSize: (size) => set({ notepadFontSize: Math.min(28, Math.max(12, size)) }),
-  beginLoading: () => set({ ...initialGame, screen: 'title', phase: 'loading' }),
+  beginLoading: () => set({ ...initialGame, screen: 'room', phase: 'dayIntro', marketReady: false }),
   loadMarket: (market) => {
     const firstDay = market.days[0]
     set({
@@ -71,13 +72,14 @@ export const useGameStore = create((set, get) => ({
       screen: 'room',
       dayIntroDestination: 'room',
       showMonitorHint: true,
+      marketReady: true,
       selectedStockId: firstDay.stocks[0].id,
       currentPrices: Object.fromEntries(firstDay.stocks.map((stock) => [stock.id, stock.startPrice])),
     })
   },
   completeDayIntro: () => {
     const state = get()
-    if (state.phase !== 'dayIntro') return
+    if (state.phase !== 'dayIntro' || !state.marketReady) return
     set({ phase: 'premarket', screen: state.dayIntroDestination, dayIntroDestination: 'monitor' })
   },
   openMonitor: () => set({ screen: 'monitor', showMonitorHint: false }),
@@ -124,6 +126,7 @@ export const useGameStore = create((set, get) => ({
       totalMinedCoin: Number(world.totalMinedCoin) || 0,
       showMonitorHint: Boolean(world.showMonitorHint),
       dayIntroDestination: 'monitor',
+      marketReady: true,
     })
   },
   purchaseRumor: (rumor) => {
@@ -229,6 +232,7 @@ export const useGameStore = create((set, get) => ({
       screen: 'room',
       dayIntroDestination: 'monitor',
       showMonitorHint: false,
+      marketReady: true,
       purchasedRumors: [],
       elapsed: 0,
       visibleNews: [],
@@ -255,7 +259,7 @@ export const useGameStore = create((set, get) => ({
       set({ cash, debt: 0, phase: 'clear' })
       return { result: 'clear' }
     }
-    set({ cash, debt: result.debt, phase: 'loading' })
+    set({ cash, debt: result.debt, cycle: result.nextCycle, day: 1, phase: 'dayIntro', screen: 'room', marketReady: false })
     return { result: 'next', cycle: result.nextCycle }
   },
   loadNextCycle: (market) => {
@@ -276,6 +280,7 @@ export const useGameStore = create((set, get) => ({
       elapsed: 0,
       dailyDrinkPurchased: 0,
       minedCoinToday: 0,
+      marketReady: true,
     })
   },
   selectStock: (selectedStockId) => set({ selectedStockId }),
@@ -283,7 +288,7 @@ export const useGameStore = create((set, get) => ({
     const state = get()
     if (state.phase !== 'day') return
     const asset = dayData(state)?.stocks.find((stock) => stock.id === stockId)
-    if (!asset || (isCoinAsset(asset) && state.miningTier < 0)) return
+    if (!asset || isCoinAsset(asset)) return
     const amount = normalizeTradeQuantity(asset, quantity)
     const marketPrice = state.currentPrices[stockId]
     const price = buyExecutionPrice(asset, marketPrice)

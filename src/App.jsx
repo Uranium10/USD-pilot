@@ -60,6 +60,7 @@ function DayTransition() {
   const cycle = useGameStore((state) => state.cycle)
   const day = useGameStore((state) => state.day)
   const completeDayIntro = useGameStore((state) => state.completeDayIntro)
+  const marketReady = useGameStore((state) => state.marketReady)
   const [typed, setTyped] = useState('')
   const [leaving, setLeaving] = useState(false)
 
@@ -82,17 +83,17 @@ function DayTransition() {
       }, 115)
     }, 850)
     const leaveTimer = window.setTimeout(() => setLeaving(true), 850 + text.length * 115 + 700)
-    const finishTimer = window.setTimeout(completeDayIntro, 850 + text.length * 115 + 1450)
+    const finishTimer = marketReady ? window.setTimeout(completeDayIntro, 850 + text.length * 115 + 1450) : undefined
     return () => {
       window.clearTimeout(startTimer)
       window.clearTimeout(leaveTimer)
-      window.clearTimeout(finishTimer)
+      if (finishTimer) window.clearTimeout(finishTimer)
       if (interval) window.clearInterval(interval)
       keyboard.pause()
     }
-  }, [completeDayIntro, cycle, day])
+  }, [completeDayIntro, cycle, day, marketReady])
 
-  return <div className={`day-transition ${leaving ? 'leaving' : ''}`}><p>{typed}<span aria-hidden="true">▋</span></p></div>
+  return <div className={`day-transition ${leaving && marketReady ? 'leaving' : ''}`}><p>{typed}<span aria-hidden="true">▋</span></p>{!marketReady && <div className="market-loading" role="status"><span aria-hidden="true" />시장 정보를 생성하는 중…</div>}</div>
 }
 
 function AutoSave() {

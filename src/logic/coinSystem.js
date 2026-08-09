@@ -1,4 +1,4 @@
-import { COIN_ASSET_ID, COIN_TRADE_SPREAD } from '../config.js'
+import { COIN_ASSET_ID, COIN_SELL_SPREAD } from '../config.js'
 
 const COIN_QUANTITY_SCALE = 10000
 
@@ -7,11 +7,11 @@ export function isCoinAsset(assetOrId) {
 }
 
 export function buyExecutionPrice(asset, marketPrice) {
-  return isCoinAsset(asset) ? marketPrice * (1 + COIN_TRADE_SPREAD) : marketPrice
+  return marketPrice
 }
 
 export function sellExecutionPrice(asset, marketPrice) {
-  return isCoinAsset(asset) ? marketPrice * (1 - COIN_TRADE_SPREAD) : marketPrice
+  return isCoinAsset(asset) ? marketPrice * (1 - COIN_SELL_SPREAD) : marketPrice
 }
 
 export function normalizeTradeQuantity(asset, quantity) {

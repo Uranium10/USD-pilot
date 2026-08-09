@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { COIN_ASSET_ID, COIN_TRADE_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE } from '../config.js'
+import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE } from '../config.js'
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
@@ -76,12 +76,14 @@ export default function MarketDesktop() {
   const sellQuantity = Math.min(quantity, holding.quantity)
   const sellTotal = sellPrice * sellQuantity
   const canTradeSelected = !selectedIsCoin || coinUnlocked
-  const canBuy = canTradeSelected && quantity > 0 && buyTotal <= state.cash && state.phase === 'day'
+  const canBuy = !selectedIsCoin && canTradeSelected && quantity > 0 && buyTotal <= state.cash && state.phase === 'day'
   const canSell = canTradeSelected && sellQuantity > 0 && state.phase === 'day'
   const remaining = Math.max(0, DAY_DURATION_SECONDS - state.elapsed)
   const netWorth = getNetWorth(state)
   const previousSummary = state.dailySummaries.at(-1)
-  const assetChange = previousSummary ? netWorth - previousSummary.netWorth : 0
+  const assetBaseline = previousSummary?.netWorth ?? state.dayStartNetWorth
+  const showAssetChange = Boolean(previousSummary) || state.phase === 'day' || state.phase === 'dayReport'
+  const assetChange = netWorth - assetBaseline
   const profitDiff = holding.quantity > 0 ? sellPrice - holding.average : 0
   const profitPct = holding.quantity > 0 && holding.average > 0 ? profitDiff / holding.average * 100 : null
   const minPayment = getMinPayment(state.debt, state.cycle)
@@ -89,7 +91,7 @@ export default function MarketDesktop() {
   const coinPrice = state.currentPrices[COIN_ASSET_ID] || data.stocks.find((stock) => stock.id === COIN_ASSET_ID)?.startPrice || 0
   const coinAsset = data.stocks.find((stock) => stock.id === COIN_ASSET_ID)
   const quantityUnit = selectedIsCoin ? ` ${selected.symbol}` : '주'
-  const quantityButtons = selectedIsCoin ? [0.1, 1, 5, 10] : [1, 5, 10, 100]
+  const quantityButtons = [1, 5, 10, 100]
 
   const openStock = (stockId) => {
     const asset = data.stocks.find((stock) => stock.id === stockId)
@@ -119,7 +121,7 @@ export default function MarketDesktop() {
         <section className="account-strip">
           <div className="asset-cell">
             <small>총자산</small><strong>{money(netWorth)}</strong>
-            {previousSummary && <small className={assetChange >= 0 ? 'green' : 'red'}>전일 대비 {assetChange >= 0 ? '+' : ''}{money(assetChange)}</small>}
+            {showAssetChange && <small className={assetChange >= 0 ? 'green' : 'red'}>{previousSummary ? '전일 대비' : '시작 자산 대비'} {assetChange >= 0 ? '+' : ''}{money(assetChange)}</small>}
             {state.feedback && <div key={state.feedback.id} className={`asset-feedback ${state.feedback.amount >= 0 ? 'gain' : 'loss'}`}>{state.feedback.amount >= 0 ? '+' : ''}{money(state.feedback.amount)}</div>}
           </div>
           <div><small>현금</small><strong>{money(state.cash)}</strong></div>
@@ -149,7 +151,7 @@ export default function MarketDesktop() {
             ? <StockGrid stocks={data.stocks} prices={state.currentPrices} onOpen={openStock} coinUnlocked={coinUnlocked} />
             : <section className="chart-panel">
               <div className="chart-title">
-                <div><small>{selected.sector}{selectedIsCoin ? ` · 거래 스프레드 ±${(COIN_TRADE_SPREAD * 100).toFixed(1)}%` : ''}</small><h2>{selected.name}</h2></div>
+                <div><small>{selected.sector}{selectedIsCoin ? ` · 채굴·판매 전용 · 판매 비용 ${(COIN_SELL_SPREAD * 100).toFixed(1)}%` : ''}</small><h2>{selected.name}</h2></div>
                 <strong>{money(currentPrice)}</strong>
               </div>
               <StockChart />
@@ -161,22 +163,24 @@ export default function MarketDesktop() {
                     : <span className={profitDiff >= 0 ? 'green' : 'red'}>수익 {profitDiff >= 0 ? '+' : ''}{money(profitDiff * holding.quantity)} ({profitPct >= 0 ? '+' : ''}{profitPct.toFixed(2)}%)</span>)}
                 </div>
                 <div className="order-controls">
-                  <div className="quantity-buttons">{quantityButtons.map((amount) => <button key={amount} onClick={() => setQuantity((value) => normalizeTradeQuantity(selected, value + amount))}>+{amount}</button>)}</div>
+                  <div className="quantity-buttons">{selectedIsCoin
+                    ? <><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity * 0.25))}>25%</button><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity * 0.5))}>50%</button><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity))}>전량</button></>
+                    : quantityButtons.map((amount) => <button key={amount} onClick={() => setQuantity((value) => normalizeTradeQuantity(selected, value + amount))}>+{amount}</button>)}</div>
                   <div className="max-buttons">
-                    <button onClick={() => setQuantity(normalizeTradeQuantity(selected, state.cash / buyPrice))}>최대 매수</button>
+                    {!selectedIsCoin && <button onClick={() => setQuantity(normalizeTradeQuantity(selected, state.cash / buyPrice))}>최대 매수</button>}
                     <button onClick={() => setQuantity(holding.quantity)} disabled={!holding.quantity}>최대 매도</button>
                   </div>
                   <div className="order-fields">
                     <label>수량<input type="number" min="0" step={selectedIsCoin ? 0.0001 : 1} value={quantity} onChange={(event) => setQuantity(normalizeTradeQuantity(selected, event.target.value))} /></label>
-                    <label>금액<input type="number" min="0" value={amountDraft} onFocus={() => { editingAmountRef.current = true }} onBlur={() => { editingAmountRef.current = false; setAmountDraft(String(Math.round(buyTotal))) }} onChange={handleAmountChange} /></label>
+                    {!selectedIsCoin && <label>금액<input type="number" min="0" value={amountDraft} onFocus={() => { editingAmountRef.current = true }} onBlur={() => { editingAmountRef.current = false; setAmountDraft(String(Math.round(buyTotal))) }} onChange={handleAmountChange} /></label>}
                   </div>
                 </div>
                 <div className="order-actions">
                   <div className="order-totals">
-                    <span className={canBuy ? '' : 'red'}>매수 {formatAssetQuantity(selected, quantity)}{quantityUnit} · {money(buyTotal)}</span>
+                    {!selectedIsCoin && <span className={canBuy ? '' : 'red'}>매수 {formatAssetQuantity(selected, quantity)}{quantityUnit} · {money(buyTotal)}</span>}
                     <span className={canSell ? '' : 'red'}>매도 {formatAssetQuantity(selected, sellQuantity)}{quantityUnit} · {money(sellTotal)}</span>
                   </div>
-                  <div className="order-buttons"><button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button><button className="sell" disabled={!canSell} onClick={sell}>매도</button></div>
+                  <div className="order-buttons">{!selectedIsCoin && <button className="buy" disabled={!canBuy} onClick={() => state.buy(selected.id, quantity)}>매수</button>}<button className="sell" disabled={!canSell} onClick={sell}>{selectedIsCoin ? 'DUST 판매' : '매도'}</button></div>
                 </div>
               </div>
             </section>}

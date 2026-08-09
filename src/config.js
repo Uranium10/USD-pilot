@@ -1,6 +1,6 @@
 const viteEnv = import.meta.env || {}
 
-export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 12 * 60
+export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 8 * 60
 export const DAYS_PER_CYCLE = 7
 export const LISTED_COMPANY_COUNT = 5
 export const MARKET_ASSET_COUNT = 6
@@ -11,12 +11,18 @@ export const JOB_ENERGY_COST = 85
 export const JOB_REWARD = 600
 
 export const COIN_ASSET_ID = 'coin-usd'
-export const COIN_REFERENCE_PRICE = 100
-export const COIN_TRADE_SPREAD = 0.015
+export const COIN_REFERENCE_PRICE = 250
+export const COIN_SELL_SPREAD = 0.025
+export const COIN_SEGMENT_MOVE_LIMIT = 0.45
+export const COIN_DAILY_MIN_MULTIPLIER = 0.45
+export const COIN_DAILY_MAX_MULTIPLIER = 1.55
+export const COIN_ABSOLUTE_MIN_MULTIPLIER = 0.2
+export const COIN_ABSOLUTE_MAX_MULTIPLIER = 5
 
 // 채굴기는 크레딧이 아니라 코인을 생산한다. T.0의 기준가 환산 생산력은
-// 0.0025 coin/s × ₡100 = 기존의 0.25 credit/s와 같다.
-export const MINE_BASE_RATE = 0.0025
+// 0.0015 DUST/s × ₡250 × 480초 = 하루 ₡180. 12분장 시절의 하루 ₡180과 같아
+// 거래일 기준 투자 회수기간은 유지된다.
+export const MINE_BASE_RATE = 0.0015
 export const MINE_RATE_GROWTH = 1.2
 export const MINE_INSTALL_COST = 3000
 export const MINE_BASE_COST = 800

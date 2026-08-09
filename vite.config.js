@@ -3,13 +3,13 @@ import { readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import { createSessionRepository } from './server/sessionRepository.js'
-import { generateMarketCycle } from './src/data/generateMarket.js'
+import { generateAiMarketCycle } from './server/ai/aiMarketCycle.js'
 
 function localMarketApi() {
   return {
     name: 'usd-local-market-api',
     configureServer(server) {
-      server.middlewares.use('/api/market-cycle', (request, response) => {
+      server.middlewares.use('/api/market-cycle', async (request, response) => {
         const url = new URL(request.url || '/', 'http://localhost')
         const cycle = Math.min(6, Math.max(1, Number(url.searchParams.get('cycle')) || 1))
         const companyIds = url.searchParams.get('companies')?.split(',').filter(Boolean)
@@ -20,7 +20,7 @@ function localMarketApi() {
         response.statusCode = 200
         response.setHeader('Content-Type', 'application/json; charset=utf-8')
         response.setHeader('Cache-Control', 'no-store')
-        response.end(JSON.stringify(generateMarketCycle({ cycle, companyIds, coinStartPrice, seed })))
+        response.end(JSON.stringify(await generateAiMarketCycle({ cycle, companyIds, coinStartPrice, seed })))
       })
     },
   }
