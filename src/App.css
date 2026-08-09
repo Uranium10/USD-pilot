@@ -2987,6 +2987,7 @@ button:hover {
 }
 
 .dialogue-box {
+  position: relative;
   width: min(920px, 92vw);
   min-height: 110px;
   padding: 20px 26px;
@@ -2995,6 +2996,23 @@ button:hover {
   border: 1px solid var(--cyan);
   box-shadow: 0 12px 60px #000c;
   user-select: none
+}
+
+.dialogue-box::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: -1px;
+  right: -1px;
+  bottom: 100%;
+  height: 96px;
+  background: linear-gradient(to top, #05070bd9 0%, #05070b73 48%, transparent 100%);
+  pointer-events: none
+}
+
+.dialogue-box> * {
+  position: relative;
+  z-index: 1
 }
 
 .dialogue-speaker {

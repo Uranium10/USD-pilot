@@ -104,6 +104,23 @@ export default function DialogueScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeScene?.id, lineIndex])
 
+  useEffect(() => {
+    if (!currentLine?.sound) return undefined
+    const lineSound = new Audio(currentLine.sound)
+    const requestedVolume = Number(currentLine.soundVolume ?? 1)
+    lineSound.volume = Number.isFinite(requestedVolume)
+      ? Math.min(1, Math.max(0, requestedVolume))
+      : 1
+    lineSound.loop = Boolean(currentLine.soundLoop)
+    lineSound.play().catch(() => {})
+    return () => {
+      lineSound.pause()
+      lineSound.currentTime = 0
+    }
+    // 대사별 사운드는 같은 줄 안에서 옵션이 바뀌지 않으므로 줄 인덱스를 재생 키로 쓴다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScene?.id, lineIndex])
+
   if (!activeScene || !currentLine) return null
 
   const advance = () => {

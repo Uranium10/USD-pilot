@@ -8,8 +8,10 @@
 // 대화 캐릭터 구조:
 //   side: 기본 등장 위치('left' | 'right'). 같은 위치에 다른 캐릭터가 등장하면 교체된다.
 //   portraits: 표정 키와 이미지 경로. 원본 이미지는 왼쪽을 바라보게 제작한다.
-// 대사에서는 { speaker, portrait, side?, text }를 쓴다. side를 생략하면 캐릭터의 기본
-// side를 사용하고, 특정 장면에서만 반대편에 세워야 할 때 대사 단위로 덮어쓸 수 있다.
+// 대사에서는 { speaker, portrait, side?, sound?, soundVolume?, soundLoop?, text }를 쓴다.
+// side를 생략하면 캐릭터의 기본 side를 사용하고, 특정 장면에서만 반대편에 세워야 할
+// 때 대사 단위로 덮어쓸 수 있다. sound에는 `/sounds/파일명.mp3`처럼 public 기준 URL을
+// 넣는다. 해당 대사가 시작될 때 재생되고 다음 대사로 넘어가면 자동으로 중단된다.
 // DialogueScene.jsx는 이미지 로드 실패 시 이니셜 placeholder로 자동 대체한다.
 
 export const CHARACTERS = {
@@ -42,7 +44,7 @@ export const SCENES = {
       { speaker: 'system', text: 'AI작성된 임시 스크립트입니다.' },
       { speaker: 'system', text: '방구석. 모니터가 경고음을 내고 있다.' },
       { speaker: 'tarae', portrait: 'neutral', text: '...상속 승인 완료? 내가 언제 승인했다고.' },
-      { speaker: 'tarae', portrait: 'neutral', text: '부모님 몫이었던 빚이, 이제 전부 내 이름으로 넘어왔다.' },
+      { speaker: 'system', portrait: 'neutral', text: '부모님 몫이었던 빚이, 이제 전부 내 이름으로 넘어왔다.' },
       { speaker: 'system', text: '[시지프 인텔리전스 채권관리부] 6주내로 채무액을 전부 변제하지 못하면 전적으로 불이익을 받으실 수 있습니다.' },
     ],
   },
