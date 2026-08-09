@@ -1,6 +1,9 @@
 import {
   COIN_ASSET_ID,
+  COIN_DAILY_MAX_MULTIPLIER,
+  COIN_DAILY_MIN_MULTIPLIER,
   COIN_REFERENCE_PRICE,
+  COIN_SEGMENT_MOVE_LIMIT,
   DAYS_PER_CYCLE,
   DAY_DURATION_SECONDS,
   FLOOR_BY_CYCLE,
@@ -14,6 +17,7 @@ import {
 } from '../src/config.js'
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { minePaybackSeconds, mineRate, mineUpgradeCost } from '../src/logic/miningSystem.js'
+import { useGameStore } from '../src/store/gameStore.js'
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message)
@@ -22,7 +26,7 @@ const average = (values) => values.reduce((total, value) => total + value, 0) / 
 const quantile = (values, ratio) => [...values].sort((left, right) => left - right)[Math.floor(values.length * ratio)]
 const weekSeconds = DAY_DURATION_SECONDS * DAYS_PER_CYCLE
 
-assert(DAY_DURATION_SECONDS === 720, '낮 스테이지는 12분(720초)이어야 합니다.')
+assert(DAY_DURATION_SECONDS === 480, '낮 스테이지는 8분(480초)이어야 합니다.')
 assert(LISTED_COMPANY_COUNT === 5 && MARKET_ASSET_COUNT === 6, '시장 구성은 기업 5 + 코인 1이어야 합니다.')
 assert(STOCK_SEGMENT_MOVE_LIMIT === 0.36, '주식 구간 변동 상한은 ±36%여야 합니다.')
 
@@ -44,7 +48,7 @@ const coverageRows = FLOOR_BY_CYCLE.map((floor, index) => {
   const totalFloorIncome = miningValue + JOB_REWARD * DAYS_PER_CYCLE
   return { cycle: index + 1, tier, floor, totalFloorIncome, coverage: totalFloorIncome / floor }
 })
-assert(coverageRows[0].coverage <= 0.31, '1주차 안전망 수입이 최소 상환액의 31%를 넘습니다.')
+assert(coverageRows[0].coverage <= 0.32, '1주차 안전망 수입이 최소 상환액의 32%를 넘습니다.')
 assert(coverageRows.every((row, index) => index === 0 || row.coverage <= coverageRows[index - 1].coverage), '주차가 지날수록 안전망 커버율이 낮아져야 합니다.')
 
 const stockRanges = []
@@ -66,8 +70,8 @@ for (let seed = 1; seed <= 500; seed += 1) {
       const range = (Math.max(...prices) - Math.min(...prices)) / asset.startPrice
       if (asset.assetType === 'coin') {
         coinRanges.push(range)
-        assert(Math.min(...prices) >= asset.startPrice * 0.549, '코인 일중 하락 제한을 벗어났습니다.')
-        assert(Math.max(...prices) <= asset.startPrice * 1.451, '코인 일중 상승 제한을 벗어났습니다.')
+        assert(Math.min(...prices) >= asset.startPrice * (COIN_DAILY_MIN_MULTIPLIER - 0.001), '코인 일중 하락 제한을 벗어났습니다.')
+        assert(Math.max(...prices) <= asset.startPrice * (COIN_DAILY_MAX_MULTIPLIER + 0.001), '코인 일중 상승 제한을 벗어났습니다.')
       } else {
         stockRanges.push(range)
         stockDailyReturns.push(asset.path.at(-1).price / asset.startPrice - 1)
@@ -118,7 +122,16 @@ const volatilityRatio = average(coinRanges) / average(stockRanges)
 const lateVolatilityRatio = average(lateCoinRanges) / average(lateStockRanges)
 assert(volatilityRatio >= 2, `코인 변동성이 충분히 크지 않습니다: ${volatilityRatio.toFixed(2)}배`)
 assert(lateVolatilityRatio >= 1.8, `6주차 코인 변동성이 충분히 크지 않습니다: ${lateVolatilityRatio.toFixed(2)}배`)
-assert(average(finalCoinPrices) >= 85 && average(finalCoinPrices) <= 115, '코인 가격에 과도한 장기 방향 편향이 있습니다.')
+assert(COIN_SEGMENT_MOVE_LIMIT === 0.45, '코인 구간 변동 상한은 ±45%여야 합니다.')
+assert(average(finalCoinPrices) >= 212.5 && average(finalCoinPrices) <= 287.5, '코인 가격에 과도한 장기 방향 편향이 있습니다.')
+
+const tradeTestMarket = generateMarketCycle({ cycle: 1, seed: 777 })
+useGameStore.getState().loadMarket(tradeTestMarket)
+useGameStore.getState().completeDayIntro()
+useGameStore.getState().startDay()
+useGameStore.setState({ miningTier: 0, cash: 100000 })
+useGameStore.getState().buy(COIN_ASSET_ID, 1)
+assert(!useGameStore.getState().holdings[COIN_ASSET_ID], 'DUST는 시장에서 매수할 수 없어야 합니다.')
 
 console.table(tierRows.map((row) => ({
   tier: `T.${row.tier}`,

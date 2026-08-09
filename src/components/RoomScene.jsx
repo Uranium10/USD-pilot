@@ -53,6 +53,8 @@ export default function RoomScene({ children }) {
   const phase = useGameStore((state) => state.phase)
   const showMonitorHint = useGameStore((state) => state.showMonitorHint)
   const openMonitor = useGameStore((state) => state.openMonitor)
+  const endNight = useGameStore((state) => state.endNight)
+  const nightActivity = useGameStore((state) => state.nightActivity)
   const netWorth = useGameStore(getNetWorth)
   const previousSummary = useGameStore((state) => state.dailySummaries.at(-1))
   const set = isNightPhase(phase) ? 'night' : 'day'
@@ -101,6 +103,9 @@ export default function RoomScene({ children }) {
         <button className={`monitor-hotspot ${showMonitorHint ? 'first-monitor-visit' : ''}`} onClick={openMonitor} aria-label="모니터 켜기">
           <span className="monitor-hint">{showMonitorHint ? 'CLICK TO START' : '화면 보기'}</span>
         </button>
+      )}
+      {phase === 'night' && (
+        <button className="sleep-button" onClick={endNight} disabled={Boolean(nightActivity)}>자기</button>
       )}
       {children}
     </main>

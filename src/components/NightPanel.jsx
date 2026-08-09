@@ -60,7 +60,6 @@ export default function NightPanel() {
       </div>}
       {tab === 'inventory' && <>{drinkCount > 0 ? <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name} × {drinkCount}</h3><p>마시면 활동력을 아주 조금 회복한다.</p><small>활동력 +{drink.energyRestore}</small></div><button onClick={() => state.useNightItem(drink)} disabled={Boolean(state.nightActivity) || state.energy >= MAX_ENERGY}>마시기</button></article> : <p className="empty-state">인벤토리가 비어 있습니다.</p>}</>}
     </div>
-    <button className="sleep-button" onClick={state.endNight} disabled={Boolean(state.nightActivity)}>자기</button>
     {state.nightActivity && <div className="activity-loading"><div className="loading-spinner" /><h3>편의점 야간 근무 중…</h3><p>재고 수량과 삶의 의미를 세는 중입니다.</p></div>}
     {state.nightMessage && <div className="night-dialogue"><p>{state.nightMessage}</p><button onClick={state.clearNightMessage}>확인</button></div>}
   </section>
