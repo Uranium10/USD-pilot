@@ -146,7 +146,11 @@ export default function DialogueScene() {
   const speakerName = CHARACTERS[currentLine.speaker]?.name
   const typedSegments = parseDialogueBold(typed)
 
-  return <div className="dialogue-backdrop" onClick={advance} role="button" tabIndex={0}
+  return <div className="dialogue-backdrop"
+    onClick={(event) => { if (event.button === 0) advance() }}
+    onContextMenu={(event) => event.preventDefault()}
+    onDragStart={(event) => event.preventDefault()}
+    role="button" tabIndex={0}
     onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') advance() }}>
     <div className="dialogue-portraits">
       <Portrait slot={slots[0]} side="left" active={activeIndex === 0} />

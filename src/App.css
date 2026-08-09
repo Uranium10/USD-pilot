@@ -2933,7 +2933,9 @@ button:hover {
   padding: 0 0 40px;
   background: #000a;
   cursor: pointer;
-  backdrop-filter: blur(2px)
+  backdrop-filter: blur(2px);
+  user-select: none;
+  -webkit-touch-callout: none
 }
 
 .dialogue-portraits {
