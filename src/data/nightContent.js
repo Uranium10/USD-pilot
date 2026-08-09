@@ -10,8 +10,8 @@ export const NIGHT_ITEMS = {
   hackingDeck: {
     id: 'hacking-deck',
     name: '해킹 덱 v.0',
-    img: '/imgs/items/mining_machine.png',
-    description: '시지프 내부망에 침투하기 위한 불법 휴대 단말. 개조할수록 회수 가능한 데이터가 늘어난다.',
+    img: '/imgs/items/hacking_deck.png',
+    description: '구시대 유물을 해킹하기 위해 조립한 낡은 단말기. 소소한 회수 성공률이 늘어난다.',
   },
   // 진 엔딩(우주 밀항) 전용 — 6주차 청산 성공 후 에필로그(유예일)에만 상점에 노출된다.
   // 구매 즉시 게임이 끝난다(별도 "사용" 단계 없음, gameStore.buySmugglingTicket 참고).
@@ -34,7 +34,7 @@ export const NIGHT_ACTIVITIES = {
   cyberRunner: {
     id: 'cyber-runner',
     name: '사이버 러너',
-    img: '/imgs/items/mining_machine.png',
-    description: '해킹 덱으로 시지프의 그림자 계좌와 자산 보관소를 훑는다.',
+    img: '/imgs/items/cyber_runner.png',
+    description: '해킹 덱을 이용해 뒷골목 의뢰를 처리한다. 그림자 계좌와 자산 보관소를 훑는다.',
   },
 }
