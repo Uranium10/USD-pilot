@@ -280,6 +280,14 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
   // (server/ai/aiMarketCycle.js 참고). 5개 기업과 같은 makePath() 확률 엔진을 그대로
   // 쓰되, 회사들보다 가파르게 성장하는 별도 프리미엄 기준가 트랙을 갖는다.
   let previousSisyphusClose = SISYPHUS_BASE_PRICE * (1 + (cycle - 1) * SISYPHUS_CYCLE_GROWTH)
+  // 시지프 정보는 매일 별도 4번째 카드로 붙이지 않는다. 한 주의 2~4일차 사이에
+  // 처음 등장하고, 이후 2~4일 간격으로 다시 나타나며 그날의 일반 정보 한 장을
+  // 교체한다. 따라서 정보 거래소는 항상 3열 한 줄을 유지하면서 희소 정보의 인상도
+  // 강해진다. 같은 시장 seed에서는 일정과 교체 위치도 항상 동일하다.
+  const sisyphusRumorDays = new Set()
+  for (let intelDay = 2 + Math.floor(random() * 3); intelDay <= DAYS_PER_CYCLE; intelDay += 2 + Math.floor(random() * 3)) {
+    sisyphusRumorDays.add(intelDay)
+  }
   const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
     const companyStocks = listedCompanies.map(([name, sector, base, companyId], stockIndex) => {
       const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
@@ -375,21 +383,24 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
         text: `${stock.name}: ${pick(stockEvents[eventDirection], random)}`,
       }
     })
-    const sisyphusWentUp = sisyphus.path.at(-1).price >= sisyphus.startPrice
-    const sisyphusAccuracy = round(0.62 + random() * 0.28)
-    const sisyphusTruthful = random() <= sisyphusAccuracy
-    const sisyphusPredictedUp = sisyphusTruthful ? sisyphusWentUp : !sisyphusWentUp
-    rumors.push({
-      id: `c${cycle}-d${dayIndex + 1}-r-sisyphus`,
-      stockId: SISYPHUS_STOCK_ID,
-      direction: sisyphusPredictedUp ? 'up' : 'down',
-      cost: Math.round((220 + sisyphusAccuracy * 520) * (INFO_COST_MULTIPLIER[cycle - 1] ?? INFO_COST_MULTIPLIER.at(-1))),
-      accuracy: sisyphusAccuracy,
-      resolveProgress: 1,
-      resolutionBasis: 'dayClose',
-      source: pick(rumorSources, random),
-      text: `시지프 인텔리전스: ${sisyphusPredictedUp ? '메티스 연산 자원 증설안이 비공개 이사회를 통과했다' : '메티스 연구동의 전력 배정이 예고 없이 축소됐다'}`,
-    })
+    if (sisyphusRumorDays.has(dayIndex + 1)) {
+      const sisyphusWentUp = sisyphus.path.at(-1).price >= sisyphus.startPrice
+      const sisyphusAccuracy = round(0.62 + random() * 0.28)
+      const sisyphusTruthful = random() <= sisyphusAccuracy
+      const sisyphusPredictedUp = sisyphusTruthful ? sisyphusWentUp : !sisyphusWentUp
+      const replaceIndex = Math.floor(random() * rumors.length)
+      rumors[replaceIndex] = {
+        id: `c${cycle}-d${dayIndex + 1}-r-sisyphus`,
+        stockId: SISYPHUS_STOCK_ID,
+        direction: sisyphusPredictedUp ? 'up' : 'down',
+        cost: Math.round((220 + sisyphusAccuracy * 520) * (INFO_COST_MULTIPLIER[cycle - 1] ?? INFO_COST_MULTIPLIER.at(-1))),
+        accuracy: sisyphusAccuracy,
+        resolveProgress: 1,
+        resolutionBasis: 'dayClose',
+        source: pick(rumorSources, random),
+        text: `시지프 인텔리전스: ${sisyphusPredictedUp ? '메티스 연산 자원 증설안이 비공개 이사회를 통과했다' : '메티스 연구동의 전력 배정이 예고 없이 축소됐다'}`,
+      }
+    }
     return { day: dayIndex + 1, stocks, news, rumors }
   })
 

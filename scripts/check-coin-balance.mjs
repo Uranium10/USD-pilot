@@ -61,6 +61,7 @@ const finalCoinPrices = []
 const selectedCompanyIds = new Set()
 for (let seed = 1; seed <= 500; seed += 1) {
   const market = generateMarketCycle({ cycle: 1, seed })
+  const sisyphusRumorDays = []
   assert(market.companyIds.length === LISTED_COMPANY_COUNT, '회사 명단 개수가 잘못됐습니다.')
   market.companyIds.forEach((companyId) => selectedCompanyIds.add(companyId))
   for (const day of market.days) {
@@ -70,7 +71,8 @@ for (let seed = 1; seed <= 500; seed += 1) {
     assert(day.stocks.at(-2)?.id === SISYPHUS_STOCK_ID && day.stocks.at(-1)?.id === COIN_ASSET_ID, '시지프는 더스트 코인 바로 위에 표시되어야 합니다.')
     assert(day.news.every((item) => day.stocks.some((asset) => asset.id === item.stockId)), '상장되지 않은 회사의 뉴스가 생성됐습니다.')
     assert(day.news.some((item) => item.stockId === SISYPHUS_STOCK_ID), '시지프 전용 뉴스가 없습니다.')
-    assert(day.rumors.some((item) => item.stockId === SISYPHUS_STOCK_ID), '시지프 전용 정보가 없습니다.')
+    assert(day.rumors.length === 3, '정보 거래소는 항상 정보 카드 3개를 제공해야 합니다.')
+    if (day.rumors.some((item) => item.stockId === SISYPHUS_STOCK_ID)) sisyphusRumorDays.push(day.day)
     for (const asset of day.stocks) {
       const prices = asset.path.map((point) => point.price)
       const range = (Math.max(...prices) - Math.min(...prices)) / asset.startPrice
@@ -88,6 +90,11 @@ for (let seed = 1; seed <= 500; seed += 1) {
         }
       }
     }
+  }
+  assert(sisyphusRumorDays[0] >= 2 && sisyphusRumorDays[0] <= 4, '첫 시지프 정보가 2~4일차 사이에 등장하지 않았습니다.')
+  for (let index = 1; index < sisyphusRumorDays.length; index += 1) {
+    const interval = sisyphusRumorDays[index] - sisyphusRumorDays[index - 1]
+    assert(interval >= 2 && interval <= 4, '시지프 정보의 등장 간격이 2~4일을 벗어났습니다.')
   }
   finalCoinPrices.push(market.days.at(-1).stocks.find((asset) => asset.id === COIN_ASSET_ID).path.at(-1).price)
 }

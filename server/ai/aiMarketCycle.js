@@ -104,7 +104,21 @@ function compileScenario(market, scenario) {
       }
     }).filter(Boolean)
     const fixedRumors = day.rumors.filter((item) => item.stockId === 'stock-sisyphus')
-    if (generatedRumors.length) day.rumors = [...generatedRumors, ...fixedRumors]
+    if (generatedRumors.length) {
+      const compiledRumors = generatedRumors.slice(0, 3)
+      const fallbackRumors = day.rumors.filter((item) => item.stockId !== 'stock-sisyphus')
+      for (const fallbackRumor of fallbackRumors) {
+        if (compiledRumors.length >= 3) break
+        compiledRumors.push(fallbackRumor)
+      }
+      // 로컬 생성기가 2~4일 간격으로 배치한 시지프 정보가 있는 날에는 AI 정보에
+      // 네 번째로 덧붙이지 않고, 세 슬롯 중 하나를 결정론적으로 교체한다.
+      if (fixedRumors.length && compiledRumors.length) {
+        const replaceIndex = (market.cycle + day.day) % compiledRumors.length
+        compiledRumors[replaceIndex] = fixedRumors[0]
+      }
+      day.rumors = compiledRumors
+    }
   }
   return { ...market, aiGenerated: true, scenarioTitle: scenario.title }
 }
