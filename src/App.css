@@ -2943,6 +2943,8 @@ button:hover {
   justify-content: space-between;
   align-items: flex-end;
   width: min(920px, 92vw);
+  padding-inline: 28px;
+  box-sizing: border-box;
   margin-bottom: -1px;
   pointer-events: none;
   user-select: none
