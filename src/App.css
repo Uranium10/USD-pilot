@@ -2936,7 +2936,8 @@ button:hover {
   align-items: flex-end;
   width: min(920px, 92vw);
   margin-bottom: 0;
-  pointer-events: none
+  pointer-events: none;
+  user-select: none
 }
 
 .dialogue-portrait {
@@ -2964,7 +2965,9 @@ button:hover {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 12px 24px #000a)
+  filter: drop-shadow(0 12px 24px #000a);
+  user-select: none;
+  -webkit-user-drag: none
 }
 
 /* 초상화 원본은 왼쪽을 바라본다. 왼쪽 슬롯에서만 대화 상대를 향하도록 반전한다. */

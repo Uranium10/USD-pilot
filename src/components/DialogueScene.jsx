@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CHARACTERS } from '../data/storyScript.js'
+import { renderDialogueTemplate } from '../logic/dialogueTemplate.js'
 import { useGameStore } from '../store/gameStore.js'
 
 // 좌/우 슬롯은 캐릭터의 side(또는 대사의 side)를 따른다. 같은 쪽에 새 인물이
@@ -49,7 +50,7 @@ function Portrait({ slot, side, active }) {
   const src = portraitKey && character.portraits[portraitKey]
   return <div className={`dialogue-portrait ${side} ${active ? 'active' : 'dimmed'}`}>
     {src && !failed
-      ? <img src={src} alt={character.name || ''} onError={() => setFailed(true)} />
+      ? <img src={src} alt={character.name || ''} draggable="false" onError={() => setFailed(true)} />
       // 아트가 아직 없거나 로드 실패 시 이니셜 placeholder로 대체 — 나중에 실제
       // 이미지가 그 경로에 생기면 자동으로 교체된다.
       : <div className="dialogue-portrait-placeholder">{(character.name || '?').slice(0, 1)}</div>}
@@ -67,6 +68,10 @@ export default function DialogueScene() {
 
   const lines = activeScene?.scene.lines || []
   const currentLine = lines[lineIndex]
+  const renderedText = useMemo(() => renderDialogueTemplate(
+    currentLine?.text || '',
+    useGameStore.getState(),
+  ), [currentLine])
 
   useEffect(() => {
     setLineIndex(0)
@@ -74,7 +79,7 @@ export default function DialogueScene() {
 
   useEffect(() => {
     if (!currentLine) return undefined
-    const text = currentLine.text
+    const text = renderedText
     const keyboard = new Audio('/sounds/KeyboardPress.mp3')
     keyboard.volume = 0.18
     let index = 0
@@ -129,7 +134,7 @@ export default function DialogueScene() {
       typingIntervalRef.current = null
       typingAudioRef.current?.pause()
       typingAudioRef.current = null
-      setTyped(currentLine.text)
+      setTyped(renderedText)
       setTypingFinished(true)
       return
     }

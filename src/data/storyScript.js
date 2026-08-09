@@ -12,6 +12,8 @@
 // side를 생략하면 캐릭터의 기본 side를 사용하고, 특정 장면에서만 반대편에 세워야 할
 // 때 대사 단위로 덮어쓸 수 있다. sound에는 `/sounds/파일명.mp3`처럼 public 기준 URL을
 // 넣는다. 해당 대사가 시작될 때 재생되고 다음 대사로 넘어가면 자동으로 중단된다.
+// text 안에서는 `{{cycle}}`, `{{cash}}`, `{{worldState.someValue}}`처럼 게임 상태의 원시값을
+// 삽입할 수 있다. 존재하지 않거나 객체·함수인 값은 예약 기호를 그대로 남긴다.
 // DialogueScene.jsx는 이미지 로드 실패 시 이니셜 placeholder로 자동 대체한다.
 
 export const CHARACTERS = {
