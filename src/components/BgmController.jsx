@@ -10,6 +10,7 @@ export default function BgmController() {
   const phase = useGameStore((state) => state.phase)
   const screen = useGameStore((state) => state.screen)
   const mode = screen === 'title' ? 'title' : phase === 'premarket' || phase === 'day' || phase === 'dayReport' ? 'chart' : phase === 'night' ? 'night' : null
+  const roomBandpass = screen === 'room' && (phase === 'premarket' || phase === 'day' || phase === 'dayReport')
   const [volume, setVolume] = useState(() => bgmPlayer.getVolume())
   const [muted, setMuted] = useState(() => bgmPlayer.isMuted())
   const [expanded, setExpanded] = useState(false)
@@ -19,6 +20,7 @@ export default function BgmController() {
   const closeTimerRef = useRef(null)
 
   useEffect(() => { bgmPlayer.setMode(mode) }, [mode])
+  useEffect(() => { bgmPlayer.setRoomFilter(roomBandpass) }, [roomBandpass])
 
   useEffect(() => () => window.clearTimeout(closeTimerRef.current), [])
 
