@@ -233,3 +233,36 @@
 2026-08-09: 낮 장을 8분으로 단축하고 채무 하한을 19k/24k/30k/40k/54k/72k로 재조정했다. DUST 기준가 ₡250, T.0 0.0015 DUST/s, 판매 비용 2.5%, 매수 금지, 구간 ±45% 변동으로 변경했다. AI RunPlan/주간 시나리오를 시장 API에 연결하고 실패 시 기존 생성기로 폴백하며 날짜 전환 화면에 로딩 스피너를 추가했다. 주차 첫날 총자산 증감은 시작 자산을 기준으로 표시한다.
 2026-08-09: AI 시장은 재호출 시 달라질 수 있어 생성된 MarketCycle 전체를 세션 worldState에 저장하고 이어하기에서 그대로 복원하도록 보완했다.
 2026-08-09: MarketDesktop의 account-strip CSS 클래스 불일치로 자산 요약이 세로로 쌓이던 문제를 수정했다. 5열 grid, 외곽선, 셀 구분선과 여백을 복원했다.
+
+## 2026-08-09 21:02 KST (Claude, 11차)
+
+- 코덱스가 이미 `server/ai/aiMarketCycle.js`를 만들어 로컬 dev API와 프로덕션 `api/market-cycle.js`에 AI 시장 생성을 실제로 연결해놓은 걸 발견했다. 사용자 요청으로 비용·시간을 실측(`scripts/check-ai-cost.mjs`)하던 중 심각한 구조적 문제를 발견해 직접 수정했다.
+- **캐싱 버그(가장 심각)**: RunPlan/worldState가 모듈 스코프 변수로 캐시되고 있어서, Vercel 서버리스 콜드 스타트마다 캐시가 사라지거나(매 사이클 RunPlan 재생성 = 시간·비용 낭비) 여러 플레이어가 같은 웜 인스턴스를 공유할 때 서로 다른 세션의 서사가 섞이는 데이터 오염 위험이 있었다. `db/schema.sql`에 `ai_market_state` 테이블(device_id별 run_plan_json/world_state_json)을 추가해 실제 Turso DB에 적용하고, `server/aiStateRepository.js`를 새로 만들어 `aiMarketCycle.js`가 세션별로 영구 저장하도록 재작성했다. `deviceId`를 `fetchMarketCycle`/`prefetchMarketCycle` → `/api/market-cycle` → `generateAiMarketCycle`까지 끝까지 배선했다. `scripts/check-ai-persistence.mjs`로 모듈을 매번 새로 import해 콜드 스타트를 흉내낸 조건에서 RunPlan이 실제로 재사용됨을 검증했다(1회차 118.4s → 2회차 76.2s, RunPlan JSON 완전 동일 확인).
+- **프리페치 없음**: 정산 화면(`Settlement`) 진입 시점에 `prefetchMarketCycle()`로 다음 사이클을 백그라운드에서 미리 받기 시작하도록 `src/App.jsx`/`src/services/marketService.js`에 추가했다.
+- **effort 과다**: `claude-opus-4-6`(RunPlan) effort를 high→medium으로, `gpt-5.5`(CycleScenario)에 `reasoning_effort: 'medium'`을 명시적으로 추가해 지연 시간·비용을 같이 낮췄다(1회차 합산 118.4s, 이전 165.4s 대비 약 28% 개선, 단일 샘플 참고치).
+- `npm run lint`, `npm run build` 통과 확인. 발견 경위, 원인, 수정 내역, 실측 검증 결과, 남은 한계를 `USD-spec/agent_workthrough_2.md`에 정리했다.
+
+## 2026-08-09 21:33 KST (Claude, 12차)
+
+- RunPlan 사전 생성 풀을 구현했다(사용자 제안). `db/schema.sql`에 `run_plan_pool` 테이블(device_id 없이 여러 세션이 공유) 추가, `server/runPlanPoolRepository.js` 신규, `server/ai/aiMarketCycle.js`의 `getOrCreateRunPlan()`이 이제 그 자리에서 생성하는 대신 풀에서 무작위로 먼저 뽑고(`ORDER BY RANDOM()`), 풀이 비어있을 때만 예전처럼 직접 생성하는 폴백을 타도록 바꿨다. RunPlan은 stock-1~stock-5 추상 슬롯만 참조해 실제 기업 배정과 무관하므로 여러 세션이 재사용해도 구조적으로 안전하다.
+- `scripts/generate-run-plan-pool.mjs`(신규, `npm run gen:run-plan-pool [개수] [동시실행수]`, 기본 10개·동시 5개)로 배치 생성 스크립트를 만들고, 실제로 30개를 동시 5개씩 생성해 풀에 채웠다(30/30 성공, 총 비용 약 $4.98, DB에서 직접 카운트로 30개 확인).
+- RunPlan이 더 이상 플레이어 요청 경로에 있지 않게 되어 `runPlanModel.js`의 effort를 medium→high로 되돌렸다(품질 우선, 오프라인 배치라 지연 무관).
+- `npm run check:ai-persistence`로 풀 도입 전/후를 비교 재검증했다 — 새 게임 첫 로딩(1회차) 체감 시간이 118.4s → 55.2s로 약 53% 단축됨을 실측 확인했다.
+- CycleScenario(사이클마다 반복되는, 전체 AI 대기시간의 약 80%를 차지하는 호출)를 스켈레톤(gpt-5.5)+날짜별 병렬 본문(gemini-3.5-flash) 2단계로 나누는 설계를 제안했으나, 사용자가 이번엔 RunPlan 풀 쪽 우선순위를 택해 아직 구현하지 않았다 — 다음 세션 후보로 남김.
+- `npm run lint`, `npm run build` 통과. 전체 내역을 `USD-spec/agent_workthrough_3.md`에 정리했다.
+
+## 2026-08-09 21:49 KST (Claude, 13차)
+
+- CycleScenario 병렬화(스켈레톤+날짜별 병렬 본문) 실험을 실제로 구현하고 검증했다 — 게임에는 연결하지 않았다(지시: "구현, 실험만 하고 좋으면 교체할 준비만").
+- 신규: `server/ai/cycleSkeletonModel.js`(gpt-5.5, 구조만 생성), `server/ai/dayDetailModel.js`(gemini-3.5-flash, 날짜별 병렬 문장 작성 — Gemini 구조화 출력 실제 사용), `server/ai/cycleScenarioParallel.js`(오케스트레이터, 기존 `generateCycleScenario()`와 동일한 반환 shape이라 교체 시 import 한 줄만 바꾸면 되도록 설계), `server/ai/schemas.js`에 `CYCLE_SKELETON_SCHEMA` 추가, `scripts/check-ai-parallel.mjs`(비교 검증 스크립트).
+- 같은 RunPlan(run_plan_pool에서 실제로 뽑음)으로 기존 순차 방식과 정면 비교한 결과: 시간 74.5s→71.2s(−4%, 오차 범위 수준), 비용 $0.177→$0.290(+64%). 둘 다 구조 검증은 통과(headline/detail 빈 값 없음, selfCheck 통과)했지만, 시간 이득이 미미하고 비용만 늘어서 **교체하지 않기로 판단**했다. 원인 분석(스켈레톤 자체가 예상만큼 안 가벼움, 직렬 의존성 잔존, 날짜별 호출 오버헤드)과 추가로 시도해볼 만한 방향(스켈레톤 더 압축, 날짜 묶음 축소, thinking 토큰 확인)을 문서에 남겼다.
+- `npm run lint`, `npm run build` 통과, `aiMarketCycle.js`가 새 병렬 경로를 import하지 않음을 직접 확인했다. 전체 내역을 `USD-spec/agent_workthrough_4.md`에 정리했다.
+
+## 2026-08-09 22:18 KST (Claude, 14차)
+
+- weekly 티어를 gpt-5.5→gpt-5.6-terra로, filler 티어를 gemini-3.5-flash→gemini-3.6-flash로 교체했다(사용자 지정). 둘 다 실제 API 호출로 존재를 확인하고 WebFetch로 공식 가격을 확인했다(gpt-5.6-terra $2/$12 per 1M, gemini-3.6-flash $1.5/$7.5 per 1M — 둘 다 이전 모델보다 저렴). `server/ai/config.js`의 `MODEL_TIERS`만 고쳤고, 이 값을 동적으로 읽는 실제 게임 경로(`cycleScenarioModel.js` → `aiMarketCycle.js`)와 실험 경로 둘 다 자동 반영됐다.
+- `check-ai-cost.mjs`/`check-ai-parallel.mjs`의 하드코딩된 모델명·가격을 `MODEL_TIERS`를 동적으로 읽도록 리팩터링했다 — 모델을 또 바꿔도 스크립트가 낡은 값을 참조하지 않게.
+- `npm run check:ai`로 3티어 전부 재검증(성공). CycleScenario 병렬화 비교(`check-ai-parallel.mjs`)를 새 모델로 재실행한 결과, **결론이 더 명확해졌다**: A) 순차 방식만으로 74.5s→32.4s, $0.177→$0.039로 압도적으로 개선(gpt-5.6-terra가 gpt-5.5보다 훨씬 효율적). B) 병렬 방식은 오히려 A 대비 155% 느려지고 176% 비싸졌다 — gemini-3.6-flash가 7개 동시 호출 중 반복적으로(2회 연속) 503 "high demand"를 반환해 `dayDetailModel.js`에 429/503 재시도(최대 2회, 백오프)를 추가해야 했고, 그 재시도가 지연을 더 키웠다.
+- 최종 결론: 병렬화는 폐기하고 모델 교체만으로 목표(사이클당 CycleScenario 약 70s→약 30s, 6주기 총합 약 420s→약 180s, 사이클당 비용 약 $0.18→$0.04)를 달성했다 — 이미 실제 게임에 반영되어 있다. 실험 코드는 재시도 로직이 추가된 채로 남겨뒀다.
+- `npm run lint`, `npm run build` 통과. 전체 내역을 `USD-spec/agent_workthrough_4.md` §6에 추가했다.
+2026-08-09: 최신 작업 지시서 반영. 날짜 전환 타이핑을 marketReady와 분리해 한 번만 재생하고 준비 완료까지 정지 상태로 유지하도록 수정했으며, 시작 직후 방 화면이 비치지 않게 했다. 정보·상점 인벤토리·채굴기 변화와 화면 전환을 즉시 저장하고 우측 하단에 저장중 스피너를 표시한다. AI RunPlan/worldState는 device별 저장 및 새 게임 시 초기화하도록 연결했다. 새 뉴스 효과음/테두리 강조와 장 종료 5초 전 효과음·중앙 숫자 카운트다운을 추가했다.

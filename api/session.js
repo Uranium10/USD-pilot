@@ -1,4 +1,5 @@
 import { createSessionRepository } from '../server/sessionRepository.js'
+import { createAiStateRepository } from '../server/aiStateRepository.js'
 
 let repository
 const getRepository = () => {
@@ -7,6 +8,14 @@ const getRepository = () => {
     authToken: process.env.TURSO_AUTH_TOKEN,
   })
   return repository
+}
+let aiRepository
+const getAiRepository = () => {
+  aiRepository ||= createAiStateRepository({
+    url: process.env.TURSO_DATABASE_URL,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  })
+  return aiRepository
 }
 
 export default async function handler(request, response) {
@@ -21,7 +30,11 @@ export default async function handler(request, response) {
       return response.status(200).json(result)
     }
     if (request.method === 'DELETE') {
-      const result = await getRepository().remove(request.query?.deviceId)
+      const deviceId = request.query?.deviceId
+      const [result] = await Promise.all([
+        getRepository().remove(deviceId),
+        getAiRepository().remove(deviceId),
+      ])
       return response.status(200).json(result)
     }
     response.setHeader('Allow', 'GET, PUT, DELETE')

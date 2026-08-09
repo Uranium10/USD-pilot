@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import BgmController from './components/BgmController.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
@@ -7,8 +7,8 @@ import RoomScene from './components/RoomScene.jsx'
 import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
-import { fetchMarketCycle } from './services/marketService.js'
-import { clearSavedSession, getSavedSession, saveSession } from './services/sessionService.js'
+import { fetchMarketCycle, prefetchMarketCycle, resetMarketCycleCache } from './services/marketService.js'
+import { clearSavedSession, getDeviceId, getSavedSession, saveSession } from './services/sessionService.js'
 import { useGameStore } from './store/gameStore.js'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
@@ -34,7 +34,8 @@ function Title() {
     setSavedSession(null)
     beginLoading()
     await clearSavedSession()
-    loadMarket(await fetchMarketCycle(1))
+    resetMarketCycleCache()
+    loadMarket(await fetchMarketCycle(1, undefined, undefined, undefined, getDeviceId()))
   }
   const continueGame = async () => {
     if (!savedSession) return
@@ -47,6 +48,7 @@ function Title() {
       companiesWerePinned ? world.companyIds : undefined,
       world.coinStartPrice,
       savedSession.marketSeed,
+      getDeviceId(),
     )
     restoreSession(savedSession, market)
   }
@@ -62,6 +64,7 @@ function DayTransition() {
   const completeDayIntro = useGameStore((state) => state.completeDayIntro)
   const marketReady = useGameStore((state) => state.marketReady)
   const [typed, setTyped] = useState('')
+  const [typingFinished, setTypingFinished] = useState(false)
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
@@ -70,6 +73,9 @@ function DayTransition() {
     keyboard.volume = 0.22
     let index = 0
     let interval
+    setTyped('')
+    setTypingFinished(false)
+    setLeaving(false)
     const startTimer = window.setTimeout(() => {
       interval = window.setInterval(() => {
         index += 1
@@ -79,53 +85,92 @@ function DayTransition() {
         if (index >= text.length) {
           window.clearInterval(interval)
           interval = undefined
+          setTypingFinished(true)
         }
       }, 115)
     }, 850)
-    const leaveTimer = window.setTimeout(() => setLeaving(true), 850 + text.length * 115 + 700)
-    const finishTimer = marketReady ? window.setTimeout(completeDayIntro, 850 + text.length * 115 + 1450) : undefined
     return () => {
       window.clearTimeout(startTimer)
-      window.clearTimeout(leaveTimer)
-      if (finishTimer) window.clearTimeout(finishTimer)
       if (interval) window.clearInterval(interval)
       keyboard.pause()
     }
-  }, [completeDayIntro, cycle, day, marketReady])
+  }, [cycle, day])
 
-  return <div className={`day-transition ${leaving && marketReady ? 'leaving' : ''}`}><p>{typed}<span aria-hidden="true">▋</span></p>{!marketReady && <div className="market-loading" role="status"><span aria-hidden="true" />시장 정보를 생성하는 중…</div>}</div>
+  useEffect(() => {
+    if (!typingFinished || !marketReady) return
+    const leaveTimer = window.setTimeout(() => setLeaving(true), 700)
+    const finishTimer = window.setTimeout(completeDayIntro, 1400)
+    return () => {
+      window.clearTimeout(leaveTimer)
+      window.clearTimeout(finishTimer)
+    }
+  }, [completeDayIntro, marketReady, typingFinished])
+
+  return <div className={`day-transition ${leaving && marketReady ? 'leaving' : ''}`}><p>{typed}<span className={typingFinished ? 'typing-finished' : ''} aria-hidden="true">▋</span></p>{!marketReady && <div className="market-loading" role="status"><span aria-hidden="true" />시장 정보를 생성하는 중…</div>}</div>
 }
 
 function AutoSave() {
+  const [saving, setSaving] = useState(false)
+  const mountedRef = useRef(true)
   useEffect(() => {
+    mountedRef.current = true
     const stablePhases = new Set(['premarket', 'day', 'dayReport', 'night', 'settlement', 'gameover', 'clear'])
     const initialState = useGameStore.getState()
     let lastPhase = initialState.phase
     let lastScreen = initialState.screen
     let lastMonitorHint = initialState.showMonitorHint
+    let lastCriticalSignature = ''
     let lastSavedAt = 0
     let timer
+    let savingPromise
+    let needsResave = false
+    const criticalSignature = (state) => JSON.stringify({
+      phase: state.phase,
+      screen: state.screen,
+      showMonitorHint: state.showMonitorHint,
+      miningTier: state.miningTier,
+      inventory: state.inventory,
+      purchasedRumorIds: state.purchasedRumors.map((rumor) => rumor.id),
+    })
     const persist = () => {
       timer = undefined
-      const state = useGameStore.getState()
-      if (!state.market || !stablePhases.has(state.phase)) return
-      lastSavedAt = Date.now()
-      saveSession(state)
+      if (savingPromise) {
+        needsResave = true
+        return savingPromise
+      }
+      savingPromise = (async () => {
+        if (mountedRef.current) setSaving(true)
+        do {
+          needsResave = false
+          const state = useGameStore.getState()
+          if (!state.market || !stablePhases.has(state.phase)) break
+          lastSavedAt = Date.now()
+          await saveSession(state)
+        } while (needsResave)
+      })().finally(() => {
+        savingPromise = undefined
+        if (mountedRef.current) setSaving(false)
+      })
+      return savingPromise
     }
     const unsubscribe = useGameStore.subscribe((state) => {
       if (!state.market || !stablePhases.has(state.phase)) {
         lastPhase = state.phase
         lastScreen = state.screen
         lastMonitorHint = state.showMonitorHint
+        lastCriticalSignature = criticalSignature(state)
         return
       }
+      const nextCriticalSignature = criticalSignature(state)
+      const criticalStateChanged = nextCriticalSignature !== lastCriticalSignature
       const navigationChanged = state.phase !== lastPhase
         || state.screen !== lastScreen
         || state.showMonitorHint !== lastMonitorHint
       lastPhase = state.phase
       lastScreen = state.screen
       lastMonitorHint = state.showMonitorHint
-      if (navigationChanged || Date.now() - lastSavedAt >= 15000) {
+      lastCriticalSignature = nextCriticalSignature
+      if (criticalStateChanged || navigationChanged || Date.now() - lastSavedAt >= 15000) {
         if (timer) window.clearTimeout(timer)
         persist()
       } else if (!timer) {
@@ -135,12 +180,13 @@ function AutoSave() {
     const saveBeforeLeaving = () => saveSession(useGameStore.getState())
     window.addEventListener('pagehide', saveBeforeLeaving)
     return () => {
+      mountedRef.current = false
       unsubscribe()
       if (timer) window.clearTimeout(timer)
       window.removeEventListener('pagehide', saveBeforeLeaving)
     }
   }, [])
-  return null
+  return saving ? <div className="save-indicator" role="status"><span aria-hidden="true" />저장중입니다</div> : null
 }
 
 function Premarket() {
@@ -177,10 +223,19 @@ function Settlement() {
   const interestIfPay = Math.round(Math.max(0, state.debt - payAmount) * INTEREST_RATE)
   const interestSaved = interestIfMinOnly - interestIfPay
 
+  // 정산 화면에 들어온 시점에 "다음 사이클이 필요할 가능성이 높다"는 걸 이미 알기 때문에,
+  // 플레이어가 상환액을 고르는 동안 백그라운드에서 미리 다음 사이클을 받아둔다. 빚을 다
+  // 갚거나(clear) 게임오버가 나면 그냥 버려진다(약간의 낭비지만 대부분의 정산은 다음
+  // 사이클로 이어지므로 감수할 만하다). 배경: USD-spec/agent_workthrough_2.md.
+  useEffect(() => {
+    prefetchMarketCycle(state.cycle + 1, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const settle = async (amount) => {
     const result = state.settleCycle(amount)
     if (result?.result === 'next') {
-      state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID]))
+      state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId()))
     }
   }
 
@@ -235,5 +290,5 @@ export default function App() {
   const phase = useGameStore((state) => state.phase)
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
   const ending = phase === 'gameover' || phase === 'clear'
-  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && phase !== 'dayIntro' && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{phase === 'dayIntro' && <DayTransition />}<Overlay /></div>
+  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && phase !== 'dayIntro' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && phase !== 'dayIntro' && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{phase === 'dayIntro' && <DayTransition />}<Overlay /></div>
 }

@@ -1,7 +1,7 @@
 const DEVICE_KEY = 'usd-device-id'
 const SESSION_KEY = 'usd-session-backup'
 
-const getDeviceId = () => {
+export const getDeviceId = () => {
   let deviceId = window.localStorage.getItem(DEVICE_KEY)
   if (!deviceId) {
     deviceId = globalThis.crypto?.randomUUID?.() || `device-${Date.now()}-${Math.random().toString(16).slice(2)}`

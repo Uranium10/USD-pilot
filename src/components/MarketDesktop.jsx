@@ -3,7 +3,7 @@ import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE }
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
-import { playCashRegister } from '../services/audioService.js'
+import { playCashRegister, playMarketCountdown, playNewsUpdate } from '../services/audioService.js'
 import { getNetWorth, useGameStore } from '../store/gameStore.js'
 import DayReport from './DayReport.jsx'
 import InformationNotepad from './InformationNotepad.jsx'
@@ -47,7 +47,10 @@ export default function MarketDesktop() {
   const [activeApp, setActiveApp] = useState('market')
   const [listView, setListView] = useState(false)
   const [amountDraft, setAmountDraft] = useState('')
+  const [newestNewsIds, setNewestNewsIds] = useState([])
   const editingAmountRef = useRef(false)
+  const previousNewsIdsRef = useRef(null)
+  const lastCountdownRef = useRef(null)
 
   // 아래 useEffect가 훅 규칙(조건부 호출 금지)을 지키려면 market이 아직 없어도 계산할 수
   // 있어야 한다. market 로딩 전에는 안전한 기본값(0)으로 둔다.
@@ -59,6 +62,8 @@ export default function MarketDesktop() {
   const buyPrice = selected ? buyExecutionPrice(selected, currentPrice) : 0
   const sellPrice = selected ? sellExecutionPrice(selected, currentPrice) : 0
   const buyTotal = buyPrice * quantity
+  const remaining = Math.max(0, DAY_DURATION_SECONDS - state.elapsed)
+  const countdown = state.phase === 'day' && remaining > 0 && remaining <= 5 ? Math.ceil(remaining) : null
 
   // 금액 입력칸은 "수량 × 현재가"를 매 렌더마다 다시 계산해 보여주는데, 입력 중에도 그대로
   // 덮어쓰면 한 자리 칠 때마다 값이 되돌아간다(예: 129원짜리 종목에 "500"을 치려고 "5"만
@@ -70,6 +75,31 @@ export default function MarketDesktop() {
     setAmountDraft(String(Math.round(buyTotal)))
   }, [buyTotal])
 
+  useEffect(() => {
+    const currentIds = state.visibleNews.map((item) => item.id)
+    if (previousNewsIdsRef.current === null) {
+      previousNewsIdsRef.current = new Set(currentIds)
+      return
+    }
+    const addedIds = currentIds.filter((id) => !previousNewsIdsRef.current.has(id))
+    previousNewsIdsRef.current = new Set(currentIds)
+    if (!addedIds.length) return
+    playNewsUpdate()
+    setNewestNewsIds(addedIds)
+    const timer = window.setTimeout(() => setNewestNewsIds([]), 1400)
+    return () => window.clearTimeout(timer)
+  }, [state.visibleNews])
+
+  useEffect(() => {
+    if (countdown === null) {
+      lastCountdownRef.current = null
+      return
+    }
+    if (lastCountdownRef.current === countdown) return
+    lastCountdownRef.current = countdown
+    playMarketCountdown()
+  }, [countdown])
+
   if (!state.market) return null
 
   const holding = state.holdings[selected.id] || { quantity: 0, average: 0 }
@@ -78,7 +108,6 @@ export default function MarketDesktop() {
   const canTradeSelected = !selectedIsCoin || coinUnlocked
   const canBuy = !selectedIsCoin && canTradeSelected && quantity > 0 && buyTotal <= state.cash && state.phase === 'day'
   const canSell = canTradeSelected && sellQuantity > 0 && state.phase === 'day'
-  const remaining = Math.max(0, DAY_DURATION_SECONDS - state.elapsed)
   const netWorth = getNetWorth(state)
   const previousSummary = state.dailySummaries.at(-1)
   const assetBaseline = previousSummary?.netWorth ?? state.dayStartNetWorth
@@ -150,6 +179,7 @@ export default function MarketDesktop() {
           {listView
             ? <StockGrid stocks={data.stocks} prices={state.currentPrices} onOpen={openStock} coinUnlocked={coinUnlocked} />
             : <section className="chart-panel">
+              {countdown !== null && <div className="market-countdown" aria-live="polite">{countdown}</div>}
               <div className="chart-title">
                 <div><small>{selected.sector}{selectedIsCoin ? ` · 채굴·판매 전용 · 판매 비용 ${(COIN_SELL_SPREAD * 100).toFixed(1)}%` : ''}</small><h2>{selected.name}</h2></div>
                 <strong>{money(currentPrice)}</strong>
@@ -184,7 +214,7 @@ export default function MarketDesktop() {
                 </div>
               </div>
             </section>}
-          <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const related = data.stocks.find((stock) => stock.id === item.stockId); return <article key={item.id}><small>{formatMarketTime(item.progress)} · {related?.name}</small><p>{item.text}</p></article> })}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
+          <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const related = data.stocks.find((stock) => stock.id === item.stockId); return <article key={item.id} className={newestNewsIds.includes(item.id) ? 'news-new' : ''}><small>{formatMarketTime(item.progress)} · {related?.name}</small><p>{item.text}</p></article> })}{state.visibleNews.length === 0 && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
         </div>
       </section>}
     </div>

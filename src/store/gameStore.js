@@ -178,7 +178,11 @@ export const useGameStore = create((set, get) => ({
     const progress = elapsed / DAY_DURATION_SECONDS
     const data = dayData(state)
     const currentPrices = Object.fromEntries(data.stocks.map((stock) => [stock.id, interpolate(stock.path, progress)]))
-    const visibleNews = data.news.filter((item) => item.progress <= progress)
+    const nextVisibleNews = data.news.filter((item) => item.progress <= progress)
+    const visibleNews = nextVisibleNews.length === state.visibleNews.length
+      && nextVisibleNews.every((item, index) => item.id === state.visibleNews[index]?.id)
+      ? state.visibleNews
+      : nextVisibleNews
     let holdings = state.holdings
     if (minedCoin > 0) {
       const previous = holdings[COIN_ASSET_ID] || { quantity: 0, average: 0 }

@@ -8,6 +8,8 @@ export default async function handler(request, response) {
   const coinStartPrice = coinPriceQuery ? Number(coinPriceQuery) : undefined
   const seedQuery = Array.isArray(request.query?.seed) ? request.query.seed[0] : request.query?.seed
   const seed = seedQuery ? Number(seedQuery) : undefined
+  const deviceIdQuery = Array.isArray(request.query?.deviceId) ? request.query.deviceId[0] : request.query?.deviceId
+  const deviceId = deviceIdQuery || undefined
   response.setHeader('Cache-Control', 'no-store')
-  response.status(200).json(await generateAiMarketCycle({ cycle, companyIds, coinStartPrice, seed }))
+  response.status(200).json(await generateAiMarketCycle({ cycle, companyIds, coinStartPrice, seed, deviceId }))
 }

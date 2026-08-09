@@ -38,3 +38,29 @@ CREATE TABLE IF NOT EXISTS holdings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+
+-- AI 시장 생성(RunPlan/CycleScenario) 전용 상태 저장소.
+-- sessions.world_state_json과 분리한 이유: 그 컬럼은 클라이언트(gameStore)가 15초마다
+-- 통째로 덮어쓰는 "게임 진행 상태"(에너지·인벤토리·메모 등)라, 서버가 생성한 AI 상태를
+-- 같이 넣으면 다음 클라이언트 저장 때 사라진다. 그래서 서버 전용으로 별도 테이블을 둔다.
+CREATE TABLE IF NOT EXISTS ai_market_state (
+  device_id         TEXT PRIMARY KEY,               -- sessions.device_id와 같은 값이지만
+                                                      -- 쓰기 순서가 달라 FK는 걸지 않는다.
+  run_plan_json     TEXT,                            -- generateRunPlan() 결과 전체. 런당 1회
+                                                      -- 생성 후 재사용 (재생성 방지가 핵심).
+  world_state_json  TEXT,                            -- 가장 최근 CycleScenario.nextWorldState.
+                                                      -- 다음 사이클 생성 프롬프트의 입력이 된다.
+  updated_at        INTEGER NOT NULL
+);
+
+-- 미리 만들어둔 RunPlan 풀 (2026-08-09 도입). 새 게임 시작 시 이 풀에서 무작위로 하나
+-- 뽑아 그 세션의 ai_market_state.run_plan_json으로 쓴다 — 플레이어가 "새로하기"를 누른
+-- 순간 RunPlan 생성(수십 초)을 기다리지 않게 하기 위함. RunPlan은 stock-1~stock-5라는
+-- 추상 슬롯만 참조하고 실제 기업 배정과 무관하므로, 여러 세션이 같은 항목을 재사용해도
+-- 구조적으로 안전하다. scripts/generate-run-plan-pool.mjs로 한가할 때마다 채워 넣는다.
+-- 근거: USD-spec/agent_workthrough_3.md.
+CREATE TABLE IF NOT EXISTS run_plan_pool (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_plan_json TEXT NOT NULL,
+  created_at    INTEGER NOT NULL
+);

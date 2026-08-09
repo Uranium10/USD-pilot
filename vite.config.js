@@ -3,6 +3,7 @@ import { readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import { createSessionRepository } from './server/sessionRepository.js'
+import { createAiStateRepository } from './server/aiStateRepository.js'
 import { generateAiMarketCycle } from './server/ai/aiMarketCycle.js'
 
 function localMarketApi() {
@@ -17,10 +18,11 @@ function localMarketApi() {
         const coinStartPrice = coinPriceQuery ? Number(coinPriceQuery) : undefined
         const seedQuery = url.searchParams.get('seed')
         const seed = seedQuery ? Number(seedQuery) : undefined
+        const deviceId = url.searchParams.get('deviceId') || undefined
         response.statusCode = 200
         response.setHeader('Content-Type', 'application/json; charset=utf-8')
         response.setHeader('Cache-Control', 'no-store')
-        response.end(JSON.stringify(await generateAiMarketCycle({ cycle, companyIds, coinStartPrice, seed })))
+        response.end(JSON.stringify(await generateAiMarketCycle({ cycle, companyIds, coinStartPrice, seed, deviceId })))
       })
     },
   }
@@ -28,12 +30,20 @@ function localMarketApi() {
 
 function localSessionApi(env) {
   let repository
+  let aiRepository
   const getRepository = () => {
     repository ||= createSessionRepository({
       url: env.TURSO_DATABASE_URL,
       authToken: env.TURSO_AUTH_TOKEN,
     })
     return repository
+  }
+  const getAiRepository = () => {
+    aiRepository ||= createAiStateRepository({
+      url: env.TURSO_DATABASE_URL,
+      authToken: env.TURSO_AUTH_TOKEN,
+    })
+    return aiRepository
   }
   const readBody = (request) => new Promise((resolveBody, reject) => {
     let body = ''
@@ -55,7 +65,11 @@ function localSessionApi(env) {
           let result
           if (request.method === 'GET') result = { session: await getRepository().get(url.searchParams.get('deviceId')) }
           else if (request.method === 'PUT') result = await getRepository().save(await readBody(request))
-          else if (request.method === 'DELETE') result = await getRepository().remove(url.searchParams.get('deviceId'))
+          else if (request.method === 'DELETE') {
+            const deviceId = url.searchParams.get('deviceId')
+            const [sessionResult] = await Promise.all([getRepository().remove(deviceId), getAiRepository().remove(deviceId)])
+            result = sessionResult
+          }
           else {
             response.statusCode = 405
             result = { error: 'method not allowed' }
