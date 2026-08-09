@@ -129,7 +129,7 @@ export default function MarketDesktop() {
             <small>{miningRate.toFixed(4)} DUST/초 · {money(state.minedCoinToday * coinPrice)}</small>
           </div>
           <div><small>총 부채</small><strong className="red">{money(state.debt)}</strong></div>
-          <div><small>이번 주 최소 상환</small><strong className="red">{money(minPayment)}</strong></div>
+          <div><small>주간 목표 상환액</small><strong className="red">{money(minPayment)}</strong></div>
         </section>
         <div className="trading-grid">
           <aside className="stock-list">

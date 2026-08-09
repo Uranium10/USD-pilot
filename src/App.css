@@ -44,7 +44,12 @@ button:hover { border-color:var(--cyan); background:#1b2b3b; }
 .overlay-modal h2 { margin:0 0 16px; color:var(--cyan); }.overlay-modal p { color:var(--ink); margin-bottom:24px; }
 .monitor-shell { min-height:100%; height:100%; padding:12px; overflow:auto; background:#080d14; font-family:'IBM Plex Mono',monospace; }
 .terminal-bar { min-height:45px; display:flex; align-items:center; gap:24px; padding:0 14px; border:1px solid var(--line); background:#0d1520; }.terminal-bar b { color:var(--cyan); margin-right:auto; }.terminal-bar button { padding:6px 10px; }
-.account-strip { display:grid; grid-template-columns:repeat(4,1fr); margin:10px 0; border:1px solid var(--line); }.account-strip div { padding:12px 18px; border-right:1px solid var(--line); }.account-strip div:last-child{border:0}.account-strip small,.account-strip strong{display:block}.account-strip small{color:var(--muted);font-size:10px}.account-strip strong{font-size:20px;margin-top:4px}
+.dashboard-summary { display:grid; grid-template-columns:1fr 1fr 1.3fr 1fr 1fr; margin:10px 0; border:1px solid var(--line); }
+.dashboard-summary > div { padding:10px 14px; border-right:1px solid var(--line); display:flex; flex-direction:column; justify-content:center; }
+.dashboard-summary > div:last-child { border:0 }
+.dashboard-summary small { display:block; color:var(--muted); font-size:12px; letter-spacing:-0.2px; }
+.dashboard-summary strong { display:block; font-size:18px; margin-top:4px; }
+.mining-status small:last-child { font-size:12.5px; font-weight:600; color:var(--cyan); margin-top:4px; letter-spacing:0; }
 .trading-grid { display:grid; grid-template-columns:250px minmax(400px,1fr) 300px; gap:10px; height:calc(100% - 135px); min-height:0; }
 .stock-list,.chart-panel,.news-panel,.panel { border:1px solid var(--line); background:var(--panel); }
 .stock-list{display:flex;flex-direction:column;overflow:auto}

@@ -42,7 +42,8 @@ function useBlink(set, isHappy) {
     return () => window.clearTimeout(timer)
   }, [set, blinking, isHappy])
 
-  return [blinking, () => setBlinking(false)]
+  const finishBlink = useMemo(() => () => setBlinking(false), [])
+  return [blinking, finishBlink]
 }
 
 // 밤(및 밤 직후 정산)에는 야경 세트, 그 외에는 낮 세트를 쓴다.
@@ -79,7 +80,7 @@ export default function RoomScene({ children }) {
         width="100%" 
         height="100%" 
         className="room-art" 
-        style={{ opacity: blinking ? 0 : 1, transition: 'opacity 0.05s' }}
+        style={{ opacity: blinking ? 0 : 1 }}
       />
       <SpriteAnimator 
         key={`blink-${set}`} 
@@ -92,7 +93,7 @@ export default function RoomScene({ children }) {
         playing={blinking} 
         onComplete={finishBlink} 
         className="room-art" 
-        style={{ opacity: blinking ? 1 : 0, transition: 'opacity 0.05s' }}
+        style={{ opacity: blinking ? 1 : 0 }}
       />
       {set === 'day' && isHappy && <FloatingNotes />}
       {phase === 'loading' && <p className="room-loading-text">궤도 시장을 도청하는 중…</p>}

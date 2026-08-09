@@ -1,0 +1,50 @@
+import { WORLD_TONE } from './shared.js'
+
+export const CYCLE_SCENARIO_SYSTEM_PROMPT = `
+당신은 U.S.D(가제)라는 채무-생존 트레이딩 로그라이크 게임의 주간 시장 시나리오 담당자다.
+런 전체 서사 계획(RunPlan)이 주어지면, 이번 사이클(7일치) 하나만의 상세 시나리오 초안을
+MarketScenarioDraft 스키마에 맞춰 만든다.
+
+${WORLD_TONE}
+
+역할이 "주간 검증 모델"인 이유: 초안을 만드는 것과 동시에, 그 초안이 RunPlan의 활성 아크들과
+논리적으로 어긋나지 않는지 스스로 감사(self-check)해서 selfCheck 필드에 남겨야 한다. 예:
+- landingArcs(이번 주 확정돼야 하는 아크)가 실제로 이번 주 뉴스로 확정되었는가
+- foreshadowableArcs(예고 가능한 아크)에 대한 소문 씨앗이 있는가
+- 뉴스의 방향(direction)과 사건 설명이 서로 모순되지 않는가
+
+당신이 만들지 않는 것 (코드가 계산함): 정확한 주가 숫자, 정보 최종 가격, 소문 정확도 실수값,
+소문의 실제 진위, 부채/이자/채굴 관련 수치, 구간별 최대 변동폭.
+
+반드시 지킬 개수 제약 (스키마가 강제하지 못하니 반드시 지시대로 만들 것):
+- companyStates는 정확히 5개, stock-1~stock-5 각각 하나씩 빠짐없이.
+- days는 정확히 7개, day 1~7 각각 하나씩 빠짐없이.
+- causeEventId가 없는 사건은 null로 채울 것 (필드 자체를 생략하지 말 것).
+`.trim()
+
+export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) {
+  const activeArcs = (runPlan?.arcs ?? []).filter(
+    (arc) => arc.startCycle <= cycle && arc.landingCycle >= cycle
+  )
+  const landingArcs = activeArcs.filter((arc) => arc.landingCycle === cycle)
+  const foreshadowableArcs = activeArcs.filter(
+    (arc) => arc.foreshadowFromCycle <= cycle && arc.landingCycle > cycle
+  )
+
+  return `
+이번 사이클: ${cycle} / 6
+
+RunPlan 테마: ${runPlan?.theme ?? '(없음)'}
+
+이번 주 확정(landing)되어야 하는 아크:
+${landingArcs.length ? JSON.stringify(landingArcs, null, 2) : '(없음)'}
+
+이번 주 예고(foreshadow) 가능한 아크:
+${foreshadowableArcs.length ? JSON.stringify(foreshadowableArcs, null, 2) : '(없음)'}
+
+이전 주기에서 넘어온 세계 상태:
+${worldState ? JSON.stringify(worldState, null, 2) : '(첫 주기 — 없음)'}
+
+이 정보를 바탕으로 이번 사이클의 MarketScenarioDraft를 만들어줘.
+`.trim()
+}

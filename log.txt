@@ -208,3 +208,19 @@
 - 새 게임 및 매일 수면 후 `N주차, N일.` 타이핑 암전 화면을 표시하고 `KeyboardPress.mp3`를 재생한다. 첫날에만 날짜 화면 뒤 방을 보여주며 모니터에 `CLICK TO START` 안내를 노출하고, 이후 날짜 전환은 정보 구매 화면으로 직행한다. 낮 BGM은 첫 방 공개 시점부터 시작한다.
 - 차트 상단 계정 영역은 채굴 칸을 더 넓게 배분하고 라벨·금액 글꼴을 키웠다. 숫자 고정 폭, 말줄임, 반응형 크기를 적용해 DUST UI가 칸 밖으로 넘치지 않도록 했다.
 - 실제 Turso 임시 세션 저장→조회→삭제, Vite 로컬 세션·시장 API, 상태 복원 흐름을 검증했다. `npm run lint`, `npm run build`, `npm run check:coin`, `node scripts/check-debt-balance.mjs`, `git diff --check` 통과.
+
+## 2026-08-09 19:48 KST (Claude, 8차)
+
+- `.env.local`의 잘못된 API 키 이름 3개를 표준 이름으로 정정했다: `OPEN_API_KEY`→`OPENAI_API_KEY`, `GOOGLE_GEMINI_KEY`→`GEMINI_API_KEY`, `ANTROPHIC_KEY`(오타)→`ANTHROPIC_API_KEY`. 값은 그대로, `VITE_` 접두사는 붙이지 않았다(서버 전용 유지).
+- AI 시장 생성 3티어 모델을 실제로 구현했다 — 단, 게임 흐름(`api/market-cycle.js`, `vite.config.js`)에는 아직 연결하지 않았다(지시에 따라 연결 보류). `server/ai/`에 `config.js`(티어별 모델 상수), `clients.js`(3사 SDK 지연 생성), `schemas.js`(RunPlan/CycleScenario JSON Schema), `runPlanModel.js`(claude-opus-5), `cycleScenarioModel.js`(gpt-5.5), `fillerModel.js`(gemini-flash-latest), `prompts/`를 추가했다.
+- 사용자가 지정한 모델명 중 두 개를 실제 검증 후 교정했다: 존재하지 않는 `claude opus4.6`→`claude-opus-5`(최신 Opus), 이 API 키 기준 404로 거부된 `gemini-2.5-flash`→`gemini-flash-latest`. `gpt-5.5`는 실제 호출로 유효함을 확인했다.
+- RunPlan(런 전체 6주기 서사 아크, 1회 생성) → CycleScenario(사이클별 시장 시나리오 초안, RunPlan의 확정/예고 대상 아크를 받아 생성 + 자체 정합성 감사 `selfCheck` 포함) 2단 구조로 구현해 서사 인과성·예고 소문 설계를 반영했다.
+- 구조화 출력 스키마에서 Claude(배열 minItems/maxItems는 0·1만 허용, 숫자 min/max 미지원)와 OpenAI strict 모드(모든 property가 required에 있어야 함, 동적 키 맵 미지원) 양쪽 제약을 실제 400 에러로 확인하고 스키마를 조정했다.
+- `npm run check:ai`(신규 스크립트)로 실제 키를 사용해 3개 함수를 전부 실행 검증했다 — filler/narrative/weekly 모두 성공, weekly 단계가 RunPlan의 미확정 아크를 실제로 인식해 반영함을 확인했다. 작업 내용 전체를 `USD-spec/agent_workthrough_1.md`에 정리했다.
+
+## 2026-08-09 20:05 KST (Claude, 9차)
+
+- 직전 작업(8차)에서 "claude opus4.6은 실존하지 않는 모델"이라 판단해 claude-opus-5로 교체했던 것을 정정했다. 사용자가 재확인을 요청해 실제 API를 호출해본 결과 `claude-opus-4-6`은 실존하고 정상 응답하는 모델이었다 — 원래 사용자가 지정한 대로 `server/ai/config.js`의 narrative 티어를 `claude-opus-4-6`으로 되돌렸다.
+- 사용자가 대안으로 제시한 `gemini-2.5-flash-preview`도 같은 방식으로 직접 호출해 검증했으나, 이 문자열은 `404 not found`로 아예 존재하지 않는 모델 ID임을 확인했다(`ai.models.list()` 결과에도 없음, `-preview-tts`/`-native-audio-preview` 음성 변형만 존재). filler 티어는 기존 `gemini-flash-latest`를 그대로 유지한다.
+- `npm run check:ai`를 claude-opus-4-6 기준으로 재실행해 3티어 전부 성공을 재확인했다 — weekly(gpt-5.5) 단계가 RunPlan의 미확정 아크(landingCycle 불일치)를 여전히 정확히 인식·반영함을 재검증했다.
+- `USD-spec/agent_workthrough_1.md`에 정정 내역과 재검증 로그, 최종 모델 표를 추가했다.

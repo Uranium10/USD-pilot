@@ -7,12 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "check:coin": "node scripts/check-coin-balance.mjs",
+    "check:ai": "node --env-file=.env.local scripts/test-ai-models.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "db:migrate": "node --env-file=.env.local scripts/migrate.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@google/genai": "^2.16.0",
     "@libsql/client": "^0.17.4",
+    "openai": "^7.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zustand": "^5.0.14"
