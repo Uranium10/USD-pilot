@@ -1,14 +1,61 @@
 import tracks from 'virtual:bgm-tracks'
 
+const DEFAULT_VOLUME = 0.18
+const VOLUME_KEY = 'usd-bgm-volume'
+const MUTED_KEY = 'usd-bgm-muted'
+
+const clampVolume = (value) => Math.min(1, Math.max(0, Number(value) || 0))
+
+function readPreference(key, fallback) {
+  try {
+    const value = window.localStorage.getItem(key)
+    return value === null ? fallback : value
+  } catch {
+    return fallback
+  }
+}
+
+function writePreference(key, value) {
+  try { window.localStorage.setItem(key, String(value)) } catch { /* 저장소 차단 시 현재 세션만 유지 */ }
+}
+
 class BgmPlayer {
   constructor() {
     this.audio = new Audio()
-    this.audio.volume = 0.35
+    this.volume = clampVolume(readPreference(VOLUME_KEY, DEFAULT_VOLUME))
+    this.muted = readPreference(MUTED_KEY, 'false') === 'true'
+    this.audio.volume = this.volume
+    this.audio.muted = this.muted
     this.audio.addEventListener('ended', () => this.playNext())
     this.mode = null
     this.queue = []
     this.lastTrack = null
     this.blocked = false
+  }
+
+  getVolume() {
+    return this.volume
+  }
+
+  isMuted() {
+    return this.muted
+  }
+
+  setVolume(value) {
+    this.volume = clampVolume(value)
+    this.audio.volume = this.volume
+    writePreference(VOLUME_KEY, this.volume)
+  }
+
+  setMuted(muted) {
+    this.muted = Boolean(muted)
+    this.audio.muted = this.muted
+    writePreference(MUTED_KEY, this.muted)
+  }
+
+  toggleMuted() {
+    this.setMuted(!this.muted)
+    return this.muted
   }
 
   shuffled(items) {
