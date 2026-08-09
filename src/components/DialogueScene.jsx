@@ -138,8 +138,12 @@ export default function DialogueScene() {
       setTypingFinished(true)
       return
     }
-    if (lineIndex + 1 < lines.length) setLineIndex(lineIndex + 1)
-    else closeScene()
+    if (lineIndex + 1 < lines.length) {
+      // 다음 줄의 effect가 실행되기 전 이전 문장이 한 프레임 남지 않도록 먼저 비운다.
+      setTyped('')
+      setTypingFinished(false)
+      setLineIndex(lineIndex + 1)
+    } else closeScene()
   }
 
   const { slots, activeIndex } = computePortraitState(lines, lineIndex)

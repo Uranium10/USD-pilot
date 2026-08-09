@@ -3025,12 +3025,19 @@ button:hover {
 }
 
 .dialogue-speaker {
+  position: absolute;
+  z-index: 2;
+  left: -1px;
+  top: 0;
   display: inline-block;
-  margin-bottom: 8px;
-  padding: 3px 10px;
+  margin: 0;
+  padding: 5px 12px;
   color: #061116;
   background: var(--cyan);
-  font: 700 13px 'IBM Plex Mono'
+  border: 1px solid var(--cyan);
+  border-bottom: 0;
+  font: 700 13px 'IBM Plex Mono';
+  transform: translateY(-100%)
 }
 
 .dialogue-box p {
