@@ -75,26 +75,26 @@ export default function RoomScene({ children }) {
 
   return (
     <main className="room">
-      <SpriteAnimator 
-        key={`rest-${set}`} 
-        type="frames" 
-        src={restFrames} 
-        width="100%" 
-        height="100%" 
-        className="room-art" 
+      <SpriteAnimator
+        key={`rest-${set}`}
+        type="frames"
+        src={restFrames}
+        width="100%"
+        height="100%"
+        className="room-art"
         style={{ opacity: blinking ? 0 : 1 }}
       />
-      <SpriteAnimator 
-        key={`blink-${set}`} 
-        type="frames" 
-        src={blinkFrames} 
-        width="100%" 
-        height="100%" 
-        fps={BLINK_FPS} 
-        loop={false} 
-        playing={blinking} 
-        onComplete={finishBlink} 
-        className="room-art" 
+      <SpriteAnimator
+        key={`blink-${set}`}
+        type="frames"
+        src={blinkFrames}
+        width="100%"
+        height="100%"
+        fps={BLINK_FPS}
+        loop={false}
+        playing={blinking}
+        onComplete={finishBlink}
+        className="room-art"
         style={{ opacity: blinking ? 1 : 0 }}
       />
       {set === 'day' && isHappy && <FloatingNotes />}
@@ -105,7 +105,7 @@ export default function RoomScene({ children }) {
         </button>
       )}
       {phase === 'night' && (
-        <button className="sleep-button" onClick={endNight} disabled={Boolean(nightActivity)}>자기</button>
+        <button className="sleep-button" onClick={endNight} disabled={Boolean(nightActivity)}>하루 종료</button>
       )}
       {children}
     </main>

@@ -24,14 +24,21 @@ const STEPS = [
     target: 'trade',
   },
   {
-    tag: '04 / 뉴스와 정보 모음',
-    title: '정보는 시장에서 검증됩니다.',
-    body: '오른쪽 LIVE WIRE에서 실시간 뉴스를 확인하세요. 구입한 정보는 작업 표시줄의 정보 모음에서 다시 볼 수 있고, 적중하면 완료 표시가 붙습니다.',
+    tag: '04 / 실시간 뉴스',
+    title: '시장의 흐름을 파악하세요.',
+    body: '오른쪽 LIVE WIRE에서 실시간 뉴스를 확인하세요. 시장에 영향을 미치는 주요 사건들이 이곳에 표시됩니다.',
     screen: 'market',
     target: 'news',
   },
   {
-    tag: '05 / 밤 활동',
+    tag: '05 / 정보 모음',
+    title: '정보는 시장에서 검증됩니다.',
+    body: '구입한 정보는 작업 표시줄의 정보 모음 창에서 다시 볼 수 있습니다. 뉴스가 발표되어 해당 정보가 사실로 드러나면 완료 표시가 붙습니다.',
+    screen: 'market',
+    target: 'info-tab',
+  },
+  {
+    tag: '06 / 밤 활동',
     title: '마감 뒤에는 방으로 돌아옵니다.',
     body: '밤에는 시간이 흐르지 않습니다. 아르바이트, 채굴기와 장비 구입을 마친 뒤 직접 하루를 종료하세요. DUST는 채굴해서 판매할 수만 있습니다.',
     screen: 'night',
@@ -66,7 +73,7 @@ function MarketMock({ target }) {
         <aside className={`tutorial-news ${target === 'news' ? 'tutorial-focus' : ''}`}><h3>LIVE WIRE</h3><article><small>10:18 · 아레스 다이내믹스</small><p>신규 궤도 식량 공급 계약 체결.</p></article><article><small>09:42 · 퀀텀 포지</small><p>차세대 합금 생산 라인 공개.</p></article></aside>
       </div>
     </section>
-    <footer className={target === 'news' ? 'tutorial-taskbar tutorial-focus' : 'tutorial-taskbar'}><button>◐ 절전</button><button>▥ U.S.D Market Terminal</button><button>▤ 정보 모음.txt</button><span>1주차 1/7일　09:00</span></footer>
+    <footer className={target === 'info-tab' ? 'tutorial-taskbar tutorial-focus' : 'tutorial-taskbar'}><button>◐ 절전</button><button>▥ U.S.D Market Terminal</button><button>▤ 정보 모음.txt</button><span>1주차 1/7일　09:00</span></footer>
   </div>
 }
 
