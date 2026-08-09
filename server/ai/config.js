@@ -16,7 +16,7 @@ export const MODEL_TIERS = {
   narrative: {
     provider: 'anthropic',
     model: 'claude-opus-4-6',
-    role: '런 전체 서사(RunPlan) — 6주기 전체를 관통하는 굵직한 사건 아크를 한 번만 생성',
+    role: '런 전체 서사(RunPlan) — 에필로그를 포함한 7주기 전체의 굵직한 사건 아크를 한 번만 생성',
   },
   weekly: {
     provider: 'openai',

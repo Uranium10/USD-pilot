@@ -1,5 +1,5 @@
 // "가장 중요한 전체 서사 모델" — Claude Opus 4.6 (사용자 지정, 실제 호출로 유효성 확인됨).
-// 런 시작 시 딱 한 번 호출해서 6주기 전체를 아우르는 RunPlan을 만든다.
+// 런 시작 시 딱 한 번 호출해서 에필로그를 포함한 7주기 전체를 아우르는 RunPlan을 만든다.
 // (server/ai/config.js의 MODEL_TIERS.narrative.model 한 곳만 고치면 다른 모델로 교체 가능)
 //
 // 2026-08-09: effort를 high→medium→high로 두 번 바꿨다. 처음엔 RunPlan이 매 신규 게임

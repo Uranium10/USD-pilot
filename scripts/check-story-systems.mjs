@@ -7,6 +7,10 @@ import {
 } from '../src/config.js'
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
+import { compileScenario, isAiScenarioCycle } from '../server/ai/aiMarketCycle.js'
+import { buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
+import { buildRunPlanUserPrompt } from '../server/ai/prompts/runPlan.js'
+import { CYCLE_SCENARIO_SCHEMA, RUN_PLAN_SCHEMA } from '../server/ai/schemas.js'
 import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
 import { createDonationSchedule, getNightActivityOptions, nightActivityCashCost } from '../src/logic/nightActivities.js'
 import { useGameStore } from '../src/store/gameStore.js'
@@ -50,6 +54,22 @@ assert(settlement?.result === 'epilogue' && settlement.cycle === EPILOGUE_CYCLE,
 assert(useGameStore.getState().marketReady === false, '7주차 시장을 받기 전에 진행 가능 상태가 되면 안 됩니다.')
 
 const epilogueMarket = generateMarketCycle({ cycle: EPILOGUE_CYCLE, seed: 710, companyIds: cycleSix.companyIds })
+assert(isAiScenarioCycle(EPILOGUE_CYCLE) && !isAiScenarioCycle(EPILOGUE_CYCLE + 1), 'AI 시나리오 생성 범위가 7주차까지 열려 있지 않습니다.')
+assert(CYCLE_SCENARIO_SCHEMA.properties.cycle.enum.includes(7), 'CycleScenario 스키마가 7주차를 거부합니다.')
+assert(RUN_PLAN_SCHEMA.properties.arcs.items.properties.landingCycle.enum.includes(7), 'RunPlan 스키마가 7주차 결말 아크를 거부합니다.')
+assert(buildRunPlanUserPrompt().includes('cycle 1~7'), 'RunPlan 프롬프트가 7주차를 요청하지 않습니다.')
+assert(buildCycleScenarioUserPrompt({ cycle: 7, runPlan: { arcs: [] } }).includes('에필로그'), '7주차 시나리오 프롬프트에 에필로그 지시가 없습니다.')
+const compiledEpilogue = compileScenario(generateMarketCycle({ cycle: 7, seed: 711, companyIds: cycleSix.companyIds }), {
+  cycle: 7,
+  title: 'AI 에필로그 검증',
+  days: Array.from({ length: 7 }, (_, index) => ({
+    day: index + 1,
+    events: index === 0 ? [{ eventId: 'ai-c7-d1-e1', primaryStockId: 'stock-1', direction: 'down', magnitude: 'minor', impactProgress: 0.45, headline: 'AI 후일담 뉴스' }] : [],
+    rumorSeeds: [],
+  })),
+})
+assert(compiledEpilogue.aiGenerated && compiledEpilogue.days[0].news.some((item) => item.id === 'ai-c7-d1-e1'), '7주차 AI 기업 뉴스가 시장에 컴파일되지 않았습니다.')
+assert(compiledEpilogue.days[0].news.some((item) => item.id === 'c7-d1-sisyphus-collapse'), '7주차 AI 컴파일이 시지프 고정 폭락 뉴스를 제거했습니다.')
 useGameStore.getState().loadEpilogueCycle(epilogueMarket)
 assert(useGameStore.getState().cycle === 7 && useGameStore.getState().day === 1, '7주차 첫날을 불러오지 못했습니다.')
 useGameStore.getState().completeDayIntro()

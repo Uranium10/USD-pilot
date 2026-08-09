@@ -61,7 +61,7 @@ function validScenario(scenario, cycle) {
     && scenario.days.length === 7
 }
 
-function compileScenario(market, scenario) {
+export function compileScenario(market, scenario) {
   for (const day of market.days) {
     const scenarioDay = scenario.days.find((item) => item.day === day.day)
     if (!scenarioDay) continue
@@ -123,14 +123,16 @@ function compileScenario(market, scenario) {
   return { ...market, aiGenerated: true, scenarioTitle: scenario.title }
 }
 
+export const isAiScenarioCycle = (cycle) => Number.isInteger(Number(cycle)) && Number(cycle) >= 1 && Number(cycle) <= 7
+
 /**
  * @param {{ cycle:number, companyIds?:string[], coinStartPrice?:number, seed?:number, deviceId?:string }} options
  */
 export async function generateAiMarketCycle(options) {
   const fallback = generateMarketCycle(options)
-  // 7주차는 부채를 모두 갚은 뒤의 에필로그다. 6주 서사 아크를 벗어나므로 AI 스키마를
-  // 억지로 확장하지 않고 검증된 로컬 시장 생성기를 사용한다.
-  if (options.cycle > 6) return fallback
+  // 1~7주차만 게임의 정식 범위다. 7주차도 일반 기업의 AI 후일담을 컴파일하되,
+  // 시지프 폭락 가격·뉴스는 fallback에 들어 있는 고정 로직을 compileScenario가 보존한다.
+  if (!isAiScenarioCycle(options.cycle)) return fallback
   const enabled = process.env.AI_MARKET_ENABLED !== 'false'
   const keysReady = process.env.ANTHROPIC_API_KEY && process.env.OPENAI_API_KEY
   const dbReady = process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN

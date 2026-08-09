@@ -16,7 +16,7 @@
 // stock-1~stock-5는 런 전체에서 고정된 슬롯 (for_agent_logic.md §3-1 불변식).
 const STOCK_SLOT_IDS = ['stock-1', 'stock-2', 'stock-3', 'stock-4', 'stock-5']
 
-// --- RunPlan: 런 시작 시 한 번만 생성하는 6주기 전체의 굵은 서사 아크 ---
+// --- RunPlan: 런 시작 시 한 번만 생성하는 7주기 전체의 굵은 서사 아크 ---
 // 실제 아크 개수(4~8개) 제약은 프롬프트로 지시한다 (스키마의 minItems/maxItems 사용 불가).
 export const RUN_PLAN_SCHEMA = {
   type: 'object',
@@ -65,17 +65,17 @@ export const RUN_PLAN_SCHEMA = {
           direction: { type: 'string', enum: ['up', 'down', 'mixed'] },
           startCycle: {
             type: 'integer',
-            enum: [1, 2, 3, 4, 5, 6],
+            enum: [1, 2, 3, 4, 5, 6, 7],
             description: '이 아크의 씨앗(소문 등)이 처음 등장할 수 있는 사이클',
           },
           foreshadowFromCycle: {
             type: 'integer',
-            enum: [1, 2, 3, 4, 5, 6],
+            enum: [1, 2, 3, 4, 5, 6, 7],
             description: '이 사이클부터 소문으로 예고 가능 (startCycle 이상)',
           },
           landingCycle: {
             type: 'integer',
-            enum: [1, 2, 3, 4, 5, 6],
+            enum: [1, 2, 3, 4, 5, 6, 7],
             description: '이 아크가 뉴스로 확정되는 사이클 (foreshadowFromCycle 이상)',
           },
         },
@@ -102,7 +102,7 @@ export const CYCLE_SCENARIO_SCHEMA = {
     'selfCheck',
   ],
   properties: {
-    cycle: { type: 'integer', enum: [1, 2, 3, 4, 5, 6] },
+    cycle: { type: 'integer', enum: [1, 2, 3, 4, 5, 6, 7] },
     title: { type: 'string' },
     openingNarration: { type: 'string' },
     weeklyTheme: { type: 'string' },
@@ -266,7 +266,7 @@ export const CYCLE_SKELETON_SCHEMA = {
     'selfCheck',
   ],
   properties: {
-    cycle: { type: 'integer', enum: [1, 2, 3, 4, 5, 6] },
+    cycle: { type: 'integer', enum: [1, 2, 3, 4, 5, 6, 7] },
     title: { type: 'string' },
     openingNarration: { type: 'string' },
     weeklyTheme: { type: 'string' },

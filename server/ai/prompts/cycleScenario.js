@@ -20,6 +20,12 @@ ${WORLD_TONE}
 - companyStates는 정확히 5개, stock-1~stock-5 각각 하나씩 빠짐없이.
 - days는 정확히 7개, day 1~7 각각 하나씩 빠짐없이.
 - causeEventId가 없는 사건은 null로 채울 것 (필드 자체를 생략하지 말 것).
+
+7주기 전용 원칙:
+- 7주기는 부채 완납 뒤의 에필로그다. 새로운 장기 떡밥을 시작하지 않는다.
+- RunPlan과 이전 worldState의 미해결 사건을 결말·후일담·여파 중심으로 정리한다.
+- 시지프 인텔리전스의 강제 대폭락과 가격 경로는 코드가 별도로 보장하므로 만들거나 덮어쓰지 않는다.
+- stock-1~stock-5 기업들이 대폭락 이후 어떤 선택을 하고 어떤 새 질서에 놓이는지에 집중한다.
 `.trim()
 
 export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) {
@@ -32,7 +38,7 @@ export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) {
   )
 
   return `
-이번 사이클: ${cycle} / 6
+이번 사이클: ${cycle} / 7${cycle === 7 ? ' (에필로그 — 미해결 아크를 회수하고 후일담을 작성할 것)' : ''}
 
 RunPlan 테마: ${runPlan?.theme ?? '(없음)'}
 

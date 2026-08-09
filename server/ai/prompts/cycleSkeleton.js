@@ -32,6 +32,11 @@ ${WORLD_TONE}
 - days는 정확히 7개, day 1~7 각각 하나씩 빠짐없이.
 - causeEventId가 없는 사건은 null로 채울 것 (필드 자체를 생략하지 말 것).
 - eventId는 날짜 간에 겹치지 않는 고유 문자열로 만들 것 (예: "c1-d3-e1").
+
+7주기 전용 원칙:
+- 7주기는 부채 완납 뒤의 에필로그다. 새로운 장기 갈등을 시작하지 않는다.
+- 이전 worldState의 미해결 사건과 RunPlan 아크를 결말·후일담·여파 중심으로 정리한다.
+- 코드가 보장하는 시지프 인텔리전스 대폭락은 건드리지 말고 stock-1~stock-5의 대응만 설계한다.
 `.trim()
 
 export function buildCycleSkeletonUserPrompt({ cycle, runPlan, worldState }) {
@@ -44,7 +49,7 @@ export function buildCycleSkeletonUserPrompt({ cycle, runPlan, worldState }) {
   )
 
   return `
-이번 사이클: ${cycle} / 6
+이번 사이클: ${cycle} / 7${cycle === 7 ? ' (에필로그 — 미해결 아크를 회수하고 후일담을 설계할 것)' : ''}
 
 RunPlan 테마: ${runPlan?.theme ?? '(없음)'}
 

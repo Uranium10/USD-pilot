@@ -656,3 +656,10 @@
 - `teddy-bear` 수집품의 표시 이름을 `낡은 곰인형`에서 `곰돌이`로 변경했다.
 - 방 소품의 낮·밤 필터에서 drop-shadow를 제거하고 기존 색감 보정만 유지했다.
 - `npm run lint`, `npm run build` 통과.
+
+## 2026-08-10 (Codex, AI 시나리오 7주차 생성 확장)
+
+- AI RunPlan, CycleScenario, CycleSkeleton의 스키마와 프롬프트를 7주차까지 확장했다.
+- 기존 7주차 로컬 우회 처리를 제거하여 7주차에도 AI가 일반 상장 기업의 결말과 후일담을 생성하도록 변경했다.
+- 시지프 인텔리전스의 7주차 강제 대폭락 가격 경로와 고정 뉴스는 AI 결과가 덮어쓰지 않도록 기존 결정론적 로직을 유지했다.
+- `npm run lint`, `npm run build`, `npm run check:story-systems`, `git diff --check` 통과.
