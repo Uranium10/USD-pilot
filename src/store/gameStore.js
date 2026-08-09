@@ -460,7 +460,7 @@ export const useGameStore = create((set, get) => ({
   useNightItem: (item) => {
     const state = get()
     const quantity = state.inventory[item.id] || 0
-    if (state.phase !== 'night' || state.nightActivity || quantity <= 0) return false
+    if (state.phase !== 'night' || state.nightActivity || quantity <= 0 || !Number.isFinite(item.energyRestore)) return false
     const inventory = { ...state.inventory, [item.id]: quantity - 1 }
     if (inventory[item.id] <= 0) delete inventory[item.id]
     set({ inventory, energy: Math.min(MAX_ENERGY, state.energy + item.energyRestore), nightMessage: `${item.name}를 마셨다. 활동력 +${item.energyRestore}` })
@@ -489,10 +489,17 @@ export const useGameStore = create((set, get) => ({
       inventory[reward.itemId] = (inventory[reward.itemId] || 0) + 1
       itemEarned = true
     }
+    let collectibleEarned = false
+    if (reward.collectibleItemId && !inventory[reward.collectibleItemId] && Math.random() < reward.collectibleChance) {
+      inventory[reward.collectibleItemId] = 1
+      collectibleEarned = true
+    }
     const rewardParts = []
     if (cashEarned > 0) rewardParts.push(`+₡${cashEarned.toLocaleString('ko-KR')}`)
     const rewardItem = Object.values(NIGHT_ITEMS).find((item) => item.id === reward.itemId)
     if (itemEarned) rewardParts.push(`+${rewardItem?.name || '아이템'} 1개`)
+    const collectibleItem = Object.values(NIGHT_ITEMS).find((item) => item.id === reward.collectibleItemId)
+    if (collectibleEarned) rewardParts.push(`희귀 수집품 발견: ${collectibleItem?.name || '수집품'}`)
     if (!rewardParts.length) rewardParts.push('별다른 수확은 없었다')
     set({
       nightActivity: null,
@@ -502,7 +509,7 @@ export const useGameStore = create((set, get) => ({
       inventory,
       nightMessage: `${activity.name} 완료. ${rewardParts.join(' · ')}`,
     })
-    return { rewardEarned: cashEarned > 0 || itemEarned, cashEarned, itemEarned }
+    return { rewardEarned: cashEarned > 0 || itemEarned || collectibleEarned, cashEarned, itemEarned, collectibleEarned }
   },
   startNightJob: () => get().startNightActivity('convenience-job'),
   completeNightJob: () => get().completeNightActivity(),

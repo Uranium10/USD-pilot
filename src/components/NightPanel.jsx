@@ -12,7 +12,7 @@ export default function NightPanel() {
   const state = useGameStore()
   const [tab, setTab] = useState('activity')
   const drink = NIGHT_ITEMS.chiliEnergy
-  const consumables = Object.values(NIGHT_ITEMS).filter((item) => item.energyRestore)
+  const inventoryItems = Object.values(NIGHT_ITEMS).filter((item) => (state.inventory[item.id] || 0) > 0)
   const ticket = NIGHT_ITEMS.smugglingTicket
   const deck = NIGHT_ITEMS.hackingDeck
   const cyberRunner = NIGHT_ACTIVITIES.cyberRunner
@@ -35,7 +35,7 @@ export default function NightPanel() {
   }, [cyberRunner.id, state.completeCyberRunner, state.completeNightActivity, state.nightActivity?.id])
 
   if (state.phase !== 'night') return null
-  const consumableCount = consumables.reduce((total, item) => total + (state.inventory[item.id] || 0), 0)
+  const inventoryCount = inventoryItems.reduce((total, item) => total + (state.inventory[item.id] || 0), 0)
   const spend = (action) => { const result = action(); if (result) playCashOut(); return result }
 
   return <section className="night-desktop">
@@ -43,7 +43,7 @@ export default function NightPanel() {
     <nav className="night-tabs" data-night-tutorial-target="tabs">
       <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>활동</button>
       <button className={tab === 'shop' ? 'active' : ''} onClick={() => setTab('shop')}>상점</button>
-      <button className={tab === 'inventory' ? 'active' : ''} onClick={() => setTab('inventory')}>인벤토리 ({consumableCount})</button>
+      <button className={tab === 'inventory' ? 'active' : ''} onClick={() => setTab('inventory')}>인벤토리 ({inventoryCount})</button>
     </nav>
     <div className="night-content">
       {tab === 'activity' && <>
@@ -55,7 +55,8 @@ export default function NightPanel() {
             : activity.reward.type === 'mixed'
               ? `기본 ${money(activity.reward.credits)} · ${rewardItem?.name || '아이템'} 발견 확률 ${Math.round(activity.reward.chance * 100)}%`
               : `${rewardItem?.name || '아이템'} 발견 확률 ${Math.round(activity.reward.chance * 100)}%`
-          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}</small></div><button onClick={() => state.startNightActivity(activity.id)} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
+          const collectibleHint = activity.reward.collectibleItemId ? ' · 희귀 수집품 발견 가능' : ''
+          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}{collectibleHint}</small></div><button onClick={() => state.startNightActivity(activity.id)} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
         })}
         {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < CYBER_RUNNER_ENERGY_COST}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
       </>}
@@ -81,10 +82,9 @@ export default function NightPanel() {
           <button onClick={() => spend(state.upgradeMiningMachine)} disabled={Boolean(state.nightActivity) || state.cash < miningCost || !canUpgrade}>{canUpgrade ? (state.miningTier < 0 ? 'T.0 설치' : `T.${nextMineTier(state.miningTier)} 업그레이드`) : '업그레이드 잠김'}</button>
         </article>
       </div>}
-      {tab === 'inventory' && <>{consumableCount > 0 ? consumables.map((item) => {
+      {tab === 'inventory' && <>{inventoryCount > 0 ? inventoryItems.map((item) => {
         const count = state.inventory[item.id] || 0
-        if (count <= 0) return null
-        return <article key={item.id} className="night-entry"><img src={item.img} alt="" className="item-thumbnail" /><div><h3>{item.name} × {count}</h3><p>{item.description}</p><small>활동력 +{item.energyRestore}</small></div><button onClick={() => state.useNightItem(item)} disabled={Boolean(state.nightActivity) || state.energy >= MAX_ENERGY}>마시기</button></article>
+        return <article key={item.id} className={`night-entry ${item.collectible ? 'collectible-item' : ''}`}>{item.img ? <img src={item.img} alt="" className="item-thumbnail" /> : <span className="item-thumbnail collectible-icon" aria-hidden="true">{item.icon}</span>}<div><h3>{item.name}{count > 1 ? ` × ${count}` : ''}</h3><p>{item.description}</p><small>{item.collectible ? '세션 한정 수집품' : `활동력 +${item.energyRestore}`}</small></div>{!item.collectible && <button onClick={() => state.useNightItem(item)} disabled={Boolean(state.nightActivity) || state.energy >= MAX_ENERGY}>마시기</button>}</article>
       }) : <p className="empty-state">인벤토리가 비어 있습니다.</p>}</>}
     </div>
     {state.nightActivity && (() => { const activity = getNightActivity(state.nightActivity.id); return <div className="activity-loading"><div className="loading-spinner" /><h3>{activity?.loadingTitle || '시지프 내부망 침투 중…'}</h3><p>{activity?.loadingText || '추적 방화벽을 우회하고 자산 키를 복호화하는 중입니다.'}</p></div> })()}

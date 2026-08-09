@@ -92,6 +92,24 @@ for (let cycle = 2; cycle <= 6; cycle += 1) {
 assert(NIGHT_ITEMS.superCola.energyRestore === 60, '슈퍼 콜라의 활동력 회복량이 잘못됐습니다.')
 assert(NIGHT_ACTIVITIES.stationWalk.reward.itemId === NIGHT_ITEMS.superCola.id, '산책이 슈퍼 콜라를 지급하지 않습니다.')
 assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.reward?.itemId === NIGHT_ITEMS.superCola.id).length === 1, '슈퍼 콜라는 산책에서만 획득할 수 있어야 합니다.')
+assert(NIGHT_ACTIVITIES.recyclingRun.reward.collectibleItemId === NIGHT_ITEMS.teddyBear.id, '폐기물 수거에 곰인형 보상이 연결되지 않았습니다.')
+
+useGameStore.setState({ phase: 'night', nightActivity: { id: NIGHT_ACTIVITIES.recyclingRun.id }, inventory: {}, completedNightActivityIds: [], energy: MAX_ENERGY })
+Math.random = (() => { const values = [1, 0]; return () => values.shift() ?? 0 })()
+try {
+  useGameStore.getState().completeNightActivity()
+} finally {
+  Math.random = originalRandom
+}
+assert(useGameStore.getState().inventory[NIGHT_ITEMS.teddyBear.id] === 1, '폐기물 수거에서 곰인형을 획득하지 못했습니다.')
+useGameStore.setState({ nightActivity: { id: NIGHT_ACTIVITIES.recyclingRun.id } })
+Math.random = () => 0
+try {
+  useGameStore.getState().completeNightActivity()
+} finally {
+  Math.random = originalRandom
+}
+assert(useGameStore.getState().inventory[NIGHT_ITEMS.teddyBear.id] === 1, '곰인형이 세션에서 중복 획득됐습니다.')
 
 useGameStore.getState().restart()
 const infoMarket = generateMarketCycle({ cycle: 1, seed: 313 })

@@ -2286,6 +2286,20 @@ button:hover {
   align-self: center;
 }
 
+.collectible-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 80px;
+  background: radial-gradient(circle at 50% 38%, #5b4938, #17120f);
+  font-size: 42px;
+  line-height: 1
+}
+
+.night-entry.collectible-item {
+  border-color: #a9804c;
+  box-shadow: inset 0 0 24px #a9804c18
+}
+
 .night-entry h3 {
   margin: 0
 }

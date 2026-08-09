@@ -14,6 +14,13 @@ export const NIGHT_ITEMS = {
     description: '단종된 고카페인 탄산음료. 정거장 외곽의 낡은 자판기에만 아주 드물게 남아 있다.',
     energyRestore: 60,
   },
+  teddyBear: {
+    id: 'teddy-bear',
+    name: '낡은 곰인형',
+    icon: '🧸',
+    description: '폐기 구역 깊숙한 곳에서 발견한 작은 곰인형. 한쪽 눈은 단추로 다시 꿰매져 있다.',
+    collectible: true,
+  },
   hackingDeck: {
     id: 'hacking-deck',
     name: '해킹 덱 v.0',
@@ -112,7 +119,7 @@ export const NIGHT_ACTIVITIES = {
     description: '버려진 캔과 부품을 모아 환급기에 넣는다. 음료가 남아 있기도 한다.',
     unlockCycle: 3,
     energyCost: 35,
-    reward: { type: 'mixed', credits: 250, itemId: 'chili-energy', chance: 0.35 },
+    reward: { type: 'mixed', credits: 250, itemId: 'chili-energy', chance: 0.35, collectibleItemId: 'teddy-bear', collectibleChance: 0.08 },
     actionLabel: '수거하러 가기',
     loadingTitle: '폐기 구역을 뒤지는 중…',
     loadingText: '쓸 만한 것과 위험한 것을 조심스럽게 골라냅니다.',
