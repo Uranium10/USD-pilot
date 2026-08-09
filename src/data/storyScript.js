@@ -14,6 +14,7 @@
 // 넣는다. 해당 대사가 시작될 때 재생되고 다음 대사로 넘어가면 자동으로 중단된다.
 // text 안에서는 `{{cycle}}`, `{{cash}}`, `{{worldState.someValue}}`처럼 게임 상태의 원시값을
 // 삽입할 수 있다. 존재하지 않거나 객체·함수인 값은 예약 기호를 그대로 남긴다.
+// `**강조할 문장**`처럼 감싼 부분은 대화창에서 굵은 글씨로 표시된다.
 // DialogueScene.jsx는 이미지 로드 실패 시 이니셜 placeholder로 자동 대체한다.
 
 export const CHARACTERS = {
@@ -48,7 +49,7 @@ export const SCENES = {
       { speaker: 'tarae', portrait: 'neutral', text: '...상속 승인 완료? 내가 언제 승인했다고.' },
       { speaker: 'system', portrait: 'neutral', text: '부모님 몫이었던 빚이, 이제 전부 내 이름으로 넘어왔다.' },
       { speaker: 'system', text: '[시지프 인텔리전스 채권관리부] 6주내로 다음 채무액을 전부 변제하지 못하면 전적으로 불이익을 받으실 수 있습니다.' },
-      { speaker: 'tarae', portrait: 'neutral', text: '{{debt}}원...???!!' },
+      { speaker: 'tarae', portrait: 'neutral', text: '**{{debt}}**원...???!!' },
       { speaker: 'tarae', portrait: 'neutral', text: '...주...주식이라도 해야 하나..?' },
     ],
   },

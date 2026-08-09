@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CHARACTERS } from '../data/storyScript.js'
-import { renderDialogueTemplate } from '../logic/dialogueTemplate.js'
+import { parseDialogueBold, renderDialogueTemplate } from '../logic/dialogueTemplate.js'
 import { useGameStore } from '../store/gameStore.js'
 
 // 좌/우 슬롯은 캐릭터의 side(또는 대사의 side)를 따른다. 같은 쪽에 새 인물이
@@ -144,6 +144,7 @@ export default function DialogueScene() {
 
   const { slots, activeIndex } = computePortraitState(lines, lineIndex)
   const speakerName = CHARACTERS[currentLine.speaker]?.name
+  const typedSegments = parseDialogueBold(typed)
 
   return <div className="dialogue-backdrop" onClick={advance} role="button" tabIndex={0}
     onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') advance() }}>
@@ -153,7 +154,9 @@ export default function DialogueScene() {
     </div>
     <div className="dialogue-box">
       {speakerName && <b className="dialogue-speaker">{speakerName}</b>}
-      <p>{typed}{typingFinished && <span className="dialogue-next" aria-hidden="true">▼</span>}</p>
+      <p>{typedSegments.map((segment, index) => segment.bold
+        ? <strong key={`${index}-${segment.text}`}>{segment.text}</strong>
+        : <span key={`${index}-${segment.text}`}>{segment.text}</span>)}{typingFinished && <span className="dialogue-next" aria-hidden="true">▼</span>}</p>
     </div>
   </div>
 }

@@ -6,7 +6,7 @@ import {
   SISYPHUS_STOCK_ID,
 } from '../src/config.js'
 import { generateMarketCycle } from '../src/data/generateMarket.js'
-import { renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
+import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
 import { useGameStore } from '../src/store/gameStore.js'
 
 const assert = (condition, message) => {
@@ -16,6 +16,11 @@ const assert = (condition, message) => {
 const dialogueVariables = { cycle: 3, cash: 12500, worldState: { codename: 'METIS' }, action: () => 'blocked' }
 assert(renderDialogueTemplate('{{cycle}}주차 · {{cash}} 크레딧 · {{worldState.codename}}', dialogueVariables) === '3주차 · 12500 크레딧 · METIS', '대화 변수 치환이 잘못됐습니다.')
 assert(renderDialogueTemplate('{{missing}} / {{action}} / {{constructor}}', dialogueVariables) === '{{missing}} / {{action}} / {{constructor}}', '대화 템플릿이 허용되지 않은 값을 노출했습니다.')
+assert(JSON.stringify(parseDialogueBold('평문 **강조** 끝')) === JSON.stringify([
+  { text: '평문 ', bold: false },
+  { text: '강조', bold: true },
+  { text: ' 끝', bold: false },
+]), '대화 굵은 글씨 구문을 올바르게 분리하지 못했습니다.')
 
 useGameStore.getState().restart()
 useGameStore.getState().beginLoading()

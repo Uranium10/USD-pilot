@@ -2935,7 +2935,7 @@ button:hover {
   justify-content: space-between;
   align-items: flex-end;
   width: min(920px, 92vw);
-  margin-bottom: 0;
+  margin-bottom: -1px;
   pointer-events: none;
   user-select: none
 }
@@ -2990,8 +2990,8 @@ button:hover {
 .dialogue-box {
   position: relative;
   width: min(920px, 92vw);
-  min-height: 110px;
-  padding: 20px 26px;
+  min-height: 148px;
+  padding: 24px 28px;
   color: var(--ink);
   background: #0b0f16f0;
   border: 1px solid var(--cyan);
@@ -3006,8 +3006,8 @@ button:hover {
   left: -1px;
   right: -1px;
   bottom: 100%;
-  height: 96px;
-  background: linear-gradient(to top, #05070bd9 0%, #05070b73 48%, transparent 100%);
+  height: 128px;
+  background: linear-gradient(to top, #05070be8 0%, #05070b80 46%, #05070b26 72%, transparent 100%);
   pointer-events: none
 }
 
@@ -3029,6 +3029,11 @@ button:hover {
   margin: 0;
   font: 16px/1.7 'Segoe UI', 'Noto Sans KR', sans-serif;
   white-space: pre-wrap
+}
+
+.dialogue-box p strong {
+  color: #fff;
+  font-weight: 800
 }
 
 .dialogue-next {

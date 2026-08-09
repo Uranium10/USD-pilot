@@ -20,3 +20,24 @@ export function renderDialogueTemplate(text, variables) {
     return token
   })
 }
+
+export function parseDialogueBold(text) {
+  const segments = []
+  let cursor = 0
+  while (cursor < text.length) {
+    const opening = text.indexOf('**', cursor)
+    if (opening === -1) {
+      segments.push({ text: text.slice(cursor), bold: false })
+      break
+    }
+    if (opening > cursor) segments.push({ text: text.slice(cursor, opening), bold: false })
+    const closing = text.indexOf('**', opening + 2)
+    if (closing === -1) {
+      segments.push({ text: text.slice(opening + 2), bold: false })
+      break
+    }
+    if (closing > opening + 2) segments.push({ text: text.slice(opening + 2, closing), bold: true })
+    cursor = closing + 2
+  }
+  return segments
+}
