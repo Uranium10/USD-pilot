@@ -1,0 +1,96 @@
+const DEVICE_KEY = 'usd-device-id'
+const SESSION_KEY = 'usd-session-backup'
+
+const getDeviceId = () => {
+  let deviceId = window.localStorage.getItem(DEVICE_KEY)
+  if (!deviceId) {
+    deviceId = globalThis.crypto?.randomUUID?.() || `device-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    window.localStorage.setItem(DEVICE_KEY, deviceId)
+  }
+  return deviceId
+}
+
+const localSession = () => {
+  try { return JSON.parse(window.localStorage.getItem(SESSION_KEY) || 'null') }
+  catch { return null }
+}
+
+export function sessionPayload(state) {
+  const purchasedRumorIds = state.purchasedRumors.map((rumor) => rumor.id)
+  return {
+    deviceId: getDeviceId(),
+    status: state.phase === 'gameover' ? 'gameover' : state.phase === 'clear' ? 'clear' : 'active',
+    screen: state.screen,
+    phase: state.phase,
+    cycle: state.cycle,
+    day: state.day,
+    marketSeed: state.market.seed,
+    elapsed: state.elapsed,
+    cash: state.cash,
+    debt: state.debt,
+    selectedStockId: state.selectedStockId,
+    selectedRumorId: purchasedRumorIds[0] || null,
+    holdings: state.holdings,
+    worldState: {
+      companyIds: state.market.companyIds,
+      companyIdsPinned: state.market.companyIdsPinned,
+      coinStartPrice: state.market.coinStartPrice,
+      purchasedRumorIds,
+      notepadContent: state.notepadContent,
+      notepadFontSize: state.notepadFontSize,
+      dailySummaries: state.dailySummaries,
+      dayStartNetWorth: state.dayStartNetWorth,
+      energy: state.energy,
+      inventory: state.inventory,
+      dailyDrinkPurchased: state.dailyDrinkPurchased,
+      miningTier: state.miningTier,
+      minedCoinToday: state.minedCoinToday,
+      totalMinedCoin: state.totalMinedCoin,
+      showMonitorHint: state.showMonitorHint,
+    },
+    updatedAt: Date.now(),
+  }
+}
+
+export async function getSavedSession() {
+  const deviceId = getDeviceId()
+  try {
+    const response = await fetch(`/api/session?deviceId=${encodeURIComponent(deviceId)}`, { cache: 'no-store' })
+    if (!response.ok) throw new Error(`session api: ${response.status}`)
+    const { session } = await response.json()
+    if (session) window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    return session || localSession()
+  } catch (error) {
+    console.warn('서버 저장을 불러올 수 없어 브라우저 백업을 사용합니다.', error)
+    return localSession()
+  }
+}
+
+export async function saveSession(state) {
+  if (!state.market) return false
+  const payload = sessionPayload(state)
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(payload))
+  try {
+    const response = await fetch('/api/session', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    })
+    if (!response.ok) throw new Error(`session api: ${response.status}`)
+    return true
+  } catch (error) {
+    console.warn('서버 저장에 실패해 브라우저 백업만 갱신했습니다.', error)
+    return false
+  }
+}
+
+export async function clearSavedSession() {
+  const deviceId = getDeviceId()
+  window.localStorage.removeItem(SESSION_KEY)
+  try {
+    await fetch(`/api/session?deviceId=${encodeURIComponent(deviceId)}`, { method: 'DELETE' })
+  } catch (error) {
+    console.warn('이전 서버 저장 삭제를 건너뜁니다.', error)
+  }
+}

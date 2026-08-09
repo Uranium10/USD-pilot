@@ -8,6 +8,7 @@ import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
 import { fetchMarketCycle } from './services/marketService.js'
+import { clearSavedSession, getSavedSession, saveSession } from './services/sessionService.js'
 import { useGameStore } from './store/gameStore.js'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
@@ -16,14 +17,129 @@ const subtitles = ['Upside Down', 'Useless Decision', 'Unpaid Space Debt', 'Urge
 function Title() {
   const beginLoading = useGameStore((state) => state.beginLoading)
   const loadMarket = useGameStore((state) => state.loadMarket)
+  const restoreSession = useGameStore((state) => state.restoreSession)
   const [loading, setLoading] = useState(false)
+  const [savedSession, setSavedSession] = useState(null)
+  const [checkingSave, setCheckingSave] = useState(true)
   const [subtitle] = useState(() => subtitles[Math.floor(Math.random() * subtitles.length)])
-  const start = async () => {
+  useEffect(() => {
+    let active = true
+    getSavedSession().then((session) => {
+      if (active && session?.status === 'active') setSavedSession(session)
+    }).finally(() => { if (active) setCheckingSave(false) })
+    return () => { active = false }
+  }, [])
+  const startNew = async () => {
     setLoading(true)
+    setSavedSession(null)
     beginLoading()
+    await clearSavedSession()
     loadMarket(await fetchMarketCycle(1))
   }
-  return <main className="title-screen"><p className="eyebrow">DEBT SURVIVAL TERMINAL</p><h1>U.S.D</h1><p className="subtitle">{subtitle}</p><button className="primary large" onClick={start} disabled={loading}>{loading ? '시장 생성 중…' : '게임 시작'}</button></main>
+  const continueGame = async () => {
+    if (!savedSession) return
+    setLoading(true)
+    const world = savedSession.worldState || {}
+    const companiesWerePinned = world.companyIdsPinned
+      || (!Object.hasOwn(world, 'companyIdsPinned') && savedSession.cycle > 1)
+    const market = await fetchMarketCycle(
+      savedSession.cycle,
+      companiesWerePinned ? world.companyIds : undefined,
+      world.coinStartPrice,
+      savedSession.marketSeed,
+    )
+    restoreSession(savedSession, market)
+  }
+  const summary = savedSession
+    ? `${savedSession.cycle}주차 ${savedSession.day}일 · 현금 ${money(savedSession.cash)}`
+    : checkingSave ? '저장 데이터 확인 중…' : '진행 중인 저장 없음'
+  return <main className="title-screen"><p className="eyebrow">DEBT SURVIVAL TERMINAL</p><h1>U.S.D</h1><p className="subtitle">{subtitle}</p><div className="title-actions"><button className="primary large" onClick={startNew} disabled={loading}>{loading ? '시장 연결 중…' : '새로하기'}</button><button className="secondary large" onClick={continueGame} disabled={loading || checkingSave || !savedSession}>이어하기</button></div><p className="save-summary">{summary}</p></main>
+}
+
+function DayTransition() {
+  const cycle = useGameStore((state) => state.cycle)
+  const day = useGameStore((state) => state.day)
+  const completeDayIntro = useGameStore((state) => state.completeDayIntro)
+  const [typed, setTyped] = useState('')
+  const [leaving, setLeaving] = useState(false)
+
+  useEffect(() => {
+    const text = `${cycle}주차, ${day}일.`
+    const keyboard = new Audio('/sounds/KeyboardPress.mp3')
+    keyboard.volume = 0.22
+    let index = 0
+    let interval
+    const startTimer = window.setTimeout(() => {
+      interval = window.setInterval(() => {
+        index += 1
+        setTyped(text.slice(0, index))
+        keyboard.currentTime = 0
+        keyboard.play().catch(() => {})
+        if (index >= text.length) {
+          window.clearInterval(interval)
+          interval = undefined
+        }
+      }, 115)
+    }, 850)
+    const leaveTimer = window.setTimeout(() => setLeaving(true), 850 + text.length * 115 + 700)
+    const finishTimer = window.setTimeout(completeDayIntro, 850 + text.length * 115 + 1450)
+    return () => {
+      window.clearTimeout(startTimer)
+      window.clearTimeout(leaveTimer)
+      window.clearTimeout(finishTimer)
+      if (interval) window.clearInterval(interval)
+      keyboard.pause()
+    }
+  }, [completeDayIntro, cycle, day])
+
+  return <div className={`day-transition ${leaving ? 'leaving' : ''}`}><p>{typed}<span aria-hidden="true">▋</span></p></div>
+}
+
+function AutoSave() {
+  useEffect(() => {
+    const stablePhases = new Set(['premarket', 'day', 'dayReport', 'night', 'settlement', 'gameover', 'clear'])
+    const initialState = useGameStore.getState()
+    let lastPhase = initialState.phase
+    let lastScreen = initialState.screen
+    let lastMonitorHint = initialState.showMonitorHint
+    let lastSavedAt = 0
+    let timer
+    const persist = () => {
+      timer = undefined
+      const state = useGameStore.getState()
+      if (!state.market || !stablePhases.has(state.phase)) return
+      lastSavedAt = Date.now()
+      saveSession(state)
+    }
+    const unsubscribe = useGameStore.subscribe((state) => {
+      if (!state.market || !stablePhases.has(state.phase)) {
+        lastPhase = state.phase
+        lastScreen = state.screen
+        lastMonitorHint = state.showMonitorHint
+        return
+      }
+      const navigationChanged = state.phase !== lastPhase
+        || state.screen !== lastScreen
+        || state.showMonitorHint !== lastMonitorHint
+      lastPhase = state.phase
+      lastScreen = state.screen
+      lastMonitorHint = state.showMonitorHint
+      if (navigationChanged || Date.now() - lastSavedAt >= 15000) {
+        if (timer) window.clearTimeout(timer)
+        persist()
+      } else if (!timer) {
+        timer = window.setTimeout(persist, 15000 - (Date.now() - lastSavedAt))
+      }
+    })
+    const saveBeforeLeaving = () => saveSession(useGameStore.getState())
+    window.addEventListener('pagehide', saveBeforeLeaving)
+    return () => {
+      unsubscribe()
+      if (timer) window.clearTimeout(timer)
+      window.removeEventListener('pagehide', saveBeforeLeaving)
+    }
+  }, [])
+  return null
 }
 
 function Premarket() {
@@ -118,5 +234,5 @@ export default function App() {
   const phase = useGameStore((state) => state.phase)
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
   const ending = phase === 'gameover' || phase === 'clear'
-  return <div className="game-frame"><BgmController /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div><div style={{ display: screen === 'title' && !ending ? 'block' : 'none' }}><Title /></div><div style={{ display: screen === 'room' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !ending ? 'block' : 'none' }}><MarketDesktop /></div><Overlay /></div>
+  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && phase !== 'dayIntro' && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{phase === 'dayIntro' && <DayTransition />}<Overlay /></div>
 }

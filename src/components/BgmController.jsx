@@ -4,7 +4,7 @@ import { useGameStore } from '../store/gameStore.js'
 
 export default function BgmController() {
   const phase = useGameStore((state) => state.phase)
-  const mode = phase === 'day' || phase === 'dayReport' ? 'chart' : phase === 'night' ? 'night' : null
+  const mode = phase === 'premarket' || phase === 'day' || phase === 'dayReport' ? 'chart' : phase === 'night' ? 'night' : null
 
   useEffect(() => { bgmPlayer.setMode(mode) }, [mode])
   useEffect(() => {

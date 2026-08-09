@@ -240,13 +240,17 @@ function makeCoinPath(startPrice, random, cycle) {
 
 export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, coinStartPrice } = {}) {
   const random = seeded(Number(seed) + cycle * 7919)
+  const companyIdsPinned = Array.isArray(companyIds)
+    && [...new Set(companyIds)].length === LISTED_COMPANY_COUNT
+    && companyIds.every((id) => companyIndexById.has(id))
   const listedCompanies = selectCompanies(random, companyIds)
   const listedCompanyIds = listedCompanies.map((company) => company[3])
   const previousCloses = listedCompanies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
   const requestedCoinStart = Number(coinStartPrice)
-  let previousCoinClose = Number.isFinite(requestedCoinStart)
+  const cycleCoinStartPrice = Number.isFinite(requestedCoinStart)
     ? clamp(requestedCoinStart, COIN_REFERENCE_PRICE * 0.25, COIN_REFERENCE_PRICE * 4)
     : COIN_REFERENCE_PRICE
+  let previousCoinClose = cycleCoinStartPrice
   const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
     const companyStocks = listedCompanies.map(([name, sector, base, companyId], stockIndex) => {
       const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
@@ -320,6 +324,8 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
     cycle,
     seed,
     companyIds: listedCompanyIds,
+    companyIdsPinned,
+    coinStartPrice: cycleCoinStartPrice,
     days,
   }
 }

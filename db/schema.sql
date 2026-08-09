@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   updated_at        INTEGER NOT NULL,
 
   screen            TEXT NOT NULL,                   -- 'title' | 'room' | 'monitor'
-  phase             TEXT NOT NULL,                   -- 'idle'|'loading'|'premarket'|'day'|'night'|'settlement'|'gameover'|'clear'
+  phase             TEXT NOT NULL,                   -- 'idle'|'loading'|'dayIntro'|'premarket'|'day'|'dayReport'|'night'|'settlement'|'gameover'|'clear'
   cycle             INTEGER NOT NULL DEFAULT 1,       -- 몇 주차
   day               INTEGER NOT NULL DEFAULT 1,       -- 주차 내 며칠째 (1~7)
 
@@ -25,9 +25,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   selected_stock_id TEXT,                            -- 마지막으로 보고 있던 종목
   selected_rumor_id TEXT,                            -- 이번 날 구매한 소문 id (없으면 NULL)
 
-  world_state_json  TEXT                             -- (미사용, 확장용) USD_SPEC.md §4 "펑크 액션과 서사 분기"에서
-                                                      -- 언급된, 다음 주기 AI 생성에 물려줄 세계 상태값을 나중에 여기 저장한다.
-                                                      -- 지금은 클라이언트/서버 어디서도 읽거나 쓰지 않는다.
+  world_state_json  TEXT                             -- 다중 소문, 메모, 일일 요약, 에너지·인벤토리·채굴기와
+                                                      -- 시장 재현 보조값 등 확장 진행 상태를 JSON으로 저장한다.
 );
 
 CREATE TABLE IF NOT EXISTS holdings (

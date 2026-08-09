@@ -50,7 +50,8 @@ const isNightPhase = (phase) => phase === 'night' || phase === 'settlement'
 
 export default function RoomScene({ children }) {
   const phase = useGameStore((state) => state.phase)
-  const setScreen = useGameStore((state) => state.setScreen)
+  const showMonitorHint = useGameStore((state) => state.showMonitorHint)
+  const openMonitor = useGameStore((state) => state.openMonitor)
   const netWorth = useGameStore(getNetWorth)
   const previousSummary = useGameStore((state) => state.dailySummaries.at(-1))
   const set = isNightPhase(phase) ? 'night' : 'day'
@@ -96,8 +97,8 @@ export default function RoomScene({ children }) {
       {set === 'day' && isHappy && <FloatingNotes />}
       {phase === 'loading' && <p className="room-loading-text">궤도 시장을 도청하는 중…</p>}
       {canOpenMonitor && (
-        <button className="monitor-hotspot" onClick={() => setScreen('monitor')} aria-label="모니터 켜기">
-          <span className="monitor-hint">화면 보기</span>
+        <button className={`monitor-hotspot ${showMonitorHint ? 'first-monitor-visit' : ''}`} onClick={openMonitor} aria-label="모니터 켜기">
+          <span className="monitor-hint">{showMonitorHint ? 'CLICK TO START' : '화면 보기'}</span>
         </button>
       )}
       {children}

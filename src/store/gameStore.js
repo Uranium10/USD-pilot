@@ -33,6 +33,8 @@ const initialGame = {
   miningTier: -1,
   minedCoinToday: 0,
   totalMinedCoin: 0,
+  dayIntroDestination: 'room',
+  showMonitorHint: false,
 }
 
 function interpolate(path, progress) {
@@ -46,6 +48,10 @@ function interpolate(path, progress) {
 
 const dayData = (state) => state.market?.days[state.day - 1]
 
+const pricesAtProgress = (stocks, progress) => Object.fromEntries(
+  stocks.map((stock) => [stock.id, interpolate(stock.path, progress)]),
+)
+
 const calculateNetWorth = (state) => Object.entries(state.holdings).reduce(
   (total, [stockId, holding]) => total + (state.currentPrices[stockId] || holding.average) * holding.quantity,
   state.cash,
@@ -56,14 +62,68 @@ export const useGameStore = create((set, get) => ({
   setScreen: (screen) => set({ screen }),
   setNotepadContent: (notepadContent) => set({ notepadContent }),
   setNotepadFontSize: (size) => set({ notepadFontSize: Math.min(28, Math.max(12, size)) }),
-  beginLoading: () => set({ ...initialGame, screen: 'room', phase: 'loading' }),
+  beginLoading: () => set({ ...initialGame, screen: 'title', phase: 'loading' }),
   loadMarket: (market) => {
     const firstDay = market.days[0]
     set({
       market,
-      phase: 'premarket',
+      phase: 'dayIntro',
+      screen: 'room',
+      dayIntroDestination: 'room',
+      showMonitorHint: true,
       selectedStockId: firstDay.stocks[0].id,
       currentPrices: Object.fromEntries(firstDay.stocks.map((stock) => [stock.id, stock.startPrice])),
+    })
+  },
+  completeDayIntro: () => {
+    const state = get()
+    if (state.phase !== 'dayIntro') return
+    set({ phase: 'premarket', screen: state.dayIntroDestination, dayIntroDestination: 'monitor' })
+  },
+  openMonitor: () => set({ screen: 'monitor', showMonitorHint: false }),
+  restoreSession: (session, market) => {
+    const world = session.worldState || {}
+    const cycle = Math.min(6, Math.max(1, Number(session.cycle) || 1))
+    const day = Math.min(DAYS_PER_CYCLE, Math.max(1, Number(session.day) || 1))
+    const data = market.days[day - 1]
+    const elapsed = Math.min(DAY_DURATION_SECONDS, Math.max(0, Number(session.elapsed) || 0))
+    const progress = elapsed / DAY_DURATION_SECONDS
+    const progressed = ['day', 'dayReport', 'night', 'settlement'].includes(session.phase)
+    const purchasedIds = new Set(world.purchasedRumorIds || (session.selectedRumorId ? [session.selectedRumorId] : []))
+    const phase = ['premarket', 'day', 'dayReport', 'night', 'settlement'].includes(session.phase) ? session.phase : 'premarket'
+    const screen = phase === 'night' || phase === 'settlement'
+      ? 'room'
+      : session.screen === 'room' ? 'room' : 'monitor'
+    set({
+      ...initialGame,
+      screen,
+      phase,
+      cycle,
+      day,
+      cash: Number(session.cash) || 0,
+      debt: Number(session.debt) || 0,
+      holdings: session.holdings || {},
+      market,
+      selectedStockId: data.stocks.some((stock) => stock.id === session.selectedStockId) ? session.selectedStockId : data.stocks[0].id,
+      purchasedRumors: data.rumors.filter((rumor) => purchasedIds.has(rumor.id)),
+      notepadContent: world.notepadContent || '',
+      notepadFontSize: Number(world.notepadFontSize) || 16,
+      dailySummaries: Array.isArray(world.dailySummaries) ? world.dailySummaries : [],
+      dayStartNetWorth: Number(world.dayStartNetWorth) || Number(session.cash) || 0,
+      elapsed,
+      currentPrices: progressed
+        ? pricesAtProgress(data.stocks, progress)
+        : Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
+      visibleNews: phase === 'day' || phase === 'dayReport' ? data.news.filter((item) => item.progress <= progress) : [],
+      paused: phase === 'dayReport',
+      energy: Number.isFinite(Number(world.energy)) ? Number(world.energy) : MAX_ENERGY,
+      inventory: world.inventory || {},
+      dailyDrinkPurchased: Number(world.dailyDrinkPurchased) || 0,
+      miningTier: Number.isFinite(Number(world.miningTier)) ? Number(world.miningTier) : -1,
+      minedCoinToday: Number(world.minedCoinToday) || 0,
+      totalMinedCoin: Number(world.totalMinedCoin) || 0,
+      showMonitorHint: Boolean(world.showMonitorHint),
+      dayIntroDestination: 'monitor',
     })
   },
   purchaseRumor: (rumor) => {
@@ -165,8 +225,10 @@ export const useGameStore = create((set, get) => ({
     const data = state.market.days[nextDay - 1]
     set({
       day: nextDay,
-      phase: 'premarket',
-      screen: 'monitor',
+      phase: 'dayIntro',
+      screen: 'room',
+      dayIntroDestination: 'monitor',
+      showMonitorHint: false,
       purchasedRumors: [],
       elapsed: 0,
       visibleNews: [],
@@ -202,8 +264,10 @@ export const useGameStore = create((set, get) => ({
       cycle: market.cycle,
       day: 1,
       market,
-      phase: 'premarket',
+      phase: 'dayIntro',
       screen: 'room',
+      dayIntroDestination: 'monitor',
+      showMonitorHint: false,
       purchasedRumors: [],
       dailySummaries: [],
       selectedStockId: data.stocks[0].id,

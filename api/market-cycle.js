@@ -6,6 +6,8 @@ export default function handler(request, response) {
   const companyIds = companies ? companies.split(',').filter(Boolean) : undefined
   const coinPriceQuery = Array.isArray(request.query?.coinPrice) ? request.query.coinPrice[0] : request.query?.coinPrice
   const coinStartPrice = coinPriceQuery ? Number(coinPriceQuery) : undefined
+  const seedQuery = Array.isArray(request.query?.seed) ? request.query.seed[0] : request.query?.seed
+  const seed = seedQuery ? Number(seedQuery) : undefined
   response.setHeader('Cache-Control', 'no-store')
-  response.status(200).json(generateMarketCycle({ cycle, companyIds, coinStartPrice }))
+  response.status(200).json(generateMarketCycle({ cycle, companyIds, coinStartPrice, seed }))
 }
