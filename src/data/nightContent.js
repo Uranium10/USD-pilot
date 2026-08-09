@@ -10,21 +10,21 @@ export const NIGHT_ITEMS = {
   superCola: {
     id: 'super-cola',
     name: '슈퍼 콜라',
-    img: '/imgs/items/chili_energy.png',
+    img: '/imgs/items/super_cola.png',
     description: '단종된 고카페인 탄산음료. 정거장 외곽의 낡은 자판기에만 아주 드물게 남아 있다.',
     energyRestore: 60,
   },
   teddyBear: {
     id: 'teddy-bear',
     name: '낡은 곰인형',
-    icon: '🧸',
+    img: '/imgs/items/teddy_bear.png',
     description: '폐기 구역 깊숙한 곳에서 발견한 작은 곰인형. 한쪽 눈은 단추로 다시 꿰매져 있다.',
     collectible: true,
   },
   discardedBurger: {
     id: 'discarded-burger',
     name: '폐기 햄버거',
-    icon: '🍔',
+    img: '/imgs/items/discarded_burger.png',
     description: '판매 기한 표시가 막 지난 편의점 햄버거. 아직 따뜻한지는 중요하지 않다.',
     energyRestore: 30,
   },
@@ -39,7 +39,7 @@ export const NIGHT_ITEMS = {
   smugglingTicket: {
     id: 'smuggling-ticket',
     name: '밀항선 티켓',
-    img: '/imgs/items/mining_machine.png', // TODO: 전용 아트 없음 — 임시로 기존 아이콘 재사용
+    img: '/imgs/items/smuggling_ticket.png', // TODO: 전용 아트 없음 — 임시로 기존 아이콘 재사용
     description: '이름도 국적도 묻지 않는 화물선의 마지막 남은 좌석 하나.',
     price: 180000,
   },
@@ -49,7 +49,7 @@ export const NIGHT_ACTIVITIES = {
   donation: {
     id: 'donation',
     name: '무료 급식소 기부',
-    img: '/imgs/items/convenience_job.png',
+    img: '/imgs/items/donation.png',
     description: '정거장 하층의 무료 급식소에 익명으로 식재료 비용을 보탠다.',
     scheduled: true,
     unlockCycle: 1,
@@ -76,7 +76,7 @@ export const NIGHT_ACTIVITIES = {
   stationWalk: {
     id: 'station-walk',
     name: '정거장 외곽 산책',
-    img: '/imgs/items/chili_energy.png',
+    img: '/imgs/items/station_walk.png',
     description: '폐쇄 직전의 산책로를 돈다. 자판기 밑에서 멀쩡한 캔을 주울 때도 있다.',
     unlockCycle: 2,
     energyCost: 20,
@@ -88,7 +88,7 @@ export const NIGHT_ACTIVITIES = {
   parcelSorting: {
     id: 'parcel-sorting',
     name: '화물 분류 대타',
-    img: '/imgs/items/convenience_job.png',
+    img: '/imgs/items/parcel_sorting.png',
     description: '행선지 코드가 지워진 소포를 밤새 컨베이어 벨트에서 골라낸다.',
     unlockCycle: 2,
     energyCost: 75,
@@ -100,7 +100,7 @@ export const NIGHT_ACTIVITIES = {
   dishwashingShift: {
     id: 'dishwashing-shift',
     name: '심야 식당 설거지',
-    img: '/imgs/items/convenience_job.png',
+    img: '/imgs/items/dishwashing_shift.png',
     description: '폐점한 식당의 접시와 조리 도구를 다음 교대 전까지 비운다.',
     unlockCycle: 2,
     energyCost: 55,
@@ -112,7 +112,7 @@ export const NIGHT_ACTIVITIES = {
   lostLuggage: {
     id: 'lost-luggage',
     name: '분실 수하물 탐색',
-    img: '/imgs/items/chili_energy.png',
+    img: '/imgs/items/lost_luggage.png',
     description: '보관 기한이 끝난 수하물의 표식을 대조한다. 사례비와 간식이 걸려 있다.',
     unlockCycle: 2,
     energyCost: 30,
@@ -124,7 +124,7 @@ export const NIGHT_ACTIVITIES = {
   dataLabeling: {
     id: 'data-labeling',
     name: '심야 데이터 라벨링',
-    img: '/imgs/items/hacking_deck.png',
+    img: '/imgs/items/data_labeling.png',
     description: '기업 AI가 버린 영상 조각에 사물 이름을 붙이는 단기 외주다.',
     unlockCycle: 3,
     energyCost: 65,
@@ -136,7 +136,7 @@ export const NIGHT_ACTIVITIES = {
   recyclingRun: {
     id: 'recycling-run',
     name: '폐기 구역 수거',
-    img: '/imgs/items/chili_energy.png',
+    img: '/imgs/items/recycling_run.png',
     description: '버려진 캔과 부품을 모아 환급기에 넣는다. 음료가 남아 있기도 한다.',
     unlockCycle: 3,
     energyCost: 35,
@@ -148,7 +148,7 @@ export const NIGHT_ACTIVITIES = {
   antennaCleaning: {
     id: 'antenna-cleaning',
     name: '통신 안테나 세척',
-    img: '/imgs/items/mining_machine.png',
+    img: '/imgs/items/antenna_cleaning.png',
     description: '정거장 외벽의 소형 중계기에 낀 분진을 닦는 단기 작업이다.',
     unlockCycle: 3,
     energyCost: 50,
@@ -160,7 +160,7 @@ export const NIGHT_ACTIVITIES = {
   nightCallCenter: {
     id: 'night-call-center',
     name: '심야 민원 대행',
-    img: '/imgs/items/hacking_deck.png',
+    img: '/imgs/items/night_call_center.png',
     description: '상담 AI가 넘긴 복잡한 민원을 사람 목소리로 진정시킨다.',
     unlockCycle: 3,
     energyCost: 70,
@@ -172,7 +172,7 @@ export const NIGHT_ACTIVITIES = {
   cargoInspection: {
     id: 'cargo-inspection',
     name: '밀봉 화물 검수',
-    img: '/imgs/items/convenience_job.png',
+    img: '/imgs/items/cargo_inspection.png',
     description: '내용물을 묻지 않는 조건으로 봉인 번호와 중량만 대조한다.',
     unlockCycle: 4,
     energyCost: 80,
@@ -184,7 +184,7 @@ export const NIGHT_ACTIVITIES = {
   blackboxTranscript: {
     id: 'blackbox-transcript',
     name: '블랙박스 전사',
-    img: '/imgs/items/hacking_deck.png',
+    img: '/imgs/items/blackbox_transcript.png',
     description: '회수된 운송선 기록에서 잡음을 걷어내고 마지막 교신을 받아 적는다.',
     unlockCycle: 4,
     energyCost: 45,
@@ -196,7 +196,7 @@ export const NIGHT_ACTIVITIES = {
   emergencyDelivery: {
     id: 'emergency-delivery',
     name: '응급 부품 배송',
-    img: '/imgs/items/convenience_job.png',
+    img: '/imgs/items/emergency_delivery.png',
     description: '정비 구역까지 제한 시간 안에 교체 부품을 운반한다.',
     unlockCycle: 4,
     energyCost: 85,
@@ -208,7 +208,7 @@ export const NIGHT_ACTIVITIES = {
   nightMarketCleanup: {
     id: 'night-market-cleanup',
     name: '야시장 철거 보조',
-    img: '/imgs/items/chili_energy.png',
+    img: '/imgs/items/night_market_cleanup.png',
     description: '무허가 야시장이 떠난 자리를 치운다. 상인들이 남긴 물건이 종종 나온다.',
     unlockCycle: 4,
     energyCost: 35,
@@ -220,7 +220,7 @@ export const NIGHT_ACTIVITIES = {
   signalSurvey: {
     id: 'signal-survey',
     name: '불법 전파 탐색',
-    img: '/imgs/items/hacking_deck.png',
+    img: '/imgs/items/signal_survey.png',
     description: '낡은 수신기를 들고 주거 구역의 전파 음영을 기록한다.',
     unlockCycle: 5,
     energyCost: 55,
@@ -232,7 +232,7 @@ export const NIGHT_ACTIVITIES = {
   droneMonitor: {
     id: 'drone-monitor',
     name: '화물 드론 관제',
-    img: '/imgs/items/hacking_deck.png',
+    img: '/imgs/items/drone_monitor.png',
     description: '자동 관제망이 놓친 충돌 경로를 찾아 수동으로 우회시킨다.',
     unlockCycle: 5,
     energyCost: 60,
@@ -244,7 +244,7 @@ export const NIGHT_ACTIVITIES = {
   proxyAttendee: {
     id: 'proxy-attendee',
     name: '기업 설명회 대리 참석',
-    img: '/imgs/items/convenience_job.png',
+    img: '/imgs/items/proxy_attendee.png',
     description: '빈 좌석을 채우고 준비된 질문을 읽는 조건으로 수당을 받는다.',
     unlockCycle: 5,
     energyCost: 40,
@@ -256,7 +256,7 @@ export const NIGHT_ACTIVITIES = {
   coolantReplacement: {
     id: 'coolant-replacement',
     name: '서버 냉각재 교체',
-    img: '/imgs/items/mining_machine.png',
+    img: '/imgs/items/coolant_replacement.png',
     description: '과열된 금융 서버의 냉각 카트리지를 수동으로 교환한다.',
     unlockCycle: 5,
     energyCost: 80,
@@ -268,7 +268,7 @@ export const NIGHT_ACTIVITIES = {
   reactorMaintenance: {
     id: 'reactor-maintenance',
     name: '보조로 냉각 점검',
-    img: '/imgs/items/mining_machine.png',
+    img: '/imgs/items/reactor_maintenance.png',
     description: '위험 수당이 붙은 보조 동력로 순찰. 오래 머물고 싶지는 않다.',
     unlockCycle: 6,
     energyCost: 90,
@@ -280,7 +280,7 @@ export const NIGHT_ACTIVITIES = {
   orbitalSalvage: {
     id: 'orbital-salvage',
     name: '궤도 잔해 회수',
-    img: '/imgs/items/mining_machine.png',
+    img: '/imgs/items/orbital_salvage.png',
     description: '정거장에 접근하는 금속 잔해를 포획해 재활용 업체에 넘긴다.',
     unlockCycle: 6,
     energyCost: 70,
@@ -292,7 +292,7 @@ export const NIGHT_ACTIVITIES = {
   identityPaperwork: {
     id: 'identity-paperwork',
     name: '신원 세탁 서류 정리',
-    img: '/imgs/items/hacking_deck.png',
+    img: '/imgs/items/identity_paperwork.png',
     description: '이름을 묻지 않는 의뢰인의 이동 기록을 서로 맞지 않게 정리한다.',
     unlockCycle: 6,
     energyCost: 50,
@@ -304,7 +304,7 @@ export const NIGHT_ACTIVITIES = {
   quarantineCourier: {
     id: 'quarantine-courier',
     name: '격리 구역 특송',
-    img: '/imgs/items/convenience_job.png',
+    img: '/imgs/items/quarantine_courier.png',
     description: '봉인된 의료 화물을 격리 구역 입구까지 운반하는 고위험 특송이다.',
     unlockCycle: 6,
     energyCost: 95,
