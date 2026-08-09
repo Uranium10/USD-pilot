@@ -39,12 +39,20 @@ export const CHARACTERS = {
 //   { type: 'dayStart', cycle, day } — 해당 주기·일차가 시작되는 시점(completeDayIntro 직후)
 //   { type: 'phaseEnter', phase }    — 해당 phase로 처음 전환되는 시점
 // 한 장면은 한 세이브당 한 번만 재생된다(gameStore.playedSceneIds로 추적).
+// {
+//   speaker: 'system',
+//   sound: '/sounds/UIPopup.mp3',
+//   soundVolume: 0.7,
+//   soundLoop: false,
+//   text: '대사 내용',
+// }
+
 export const SCENES = {
   'prologue-day1': {
     trigger: { type: 'dayStart', cycle: 1, day: 1 },
     background: null, // null이면 현재 화면을 살짝 어둡게 깔고 그 위에 대화창만 띄운다.
     lines: [
-      { speaker: 'system', sound: '/sounds/UIPopup.mp3', soundVolume: 0.55, text: '**03:17 AM.** 꺼 두었던 모니터가 혼자 켜졌다.' },
+      { speaker: 'system', sound: '/sounds/Message_1.mp3', soundVolume: 0.55, text: '꺼 두었던 모니터가 혼자 켜졌다.' },
       { speaker: 'tarae', portrait: 'neutral', text: '이 시간에 올 연락이라곤 스팸이랑 압류 통지뿐인데.' },
       { speaker: 'system', text: '[시지프 인텔리전스 채권관리부]\n상속 집행이 정상적으로 완료되었습니다.' },
       { speaker: 'tarae', portrait: 'worried', text: '잠깐. 부모님은 **실종**이야. 사망 신고도 없는데 무슨 상속을—' },
@@ -54,7 +62,7 @@ export const SCENES = {
       { speaker: 'tarae', portrait: 'worried', text: '그건 취업이 아니라 뇌를 서버에 꽂고 영원히 갈아버리겠다는 거잖아.' },
       { speaker: 'system', text: '상환 기한: **6주.**\n현재 채무: **₡{{debt}}.**\n현재 가용 현금: **₡{{cash}}.**' },
       { speaker: 'tarae', portrait: 'worried', text: '......숫자 하나가 사람을 이렇게 조용하게 만들 수도 있구나.' },
-      { speaker: 'system', text: '채무자의 원활한 변제를 지원하기 위해 **G.A.Z.U.A 거래 엔진**을 개방합니다. 투자 손실은 전적으로 고객의 책임입니다.' },
+      { speaker: 'system', text: '채무자의 원활한 변제를 지원하기 위해 **궤도 증권시장 접속 권한**을 개방합니다. 투자 손실은 전적으로 고객의 책임입니다.' },
       { speaker: 'tarae', portrait: 'neutral', text: '부모님은 저 회사를 부수려다 사라졌고, 나는 그 회사에 빚을 졌다.' },
       { speaker: 'tarae', portrait: 'determined', text: '좋아. 빚부터 갚는다. 그리고 살아남으면—' },
       { speaker: 'tarae', portrait: 'determined', text: '**시지프 주식을 한 주씩 사서, 저 바위를 회사 쪽으로 굴려주겠어.**' },
