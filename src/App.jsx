@@ -45,7 +45,7 @@ function Title() {
           setGlitching(false)
           schedule()
         }, 140 + Math.random() * 220)
-      }, 2400 + Math.random() * 4600)
+      }, 1920 + Math.random() * 3680)
     }
     schedule()
     return () => {

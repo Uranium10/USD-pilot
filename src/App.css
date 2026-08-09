@@ -266,6 +266,13 @@
   pointer-events: none
 }
 
+/* 직계 자식 전체에 height:100%를 주는 game-frame 규칙보다 우선해, 펼친 볼륨 패널과
+   작은 실행 버튼이 같은 세로 중앙을 기준으로 겹치게 한다. */
+.game-frame>.bgm-control {
+  height: 262px;
+  min-height: 0
+}
+
 .tutorial-backdrop {
   position: absolute;
   z-index: 255;

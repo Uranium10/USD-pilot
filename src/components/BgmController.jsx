@@ -34,7 +34,7 @@ export default function BgmController() {
   const scheduleClose = () => {
     cancelClose()
     if (draggingRef.current || focusWithinRef.current) return
-    closeTimerRef.current = window.setTimeout(() => setExpanded(false), 900)
+    closeTimerRef.current = window.setTimeout(() => setExpanded(false), 1200)
   }
 
   const updateFromPointer = (clientY) => {
