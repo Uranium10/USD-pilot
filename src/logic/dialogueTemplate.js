@@ -16,7 +16,10 @@ export function renderDialogueTemplate(text, variables) {
   return text.replace(TEMPLATE_TOKEN, (token, path) => {
     const value = readPath(variables, path)
     if (value === null) return ''
-    if (['string', 'number', 'boolean', 'bigint'].includes(typeof value)) return String(value)
+    // 숫자는 게임 다른 곳의 money() 표기(₡165,000)와 통일되게 천단위 콤마를 넣는다 —
+    // {{cycle}}/{{day}}처럼 작은 정수는 콤마가 안 붙으니(예: "6") 그대로 안전하다.
+    if (typeof value === 'number') return value.toLocaleString('ko-KR')
+    if (['string', 'boolean', 'bigint'].includes(typeof value)) return String(value)
     return token
   })
 }
