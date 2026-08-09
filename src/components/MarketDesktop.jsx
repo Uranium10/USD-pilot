@@ -7,6 +7,7 @@ import { playCashOut, playCashRegister, playMarketCountdown, playNewsUpdate } fr
 import { getNetWorth, isHiddenEndingEligible, useGameStore } from '../store/gameStore.js'
 import DayReport from './DayReport.jsx'
 import InformationNotepad from './InformationNotepad.jsx'
+import OverflowMarquee from './OverflowMarquee.jsx'
 import ShareholderMail from './ShareholderMail.jsx'
 import StockChart from './StockChart.jsx'
 
@@ -38,7 +39,7 @@ function StockGrid({ stocks, prices, onOpen, coinUnlocked }) {
     const current = prices[stock.id] || stock.startPrice
     const change = (current / stock.startPrice - 1) * 100
     return <article key={stock.id} className={`stock-grid-card ${assetClass(stock)} ${locked ? 'coin-locked-card' : ''}`} role={locked ? undefined : 'button'} tabIndex={locked ? undefined : '0'} onClick={locked ? undefined : () => onOpen(stock.id)} onKeyDown={locked ? undefined : (event) => { if (event.key === 'Enter' || event.key === ' ') onOpen(stock.id) }}>
-      <header><div><b>{stock.name}</b><small>{locked ? '채굴기 설치 후 거래 가능' : stock.sector}</small></div>{locked ? <span>LOCKED</span> : <span className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</span>}</header>
+      <header><div><OverflowMarquee as="b">{stock.name}</OverflowMarquee><OverflowMarquee as="small">{locked ? '채굴기 설치 후 거래 가능' : stock.sector}</OverflowMarquee></div>{locked ? <span>LOCKED</span> : <span className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</span>}</header>
       {locked ? <div className="coin-lock-visual"><b>◆</b><span>암호자산 거래소 잠김</span></div> : <StockChart stockId={stock.id} compact />}
       {!locked && <span className="inspect-stock" aria-hidden="true">⌕</span>}
     </article>
@@ -181,8 +182,8 @@ export default function MarketDesktop() {
               const change = (current / stock.startPrice - 1) * 100
               const qty = state.holdings[stock.id]?.quantity || 0
               return <button key={stock.id} className={`${assetClass(stock)} ${stock.id === selected.id ? 'active' : ''} ${locked ? 'coin-locked' : ''}`} disabled={locked} onClick={() => openStock(stock.id)}>
-                <span><b>{locked ? '◆ 암호자산 슬롯' : stock.name}</b><small>{locked ? '채굴기 설치 필요' : stock.sector}</small></span>
-                <span>{locked ? <><b>LOCKED</b><small>상점에서 T.0 설치</small></> : <><b>{money(current)}</b><small className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</small>{qty > 0 && <small>{formatAssetQuantity(stock, qty)}{isCoinAsset(stock) ? ` ${stock.symbol}` : '주'} 보유</small>}</>}</span>
+                <span><OverflowMarquee as="b">{locked ? '◆ 암호자산 슬롯' : stock.name}</OverflowMarquee><OverflowMarquee as="small">{locked ? '채굴기 설치 필요' : stock.sector}</OverflowMarquee></span>
+                <span>{locked ? <><OverflowMarquee as="b">LOCKED</OverflowMarquee><OverflowMarquee as="small">상점에서 T.0 설치</OverflowMarquee></> : <><b>{money(current)}</b><small className={change >= 0 ? 'green' : 'red'}>{change >= 0 ? '+' : ''}{change.toFixed(2)}%</small>{qty > 0 && <small>{formatAssetQuantity(stock, qty)}{isCoinAsset(stock) ? ` ${stock.symbol}` : '주'} 보유</small>}</>}</span>
               </button>
             })}
             <button className="list-view-button" onClick={toggleListView}>{listView ? '↩ 이전으로' : '▦ 목록 보기'}</button>

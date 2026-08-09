@@ -1646,6 +1646,35 @@ button:hover {
   border-color: var(--cyan)
 }
 
+.overflow-marquee {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip !important;
+  white-space: nowrap
+}
+
+.overflow-marquee>span {
+  display: inline-block;
+  min-width: max-content;
+  will-change: transform
+}
+
+.overflow-marquee.is-overflowing>span {
+  animation: overflow-marquee var(--marquee-duration) ease-in-out 1.4s infinite
+}
+
+@keyframes overflow-marquee {
+  0%, 18% { transform: translateX(0) }
+  58%, 78% { transform: translateX(calc(-1 * var(--marquee-distance))) }
+  100% { transform: translateX(0) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overflow-marquee.is-overflowing>span { animation: none }
+  .overflow-marquee { text-overflow: ellipsis !important }
+}
+
 .rumor.sisyphus-intel {
   background: linear-gradient(rgba(29, 14, 47, .62), rgba(16, 12, 31, .72)), url('/imgs/ui/rumor_card_bg.png') center/cover no-repeat, #20152f;
   border-color: #9a62d4;
