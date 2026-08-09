@@ -12,6 +12,20 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message)
 }
 
+useGameStore.getState().restart()
+useGameStore.getState().beginLoading()
+assert(useGameStore.getState().phase === 'prologue' && useGameStore.getState().activeScene?.id === 'prologue-day1', '새 게임과 동시에 프롤로그가 시작되지 않았습니다.')
+const firstMarket = generateMarketCycle({ cycle: 1, seed: 101 })
+useGameStore.getState().loadMarket(firstMarket)
+assert(useGameStore.getState().phase === 'prologue' && useGameStore.getState().marketReady, '시장 생성 완료가 프롤로그를 건너뛰었습니다.')
+useGameStore.getState().closeScene()
+assert(useGameStore.getState().phase === 'tutorial', '프롤로그 종료 후 튜토리얼로 이어지지 않았습니다.')
+useGameStore.getState().completeTutorial()
+assert(useGameStore.getState().phase === 'dayIntro', '튜토리얼 종료 후 날짜 전환 화면으로 이어지지 않았습니다.')
+useGameStore.getState().completeDayIntro()
+assert(useGameStore.getState().phase === 'premarket', '날짜 전환 후 정보 선택 화면으로 이어지지 않았습니다.')
+assert(useGameStore.getState().screen === 'monitor', '첫 날짜 전환 후 정보 선택 화면이 열리지 않았습니다.')
+
 const cycleSix = generateMarketCycle({ cycle: 6, seed: 610 })
 useGameStore.getState().loadMarket(cycleSix)
 useGameStore.setState({ phase: 'settlement', cycle: 6, day: 7, cash: 5000, debt: 5000 })

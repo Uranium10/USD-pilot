@@ -5,6 +5,7 @@ import DialogueScene from './components/DialogueScene.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
 import RoomScene from './components/RoomScene.jsx'
+import TutorialOverlay from './components/TutorialOverlay.jsx'
 import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
@@ -334,5 +335,5 @@ export default function App() {
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
   const ending = phase === 'gameover' || phase === 'ended'
   const isDayIntro = phase === 'dayIntro' || phase === 'epilogueIntro'
-  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !isDayIntro && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !isDayIntro && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{isDayIntro && <DayTransition />}<Overlay />{activeScene && <DialogueScene />}</div>
+  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !isDayIntro && !['prologue', 'tutorial'].includes(phase) && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !isDayIntro && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{isDayIntro && <DayTransition />}{phase === 'tutorial' && <TutorialOverlay />}<Overlay />{activeScene && <DialogueScene />}</div>
 }

@@ -41,6 +41,7 @@ const initialGame = {
   // 대화 스토리 엔진 (2026-08-10 도입)
   activeScene: null,
   playedSceneIds: [],
+  tutorialCompleted: false,
   // 4분기 엔딩 시스템
   epilogue: false, // 6주차 청산 성공 후 부채 없이 진행하는 7주차인지
   endingType: null, // 'normal' | 'hidden' | 'true' — phase가 'ended'일 때만 의미 있음
@@ -87,15 +88,19 @@ export const useGameStore = create((set, get) => ({
   setScreen: (screen) => set({ screen }),
   setNotepadContent: (notepadContent) => set({ notepadContent }),
   setNotepadFontSize: (size) => set({ notepadFontSize: Math.min(28, Math.max(12, size)) }),
-  beginLoading: () => set({ ...initialGame, screen: 'room', phase: 'dayIntro', marketReady: false }),
+  beginLoading: () => {
+    set({ ...initialGame, screen: 'room', phase: 'prologue', paused: true, marketReady: false })
+    get().checkStoryTriggers()
+  },
   loadMarket: (market) => {
     const firstDay = market.days[0]
+    const currentPhase = get().phase
     set({
       market,
-      phase: 'dayIntro',
+      phase: ['prologue', 'tutorial'].includes(currentPhase) ? currentPhase : 'dayIntro',
       screen: 'room',
-      dayIntroDestination: 'room',
-      showMonitorHint: true,
+      dayIntroDestination: 'monitor',
+      showMonitorHint: false,
       marketReady: true,
       selectedStockId: firstDay.stocks[0].id,
       currentPrices: Object.fromEntries(firstDay.stocks.map((stock) => [stock.id, stock.startPrice])),
@@ -158,6 +163,7 @@ export const useGameStore = create((set, get) => ({
       epilogue: Boolean(world.epilogue),
       endingType: world.endingType || null,
       hasSmugglingTicket: Boolean(world.hasSmugglingTicket),
+      tutorialCompleted: true,
     })
   },
   purchaseRumor: (rumor) => {
@@ -506,8 +512,18 @@ export const useGameStore = create((set, get) => ({
   closeScene: () => {
     const state = get()
     if (!state.activeScene) return
-    set({ activeScene: null, paused: false, playedSceneIds: [...state.playedSceneIds, state.activeScene.id] })
+    const playedSceneIds = [...state.playedSceneIds, state.activeScene.id]
+    if (state.phase === 'prologue' && state.activeScene.id === 'prologue-day1') {
+      set({ activeScene: null, phase: 'tutorial', paused: true, playedSceneIds })
+      return
+    }
+    set({ activeScene: null, paused: false, playedSceneIds })
     queueMicrotask(() => get().checkStoryTriggers())
+  },
+  completeTutorial: () => {
+    const state = get()
+    if (state.phase !== 'tutorial') return
+    set({ phase: 'dayIntro', paused: false, tutorialCompleted: true })
   },
   triggerHiddenEnding: () => set({ phase: 'ended', endingType: 'hidden' }),
   buySmugglingTicket: (item) => {
