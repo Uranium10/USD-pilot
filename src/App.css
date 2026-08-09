@@ -2945,7 +2945,7 @@ button:hover {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  transition: opacity .2s ease, filter .2s ease
+  transition: filter .24s ease
 }
 
 .dialogue-portrait.empty {
@@ -2953,12 +2953,10 @@ button:hover {
 }
 
 .dialogue-portrait.dimmed {
-  opacity: .38;
-  filter: grayscale(.6) brightness(.7)
+  filter: brightness(.42) saturate(.3)
 }
 
 .dialogue-portrait.active {
-  opacity: 1;
   filter: none
 }
 
