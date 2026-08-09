@@ -612,20 +612,32 @@
 }
 
 .tutorial-information-example {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  font: 14px/1.5 Gulim, '굴림', sans-serif
+  padding: 18px 20px 0;
+  color: #111;
+  background: #fff;
+  white-space: pre-line;
+  font: 16px/1.45 Gulim, '굴림', sans-serif
 }
 
-.tutorial-information-example>div+div {
-  padding-left: 18px;
-  border-left: 1px solid #c1ced9
+.tutorial-note-placeholder {
+  min-height: 96px;
+  padding-top: 24px;
+  color: #999
 }
 
-.tutorial-notepad-desktop .tutorial-taskbar .active {
-  background: #32465e;
-  border-color: var(--cyan)
+.tutorial-notepad-taskbar {
+  z-index: 5
+}
+
+.tutorial-notepad-taskbar>span {
+  margin-left: auto;
+  padding: 0 8px;
+  color: #fff;
+  font-size: 11px
+}
+
+.tutorial-notepad-taskbar>span+time {
+  margin-left: 0
 }
 
 .tutorial-night-screen { position: relative; height: 100%; overflow: hidden; background: #080d15 }

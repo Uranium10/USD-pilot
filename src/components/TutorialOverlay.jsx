@@ -91,15 +91,21 @@ function NotepadMock() {
       <div className="notepad-tabbar"><span className="notepad-app-icon">▤</span><div className="notepad-tab"><b>정보 모음.txt</b><span>×</span></div><button className="new-tab">＋</button><div className="window-buttons"><button>—</button><button>□</button><button>×</button></div></div>
       <div className="notepad-commandbar"><div className="notepad-tools"><button><b>B</b></button><button><i>I</i></button><span className="tool-separator" /><button>A−</button><span className="font-size-value">16px</span><button>A＋</button></div></div>
       <div className="notepad-document">
-        <section className="locked-information tutorial-information-example">
-          <div><div>------------------------------</div><br /><div>[정보 1] 출처: 궤도 관제소 첩보 / 신뢰도: 86% <b className="information-completed">(완료됨)</b></div><div>“아레스 다이내믹스의 군수 보급 계약이 장중 공개될 예정이다.”</div><br /><div>------------------------------</div></div>
-          <div><div>------------------------------</div><br /><div>[정보 2] 출처: 익명 해커의 데이터랩 / 신뢰도: 72%</div><div>“퀀텀 포지의 차세대 합금 생산 라인에 공급 차질이 감지됐다.”</div><br /><div>------------------------------</div></div>
+        <section className="tutorial-information-example">
+          <div>------------------------------</div><br />
+          <div>[정보 1] 출처: 화성 탐사선 통신 감청 / 신뢰도: 61%</div>
+          <div>“셀레네 드릴: 소행성 벨트 신규 탐사선 발사 임박... 대박 기대감”</div><br />
+          <div>------------------------------</div><br />
+          <div>------------------------------</div><br />
+          <div>[정보 2] 출처: 어둠의 다크웹 포럼 / 신뢰도: 73% <b className="information-completed">(완료됨)</b></div>
+          <div>“퀀텀 포지: 차세대 합병 절차 90% 달성... 대량 납품 시작”</div><br />
+          <div>------------------------------</div>
         </section>
-        <div className="notepad-editor editable-notes">오늘의 메모를 여기에 남길 수 있다.</div>
+        <div className="notepad-editor editable-notes tutorial-note-placeholder">여기에 메모를 입력하세요...</div>
       </div>
       <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>184자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
     </section>
-    <footer className="tutorial-taskbar"><button>◐ 절전</button><button>▥ U.S.D Market Terminal</button><button className="active">▤ 정보 모음.txt</button><span>1주차 1/7일　13:24</span></footer>
+    <footer className="taskbar tutorial-notepad-taskbar"><button className="shutdown">◐ 절전</button><button>▥ U.S.D Market Terminal</button><button className="active">▤ 정보 모음.txt</button><span>1주차 1/7일</span><time>09:04</time></footer>
   </div>
 }
 
