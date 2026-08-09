@@ -41,6 +41,19 @@
   background: repeating-linear-gradient(0deg, transparent 0 3px, #55e7ff08 4px);
 }
 
+.title-screen::after {
+  content: '';
+  position: absolute;
+  z-index: 30;
+  inset: 0;
+  opacity: 0;
+  background: #000;
+  pointer-events: none;
+  transition: opacity 1.2s ease-in-out
+}
+
+.title-screen.is-leaving::after { opacity: 1 }
+
 .eyebrow {
   color: var(--cyan);
   font: 600 12px 'IBM Plex Mono';
