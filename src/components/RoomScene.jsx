@@ -100,7 +100,7 @@ export default function RoomScene({ children }) {
       />
       {hasTeddyBear && (
         <svg className={`room-props ${set}`} viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <image className="room-teddy-bear" href="/imgs/bg/Tarae/Bear.png" x="806" y="326" width="94" height="141" preserveAspectRatio="xMidYMid meet" />
+          <image className="room-teddy-bear" href="/imgs/bg/Tarae/Bear.png" x="806" y="294" width="94" height="141" preserveAspectRatio="xMidYMid meet" />
         </svg>
       )}
       {set === 'day' && isHappy && <FloatingNotes />}
