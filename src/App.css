@@ -1665,9 +1665,9 @@ button:hover {
 }
 
 @keyframes overflow-marquee {
-  0%, 18% { transform: translateX(0) }
-  58%, 78% { transform: translateX(calc(-1 * var(--marquee-distance))) }
-  100% { transform: translateX(0) }
+  0%, 22% { transform: translateX(0) }
+  76%, 90% { transform: translateX(calc(-1 * var(--marquee-distance))) }
+  90.01%, 100% { transform: translateX(0) }
 }
 
 @media (prefers-reduced-motion: reduce) {

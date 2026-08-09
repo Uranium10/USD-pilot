@@ -25,7 +25,7 @@ export default function OverflowMarquee({ as: Tag = 'span', className = '', chil
     }
   }, [children])
 
-  const duration = Math.max(6.5, 5.5 + overflow / 28)
+  const duration = Math.max(8, 7 + overflow / 24)
   return <Tag
     ref={containerRef}
     className={`overflow-marquee ${overflow > 0 ? 'is-overflowing' : ''} ${className}`.trim()}
