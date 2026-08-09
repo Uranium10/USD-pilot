@@ -49,14 +49,12 @@ export default function NightPanel() {
       {tab === 'activity' && <>
         {activityOptions.map((activity, index) => {
           const completed = state.completedNightActivityIds.includes(activity.id)
-          const rewardItem = Object.values(NIGHT_ITEMS).find((item) => item.id === activity.reward.itemId)
           const reward = activity.reward.type === 'credits'
             ? `보상 ${money(activity.reward.amount)}`
             : activity.reward.type === 'mixed'
-              ? `기본 ${money(activity.reward.credits)} · ${rewardItem?.name || '아이템'} 발견 확률 ${Math.round(activity.reward.chance * 100)}%`
-              : `${rewardItem?.name || '아이템'} 발견 확률 ${Math.round(activity.reward.chance * 100)}%`
-          const collectibleHint = activity.reward.collectibleItemId ? ' · 희귀 수집품 발견 가능' : ''
-          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}{collectibleHint}</small></div><button onClick={() => state.startNightActivity(activity.id)} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
+              ? `기본 보상 ${money(activity.reward.credits)}`
+              : '뜻밖의 발견 가능'
+          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}</small></div><button onClick={() => state.startNightActivity(activity.id)} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
         })}
         {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < CYBER_RUNNER_ENERGY_COST}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
       </>}
