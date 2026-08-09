@@ -7,6 +7,7 @@ import {
 } from '../src/config.js'
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
+import { getNightActivityOptions } from '../src/logic/nightActivities.js'
 import { useGameStore } from '../src/store/gameStore.js'
 
 const assert = (condition, message) => {
@@ -76,6 +77,12 @@ try {
 }
 assert(useGameStore.getState().holdings[SISYPHUS_STOCK_ID]?.quantity === 4, '사이버 러너의 시지프 주식 보상이 잘못됐습니다.')
 assert(useGameStore.getState().nightActivity === null, '사이버 러너 완료 후 활동 잠금이 해제되지 않았습니다.')
+
+const firstWeekActivities = getNightActivityOptions(1, 4, 111)
+assert(firstWeekActivities.length === 1 && firstWeekActivities[0].id === 'convenience-job', '1주차에는 편의점 활동만 나와야 합니다.')
+const secondWeekActivities = getNightActivityOptions(2, 4, 111)
+assert(secondWeekActivities[0].id === 'convenience-job' && secondWeekActivities.length >= 2 && secondWeekActivities.length <= 3, '2주차 활동 추첨 수가 잘못됐습니다.')
+assert(JSON.stringify(secondWeekActivities) === JSON.stringify(getNightActivityOptions(2, 4, 111)), '같은 날짜의 야간 활동 목록이 다시 계산할 때 바뀝니다.')
 
 useGameStore.getState().restart()
 const infoMarket = generateMarketCycle({ cycle: 1, seed: 313 })

@@ -1,8 +1,10 @@
 import { create } from 'zustand'
-import { COIN_ASSET_ID, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, EPILOGUE_CYCLE, HACKING_DECK_COSTS, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY, SISYPHUS_MAJORITY_SHARES, SISYPHUS_MAX_SHARES, SISYPHUS_STOCK_ID } from '../config.js'
+import { COIN_ASSET_ID, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, EPILOGUE_CYCLE, HACKING_DECK_COSTS, INITIAL_DEBT, MAX_ENERGY, SISYPHUS_MAJORITY_SHARES, SISYPHUS_MAX_SHARES, SISYPHUS_STOCK_ID } from '../config.js'
+import { NIGHT_ITEMS } from '../data/nightContent.js'
 import { buyExecutionPrice, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { computeSettlement } from '../logic/debtSystem.js'
 import { canUpgradeMine, mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
+import { getNightActivity, getNightActivityOptions } from '../logic/nightActivities.js'
 import { findMatchingScene } from '../logic/storyTriggers.js'
 
 const initialGame = {
@@ -29,6 +31,7 @@ const initialGame = {
   energy: MAX_ENERGY,
   inventory: {},
   nightActivity: null,
+  completedNightActivityIds: [],
   nightMessage: null,
   dailyDrinkPurchased: 0,
   miningTier: -1,
@@ -156,6 +159,7 @@ export const useGameStore = create((set, get) => ({
       energy: Number.isFinite(Number(world.energy)) ? Number(world.energy) : MAX_ENERGY,
       inventory: world.inventory || {},
       dailyDrinkPurchased: Number(world.dailyDrinkPurchased) || 0,
+      completedNightActivityIds: Array.isArray(world.completedNightActivityIds) ? world.completedNightActivityIds : [],
       miningTier: Number.isFinite(Number(world.miningTier)) ? Number(world.miningTier) : -1,
       hackingDeckLevel: Number.isFinite(Number(world.hackingDeckLevel)) ? Number(world.hackingDeckLevel) : -1,
       minedCoinToday: Number(world.minedCoinToday) || 0,
@@ -318,6 +322,7 @@ export const useGameStore = create((set, get) => ({
       selectedStockId: data.stocks[0].id,
       energy: MAX_ENERGY,
       nightMessage: null,
+      completedNightActivityIds: [],
       dailyDrinkPurchased: 0,
     })
     get().checkStoryTriggers()
@@ -339,11 +344,12 @@ export const useGameStore = create((set, get) => ({
         cash, debt: 0, cycle: EPILOGUE_CYCLE, phase: 'epilogueIntro', epilogue: true, day: 1, screen: 'room',
         dayIntroDestination: 'monitor', showMonitorHint: false, marketReady: false,
         purchasedRumors: state.purchasedRumors, elapsed: 0, visibleNews: [], dailyDrinkPurchased: 0, minedCoinToday: 0,
+        completedNightActivityIds: [],
         currentPrices: {}, selectedStockId: null,
       })
       return { result: 'epilogue', cycle: EPILOGUE_CYCLE }
     }
-    set({ cash, debt: result.debt, cycle: result.nextCycle, day: 1, phase: 'dayIntro', screen: 'room', marketReady: false })
+    set({ cash, debt: result.debt, cycle: result.nextCycle, day: 1, phase: 'dayIntro', screen: 'room', marketReady: false, completedNightActivityIds: [] })
     get().checkStoryTriggers()
     return { result: 'next', cycle: result.nextCycle }
   },
@@ -365,6 +371,7 @@ export const useGameStore = create((set, get) => ({
       elapsed: 0,
       dailyDrinkPurchased: 0,
       minedCoinToday: 0,
+      completedNightActivityIds: [],
       marketReady: true,
     })
   },
@@ -375,7 +382,7 @@ export const useGameStore = create((set, get) => ({
       screen: 'room', dayIntroDestination: 'monitor', showMonitorHint: false,
       purchasedRumors: get().purchasedRumors, dailySummaries: [], selectedStockId: data.stocks[0].id,
       currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
-      visibleNews: [], elapsed: 0, dailyDrinkPurchased: 0, minedCoinToday: 0, marketReady: true,
+      visibleNews: [], elapsed: 0, dailyDrinkPurchased: 0, minedCoinToday: 0, completedNightActivityIds: [], marketReady: true,
     })
   },
   selectStock: (selectedStockId) => set({ selectedStockId }),
@@ -459,26 +466,48 @@ export const useGameStore = create((set, get) => ({
     set({ inventory, energy: Math.min(MAX_ENERGY, state.energy + item.energyRestore), nightMessage: '적응이 안되는 맛이다...' })
     return true
   },
-  startNightJob: () => {
+  startNightActivity: (activityId) => {
     const state = get()
-    if (state.phase !== 'night' || state.nightActivity || state.energy < JOB_ENERGY_COST) return false
-    set({ nightActivity: { id: 'convenience-job', startedAt: Date.now() }, nightMessage: null })
+    const activity = getNightActivity(activityId)
+    if (!activity || activity.requiresHackingDeck || state.phase !== 'night' || state.nightActivity) return false
+    if (!getNightActivityOptions(state.cycle, state.day, state.market?.seed).some((option) => option.id === activity.id)) return false
+    if (state.completedNightActivityIds.includes(activity.id) || state.energy < activity.energyCost) return false
+    set({ nightActivity: { id: activity.id, startedAt: Date.now() }, nightMessage: null })
     return true
   },
-  completeNightJob: () => {
+  completeNightActivity: () => {
     const state = get()
-    if (state.nightActivity?.id !== 'convenience-job') return
+    const activity = getNightActivity(state.nightActivity?.id)
+    if (!activity || activity.requiresHackingDeck) return
+    const reward = activity.reward
+    let cashEarned = 0
+    let itemEarned = false
+    const inventory = { ...state.inventory }
+    if (reward.type === 'credits') cashEarned = reward.amount
+    if (reward.type === 'mixed') cashEarned = reward.credits
+    if (['itemChance', 'mixed'].includes(reward.type) && Math.random() < reward.chance) {
+      inventory[reward.itemId] = (inventory[reward.itemId] || 0) + 1
+      itemEarned = true
+    }
+    const rewardParts = []
+    if (cashEarned > 0) rewardParts.push(`+₡${cashEarned.toLocaleString('ko-KR')}`)
+    if (itemEarned) rewardParts.push(`+${NIGHT_ITEMS.chiliEnergy.name} 1개`)
+    if (!rewardParts.length) rewardParts.push('별다른 수확은 없었다')
     set({
       nightActivity: null,
-      energy: Math.max(0, state.energy - JOB_ENERGY_COST),
-      cash: state.cash + JOB_REWARD,
-      nightMessage: `편의점 아르바이트를 마쳤다. +₡${JOB_REWARD}`,
+      completedNightActivityIds: [...state.completedNightActivityIds, activity.id],
+      energy: Math.max(0, state.energy - activity.energyCost),
+      cash: state.cash + cashEarned,
+      inventory,
+      nightMessage: `${activity.name} 완료. ${rewardParts.join(' · ')}`,
     })
-    return { rewardEarned: true, cashEarned: JOB_REWARD }
+    return { rewardEarned: cashEarned > 0 || itemEarned, cashEarned, itemEarned }
   },
+  startNightJob: () => get().startNightActivity('convenience-job'),
+  completeNightJob: () => get().completeNightActivity(),
   startCyberRunner: () => {
     const state = get()
-    if (state.phase !== 'night' || state.nightActivity || state.hackingDeckLevel < 0 || state.energy < CYBER_RUNNER_ENERGY_COST) return false
+    if (state.phase !== 'night' || state.nightActivity || state.completedNightActivityIds.includes('cyber-runner') || state.hackingDeckLevel < 0 || state.energy < CYBER_RUNNER_ENERGY_COST) return false
     set({ nightActivity: { id: 'cyber-runner', startedAt: Date.now() }, nightMessage: null })
     return true
   },
@@ -512,7 +541,7 @@ export const useGameStore = create((set, get) => ({
         message = `주권 보관소가 비어 있어 추적 방지 예치금만 회수했다. +₡${credits.toLocaleString('ko-KR')}`
       }
     }
-    set({ cash, holdings, nightActivity: null, energy: Math.max(0, state.energy - CYBER_RUNNER_ENERGY_COST), nightMessage: message })
+    set({ cash, holdings, nightActivity: null, completedNightActivityIds: [...state.completedNightActivityIds, 'cyber-runner'], energy: Math.max(0, state.energy - CYBER_RUNNER_ENERGY_COST), nightMessage: message })
     return { rewardEarned: true, cashEarned: Math.max(0, cash - state.cash) }
   },
   clearNightMessage: () => set({ nightMessage: null }),

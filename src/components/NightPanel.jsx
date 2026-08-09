@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { COIN_ASSET_ID, COIN_REFERENCE_PRICE, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, HACKING_DECK_COSTS, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
+import { COIN_ASSET_ID, COIN_REFERENCE_PRICE, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, HACKING_DECK_COSTS, MAX_ENERGY } from '../config.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../data/nightContent.js'
 import { canUpgradeMine, maxMineTier, minePaybackSeconds, mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
+import { getNightActivity, getNightActivityOptions } from '../logic/nightActivities.js'
 import { playCashOut, playCashRegister } from '../services/audioService.js'
 import { useGameStore } from '../store/gameStore.js'
 
@@ -13,8 +14,8 @@ export default function NightPanel() {
   const drink = NIGHT_ITEMS.chiliEnergy
   const ticket = NIGHT_ITEMS.smugglingTicket
   const deck = NIGHT_ITEMS.hackingDeck
-  const job = NIGHT_ACTIVITIES.convenienceJob
   const cyberRunner = NIGHT_ACTIVITIES.cyberRunner
+  const activityOptions = getNightActivityOptions(state.cycle, state.day, state.market?.seed)
   const miningCost = mineUpgradeCost(state.miningTier)
   const currentMiningRate = mineRate(state.miningTier)
   const upgradedMiningRate = mineRate(nextMineTier(state.miningTier))
@@ -26,11 +27,11 @@ export default function NightPanel() {
 
   useEffect(() => {
     const activityId = state.nightActivity?.id
-    if (![job.id, cyberRunner.id].includes(activityId)) return undefined
-    const complete = activityId === job.id ? state.completeNightJob : state.completeCyberRunner
-    const timer = window.setTimeout(() => { const result = complete(); if (result?.rewardEarned) playCashRegister() }, 1400)
+    if (!activityId) return undefined
+    const complete = activityId === cyberRunner.id ? state.completeCyberRunner : state.completeNightActivity
+    const timer = window.setTimeout(() => { const result = complete(); if (result?.cashEarned > 0) playCashRegister() }, 1400)
     return () => window.clearTimeout(timer)
-  }, [cyberRunner.id, job.id, state.completeCyberRunner, state.completeNightJob, state.nightActivity?.id])
+  }, [cyberRunner.id, state.completeCyberRunner, state.completeNightActivity, state.nightActivity?.id])
 
   if (state.phase !== 'night') return null
   const drinkCount = state.inventory[drink.id] || 0
@@ -45,8 +46,16 @@ export default function NightPanel() {
     </nav>
     <div className="night-content">
       {tab === 'activity' && <>
-        <article className="night-entry" data-night-tutorial-target="activity"><img src={job.img} alt="" className="item-thumbnail" /><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>
-        {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.energy < CYBER_RUNNER_ENERGY_COST}>침투 시작</button></article>}
+        {activityOptions.map((activity, index) => {
+          const completed = state.completedNightActivityIds.includes(activity.id)
+          const reward = activity.reward.type === 'credits'
+            ? `보상 ${money(activity.reward.amount)}`
+            : activity.reward.type === 'mixed'
+              ? `기본 ${money(activity.reward.credits)} · 음료 발견 확률 ${Math.round(activity.reward.chance * 100)}%`
+              : `음료 발견 확률 ${Math.round(activity.reward.chance * 100)}%`
+          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}</small></div><button onClick={() => state.startNightActivity(activity.id)} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
+        })}
+        {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < CYBER_RUNNER_ENERGY_COST}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
       </>}
       {tab === 'shop' && <div className="night-shop-list">
         <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => spend(() => state.buyNightItem(drink))} disabled={Boolean(state.nightActivity) || state.cash < drink.price || state.dailyDrinkPurchased >= 2}>구입</button></article>
@@ -72,7 +81,7 @@ export default function NightPanel() {
       </div>}
       {tab === 'inventory' && <>{drinkCount > 0 ? <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name} × {drinkCount}</h3><p>마시면 활동력을 아주 조금 회복한다.</p><small>활동력 +{drink.energyRestore}</small></div><button onClick={() => state.useNightItem(drink)} disabled={Boolean(state.nightActivity) || state.energy >= MAX_ENERGY}>마시기</button></article> : <p className="empty-state">인벤토리가 비어 있습니다.</p>}</>}
     </div>
-    {state.nightActivity && <div className="activity-loading"><div className="loading-spinner" /><h3>{state.nightActivity.id === cyberRunner.id ? '시지프 내부망 침투 중…' : '편의점 야간 근무 중…'}</h3><p>{state.nightActivity.id === cyberRunner.id ? '추적 방화벽을 우회하고 자산 키를 복호화하는 중입니다.' : '재고 수량과 삶의 의미를 세는 중입니다.'}</p></div>}
+    {state.nightActivity && (() => { const activity = getNightActivity(state.nightActivity.id); return <div className="activity-loading"><div className="loading-spinner" /><h3>{activity?.loadingTitle || '시지프 내부망 침투 중…'}</h3><p>{activity?.loadingText || '추적 방화벽을 우회하고 자산 키를 복호화하는 중입니다.'}</p></div> })()}
     {state.nightMessage && <div className="night-dialogue"><p>{state.nightMessage}</p><button onClick={state.clearNightMessage}>확인</button></div>}
   </section>
 }
