@@ -19,7 +19,7 @@ export function sessionPayload(state) {
   const purchasedRumorIds = state.purchasedRumors.map((rumor) => rumor.id)
   return {
     deviceId: getDeviceId(),
-    status: state.phase === 'gameover' ? 'gameover' : state.phase === 'clear' ? 'clear' : 'active',
+    status: state.phase === 'gameover' ? 'gameover' : state.phase === 'ended' ? 'clear' : 'active',
     screen: state.screen,
     phase: state.phase,
     cycle: state.cycle,
@@ -48,6 +48,10 @@ export function sessionPayload(state) {
       minedCoinToday: state.minedCoinToday,
       totalMinedCoin: state.totalMinedCoin,
       showMonitorHint: state.showMonitorHint,
+      playedSceneIds: state.playedSceneIds,
+      epilogue: state.epilogue,
+      endingType: state.endingType,
+      hasSmugglingTicket: state.hasSmugglingTicket,
     },
     updatedAt: Date.now(),
   }

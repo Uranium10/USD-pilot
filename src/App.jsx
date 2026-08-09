@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import BgmController from './components/BgmController.jsx'
+import DialogueScene from './components/DialogueScene.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
 import RoomScene from './components/RoomScene.jsx'
@@ -61,6 +62,7 @@ function Title() {
 function DayTransition() {
   const cycle = useGameStore((state) => state.cycle)
   const day = useGameStore((state) => state.day)
+  const epilogue = useGameStore((state) => state.epilogue)
   const completeDayIntro = useGameStore((state) => state.completeDayIntro)
   const marketReady = useGameStore((state) => state.marketReady)
   const [typed, setTyped] = useState('')
@@ -68,7 +70,7 @@ function DayTransition() {
   const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
-    const text = `${cycle}주차, ${day}일.`
+    const text = epilogue ? '청산 완료. 유예된 하루.' : `${cycle}주차, ${day}일.`
     const keyboard = new Audio('/sounds/KeyboardPress.mp3')
     keyboard.volume = 0.22
     let index = 0
@@ -94,7 +96,7 @@ function DayTransition() {
       if (interval) window.clearInterval(interval)
       keyboard.pause()
     }
-  }, [cycle, day])
+  }, [cycle, day, epilogue])
 
   useEffect(() => {
     if (!typingFinished || !marketReady) return
@@ -114,7 +116,7 @@ function AutoSave() {
   const mountedRef = useRef(true)
   useEffect(() => {
     mountedRef.current = true
-    const stablePhases = new Set(['premarket', 'day', 'dayReport', 'night', 'settlement', 'gameover', 'clear'])
+    const stablePhases = new Set(['premarket', 'day', 'dayReport', 'night', 'settlement', 'epilogueIntro', 'gameover', 'ended'])
     const initialState = useGameStore.getState()
     let lastPhase = initialState.phase
     let lastScreen = initialState.screen
@@ -279,16 +281,44 @@ function Overlay() {
   return <div className="overlay-backdrop"><div className="overlay-modal">{state.overlay.title && <h2>{state.overlay.title}</h2>}{state.overlay.text && <p>{state.overlay.text}</p>}{information && <div className="information-list">{state.purchasedRumors.length === 0 && <p className="muted">구입한 정보가 없습니다.</p>}{state.purchasedRumors.map((rumor) => <article key={rumor.id}><small>{rumor.source} · 신뢰도 {Math.round(rumor.accuracy * 100)}%</small><p>{rumor.text}</p></article>)}</div>}{state.overlay.type === 'dayBriefing' ? <button className="primary" onClick={state.startDay}>{state.day}일차 시작</button> : <button className="primary" onClick={state.closeOverlay}>닫기</button>}</div></div>
 }
 
+// 4분기 엔딩(USD-spec/STORY.md §4): 배드(phase='gameover')는 기존 부채 청산 실패
+// 로직 그대로, 나머지 3개(노멀/히든/진)는 phase='ended' + endingType으로 분기한다.
+const ENDINGS = {
+  bad: { eyebrow: 'ACCOUNT LIQUIDATED', title: '끝났다.', className: '' },
+  normal: {
+    eyebrow: 'DEBT CLEARED',
+    title: '살아남았다.',
+    body: '빚이라는 바위를 다 밀어 올렸다. 하지만 단타의 도파민은 여전히 몸에 남아, 오늘도 차트 앞에 앉는다 — 현대판 시지프스.',
+    className: 'clear',
+  },
+  hidden: {
+    eyebrow: 'HOSTILE TAKEOVER',
+    title: '왕좌를 빼앗았다.',
+    body: '시지프 인텔리전스의 51%를 손에 넣었다. 사장을 끌어내리고 메티스를 셧다운했지만, 부모님의 행방은 끝내 찾지 못했다.',
+    className: 'clear hidden',
+  },
+  true: {
+    eyebrow: 'ESCAPE VELOCITY',
+    title: '궤도를 벗어났다.',
+    body: '밀항선 티켓을 쥐고 우주로 도주한다. 그곳에서, 부모님이 지옥을 뚫고 무사히 도주했다는 암호 메시지가 도착한다.',
+    className: 'clear true',
+  },
+}
+
 function Ending() {
   const state = useGameStore()
-  const clear = state.phase === 'clear'
-  return <main className={`ending ${clear ? 'clear' : ''}`}><p className="eyebrow">{clear ? 'DEBT CLEARED' : 'ACCOUNT LIQUIDATED'}</p><h1>{clear ? '살아남았다.' : '끝났다.'}</h1><p>{clear ? '6주간의 우주 자본주의가 당신을 이기지 못했습니다.' : `${state.cycle}주차, 채권 추심 드론이 문을 두드립니다.`}</p><button className="primary" onClick={state.restart}>다시 시작</button></main>
+  const key = state.phase === 'gameover' ? 'bad' : (state.endingType || 'normal')
+  const ending = ENDINGS[key] || ENDINGS.normal
+  const body = key === 'bad' ? `${state.cycle}주차, 채권 추심 드론이 문을 두드립니다.` : ending.body
+  return <main className={`ending ${ending.className}`}><p className="eyebrow">{ending.eyebrow}</p><h1>{ending.title}</h1><p>{body}</p><button className="primary" onClick={state.restart}>다시 시작</button></main>
 }
 
 export default function App() {
   const screen = useGameStore((state) => state.screen)
   const phase = useGameStore((state) => state.phase)
+  const activeScene = useGameStore((state) => state.activeScene)
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
-  const ending = phase === 'gameover' || phase === 'clear'
-  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && phase !== 'dayIntro' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && phase !== 'dayIntro' && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{phase === 'dayIntro' && <DayTransition />}<Overlay /></div>
+  const ending = phase === 'gameover' || phase === 'ended'
+  const isDayIntro = phase === 'dayIntro' || phase === 'epilogueIntro'
+  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><Ending /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !isDayIntro && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !isDayIntro && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{isDayIntro && <DayTransition />}<Overlay />{activeScene && <DialogueScene />}</div>
 }

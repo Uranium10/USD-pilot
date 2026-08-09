@@ -11,6 +11,9 @@ import {
   DAYS_PER_CYCLE,
   INFO_COST_MULTIPLIER,
   LISTED_COMPANY_COUNT,
+  SISYPHUS_BASE_PRICE,
+  SISYPHUS_CYCLE_GROWTH,
+  SISYPHUS_STOCK_ID,
   STOCK_BASE_SIGMA,
   STOCK_DAILY_MAX_MULTIPLIER,
   STOCK_DAILY_MIN_MULTIPLIER,
@@ -256,6 +259,11 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
     ? clamp(requestedCoinStart, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MIN_MULTIPLIER, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MAX_MULTIPLIER)
     : COIN_REFERENCE_PRICE
   let previousCoinClose = cycleCoinStartPrice
+  // 시지프 인텔리전스 — 상시 상장 특수 자산(작업지시서/STORY.md). AI 서사 스키마의
+  // STOCK_SLOT_IDS(stock-1~5)와 겹치지 않는 id라 AI 컴파일러가 절대 안 건드린다
+  // (server/ai/aiMarketCycle.js 참고). 5개 기업과 같은 makePath() 확률 엔진을 그대로
+  // 쓰되, 회사들보다 가파르게 성장하는 별도 프리미엄 기준가 트랙을 갖는다.
+  let previousSisyphusClose = SISYPHUS_BASE_PRICE * (1 + (cycle - 1) * SISYPHUS_CYCLE_GROWTH)
   const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
     const companyStocks = listedCompanies.map(([name, sector, base, companyId], stockIndex) => {
       const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
@@ -283,7 +291,21 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
       path: makeCoinPath(coinStart, random, cycle),
     }
     previousCoinClose = coin.path.at(-1).price
-    const stocks = [...companyStocks, coin]
+    const sisyphusReference = dayIndex === 0
+      ? SISYPHUS_BASE_PRICE * (1 + (cycle - 1) * SISYPHUS_CYCLE_GROWTH)
+      : previousSisyphusClose
+    const sisyphusStart = round(sisyphusReference * (1 + (random() - 0.5) * 0.02))
+    const sisyphus = {
+      id: SISYPHUS_STOCK_ID,
+      assetType: 'company',
+      companyId: 'sisyphus-intelligence',
+      name: '시지프 인텔리전스',
+      sector: '초지능 AI',
+      startPrice: sisyphusStart,
+      path: makePath(sisyphusStart, random, cycle),
+    }
+    previousSisyphusClose = sisyphus.path.at(-1).price
+    const stocks = [...companyStocks, coin, sisyphus]
     const newsTargets = [
       ...Array.from({ length: 4 }, () => companyStocks[Math.floor(random() * companyStocks.length)]),
       coin,

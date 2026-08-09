@@ -3,12 +3,23 @@ const viteEnv = import.meta.env || {}
 export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 8 * 60
 export const DAYS_PER_CYCLE = 7
 export const LISTED_COMPANY_COUNT = 5
-export const MARKET_ASSET_COUNT = 6
+export const MARKET_ASSET_COUNT = 7 // 기업 5 + 코인 1 + 시지프 인텔리전스 1 (2026-08-10)
 export const MAX_CYCLES = 6
 export const TICK_MS = 100
 export const MAX_ENERGY = 100
 export const JOB_ENERGY_COST = 85
 export const JOB_REWARD = 600
+
+// 시지프 인텔리전스 — 상시 상장된 7번째 특수 자산(작업지시서/STORY.md 반영, 2026-08-10).
+// stock-1~stock-5(AI 서사가 참조하는 슬롯, server/ai/schemas.js STOCK_SLOT_IDS)와
+// 겹치지 않는 id를 써서 AI 시장 생성 컴파일러가 이 자산을 절대 건드리지 않게 한다.
+export const SISYPHUS_STOCK_ID = 'stock-sisyphus'
+export const SISYPHUS_MAX_SHARES = 1000
+export const SISYPHUS_MAJORITY_SHARES = 510 // 51% — 히든 엔딩(적대적 M&A) 자격선
+// 5개 기업 기준가(61~191)보다 훨씬 높은 프리미엄 종목 — "달성 가능한 고가의 종목"
+// 요구사항 반영. 사이클마다 회사들(연 2.5%)보다 가파르게(연 4%) 성장한다. 밸런싱 필요.
+export const SISYPHUS_BASE_PRICE = 4200
+export const SISYPHUS_CYCLE_GROWTH = 0.04
 
 export const COIN_ASSET_ID = 'coin-usd'
 export const COIN_REFERENCE_PRICE = 250

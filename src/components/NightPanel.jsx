@@ -10,6 +10,7 @@ export default function NightPanel() {
   const state = useGameStore()
   const [tab, setTab] = useState('activity')
   const drink = NIGHT_ITEMS.chiliEnergy
+  const ticket = NIGHT_ITEMS.smugglingTicket
   const job = NIGHT_ACTIVITIES.convenienceJob
   const miningCost = mineUpgradeCost(state.miningTier)
   const currentMiningRate = mineRate(state.miningTier)
@@ -40,6 +41,7 @@ export default function NightPanel() {
       {tab === 'activity' && <article className="night-entry"><img src={job.img} alt="" className="item-thumbnail" /><div><h3>{job.name}</h3><p>{job.description}</p><small>활동력 -{JOB_ENERGY_COST} · 보상 약 {money(JOB_REWARD)}</small></div><button onClick={state.startNightJob} disabled={Boolean(state.nightActivity) || state.energy < JOB_ENERGY_COST}>일하러 가기</button></article>}
       {tab === 'shop' && <div className="night-shop-list">
         <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => state.buyNightItem(drink)} disabled={Boolean(state.nightActivity) || state.cash < drink.price || state.dailyDrinkPurchased >= 2}>구입</button></article>
+        {state.epilogue && <article className="night-entry smuggling-ticket"><img src={ticket.img} alt="" className="item-thumbnail" /><div><h3>{ticket.name}</h3><p>{ticket.description}</p><small>{money(ticket.price)} · 구매 즉시 우주로 도주합니다(되돌릴 수 없음)</small></div><button onClick={() => state.buySmugglingTicket(ticket)} disabled={Boolean(state.nightActivity) || state.cash < ticket.price}>구입하고 탈출한다</button></article>}
         <article className="night-entry mining-machine">
           <img src="/imgs/items/mining_machine.png" alt="" className="item-thumbnail" />
           <div>

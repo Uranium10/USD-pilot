@@ -1,8 +1,9 @@
 import { create } from 'zustand'
-import { COIN_ASSET_ID, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY } from '../config.js'
+import { COIN_ASSET_ID, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, INITIAL_DEBT, JOB_ENERGY_COST, JOB_REWARD, MAX_ENERGY, SISYPHUS_MAJORITY_SHARES, SISYPHUS_MAX_SHARES, SISYPHUS_STOCK_ID } from '../config.js'
 import { buyExecutionPrice, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { computeSettlement } from '../logic/debtSystem.js'
 import { canUpgradeMine, mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
+import { findMatchingScene } from '../logic/storyTriggers.js'
 
 const initialGame = {
   screen: 'title',
@@ -36,6 +37,13 @@ const initialGame = {
   dayIntroDestination: 'room',
   showMonitorHint: false,
   marketReady: false,
+  // 대화 스토리 엔진 (2026-08-10 도입)
+  activeScene: null,
+  playedSceneIds: [],
+  // 4분기 엔딩 시스템
+  epilogue: false, // 6주차 청산 성공 후 7일째(에필로그) 유예 기간인지
+  endingType: null, // 'normal' | 'hidden' | 'true' — phase가 'ended'일 때만 의미 있음
+  hasSmugglingTicket: false,
 }
 
 function interpolate(path, progress) {
@@ -79,8 +87,9 @@ export const useGameStore = create((set, get) => ({
   },
   completeDayIntro: () => {
     const state = get()
-    if (state.phase !== 'dayIntro' || !state.marketReady) return
+    if (!['dayIntro', 'epilogueIntro'].includes(state.phase) || !state.marketReady) return
     set({ phase: 'premarket', screen: state.dayIntroDestination, dayIntroDestination: 'monitor' })
+    get().checkStoryTriggers()
   },
   openMonitor: () => set({ screen: 'monitor', showMonitorHint: false }),
   restoreSession: (session, market) => {
@@ -92,7 +101,7 @@ export const useGameStore = create((set, get) => ({
     const progress = elapsed / DAY_DURATION_SECONDS
     const progressed = ['day', 'dayReport', 'night', 'settlement'].includes(session.phase)
     const purchasedIds = new Set(world.purchasedRumorIds || (session.selectedRumorId ? [session.selectedRumorId] : []))
-    const phase = ['premarket', 'day', 'dayReport', 'night', 'settlement'].includes(session.phase) ? session.phase : 'premarket'
+    const phase = ['premarket', 'day', 'dayReport', 'night', 'settlement', 'epilogueIntro'].includes(session.phase) ? session.phase : 'premarket'
     const screen = phase === 'night' || phase === 'settlement'
       ? 'room'
       : session.screen === 'room' ? 'room' : 'monitor'
@@ -127,6 +136,10 @@ export const useGameStore = create((set, get) => ({
       showMonitorHint: Boolean(world.showMonitorHint),
       dayIntroDestination: 'monitor',
       marketReady: true,
+      playedSceneIds: Array.isArray(world.playedSceneIds) ? world.playedSceneIds : [],
+      epilogue: Boolean(world.epilogue),
+      endingType: world.endingType || null,
+      hasSmugglingTicket: Boolean(world.hasSmugglingTicket),
     })
   },
   purchaseRumor: (rumor) => {
@@ -216,14 +229,22 @@ export const useGameStore = create((set, get) => ({
       overlay: null,
       dailySummaries: [...state.dailySummaries.filter((item) => item.cycle !== state.cycle || item.day !== state.day), summary],
     })
+    get().checkStoryTriggers()
   },
   enterNight: () => {
     if (get().phase !== 'dayReport') return
     set({ phase: 'night', screen: 'room', paused: false, nightActivity: null, nightMessage: null })
+    get().checkStoryTriggers()
   },
   endNight: () => {
     const state = get()
     if (state.phase !== 'night' || state.nightActivity) return
+    // 에필로그(청산 후 유예일)의 밤이 끝나면 정산/다음 날로 넘어가지 않고 바로 결말로
+    // 이어진다 — 밀항선 티켓을 샀으면 진 엔딩, 아니면 노멀 엔딩.
+    if (state.epilogue) {
+      set({ phase: 'ended', endingType: state.hasSmugglingTicket ? 'true' : 'normal' })
+      return
+    }
     if (state.day >= DAYS_PER_CYCLE) {
       set({ phase: 'settlement', energy: MAX_ENERGY, nightMessage: null })
       return
@@ -246,6 +267,7 @@ export const useGameStore = create((set, get) => ({
       nightMessage: null,
       dailyDrinkPurchased: 0,
     })
+    get().checkStoryTriggers()
   },
   // payAmount: 플레이어가 이번 주기에 실제로 낼 금액(최소 상환액 이상, 초과분은 선상환).
   // 보유 현금을 넘겨 낼 수는 없으므로 여기서 한 번 더 clamp한다.
@@ -260,10 +282,21 @@ export const useGameStore = create((set, get) => ({
     }
     const cash = state.cash - amount
     if (result.cleared) {
-      set({ cash, debt: 0, phase: 'clear' })
-      return { result: 'clear' }
+      // 청산 성공 — 곧바로 끝내지 않고 1일짜리 에필로그(유예 기간)로 진입한다. 새 시장을
+      // 따로 생성하지 않고 이번 사이클 마지막 날의 시세/뉴스/소문 데이터를 그대로
+      // 재사용한다(밸런스·AI 스키마를 사이클 7까지 확장하지 않기 위한 의도적 단순화).
+      const epilogueDay = state.market.days[DAYS_PER_CYCLE - 1]
+      set({
+        cash, debt: 0, phase: 'epilogueIntro', epilogue: true, day: 1, screen: 'room',
+        dayIntroDestination: 'monitor', showMonitorHint: false, marketReady: true,
+        purchasedRumors: [], elapsed: 0, visibleNews: [], dailyDrinkPurchased: 0, minedCoinToday: 0,
+        currentPrices: Object.fromEntries(epilogueDay.stocks.map((stock) => [stock.id, stock.startPrice])),
+        selectedStockId: epilogueDay.stocks[0].id,
+      })
+      return { result: 'epilogue' }
     }
     set({ cash, debt: result.debt, cycle: result.nextCycle, day: 1, phase: 'dayIntro', screen: 'room', marketReady: false })
+    get().checkStoryTriggers()
     return { result: 'next', cycle: result.nextCycle }
   },
   loadNextCycle: (market) => {
@@ -293,7 +326,13 @@ export const useGameStore = create((set, get) => ({
     if (state.phase !== 'day') return
     const asset = dayData(state)?.stocks.find((stock) => stock.id === stockId)
     if (!asset || isCoinAsset(asset)) return
-    const amount = normalizeTradeQuantity(asset, quantity)
+    let amount = normalizeTradeQuantity(asset, quantity)
+    // 시지프 인텔리전스는 총 발행 주식이 1000주뿐인 상시 상장 특수 자산이다 — 플레이어가
+    // 최대 보유량(1000주)을 넘겨 살 수 없도록 여기서 clamp한다.
+    if (stockId === SISYPHUS_STOCK_ID) {
+      const owned = state.holdings[stockId]?.quantity || 0
+      amount = Math.min(amount, Math.max(0, SISYPHUS_MAX_SHARES - owned))
+    }
     const marketPrice = state.currentPrices[stockId]
     const price = buyExecutionPrice(asset, marketPrice)
     const cost = price * amount
@@ -373,9 +412,35 @@ export const useGameStore = create((set, get) => ({
   clearNightMessage: () => set({ nightMessage: null }),
   showOverlay: (overlay) => set({ overlay, paused: true }),
   closeOverlay: () => set({ overlay: null, paused: false }),
+  // day/cycle/phase 전환 지점들 끝에서 호출된다 — 조건에 맞는 미재생 장면이 있으면
+  // activeScene에 채운다. paused:true로 겹쳐 day 타이머 등을 멈춘다(closeOverlay와
+  // 동일한 패턴).
+  checkStoryTriggers: () => {
+    const state = get()
+    if (state.activeScene) return
+    const match = findMatchingScene(state, state.playedSceneIds)
+    if (match) set({ activeScene: match, paused: true })
+  },
+  closeScene: () => {
+    const state = get()
+    if (!state.activeScene) return
+    set({ activeScene: null, paused: false, playedSceneIds: [...state.playedSceneIds, state.activeScene.id] })
+  },
+  triggerHiddenEnding: () => set({ phase: 'ended', endingType: 'hidden' }),
+  buySmugglingTicket: (item) => {
+    const state = get()
+    if (!state.epilogue || state.phase !== 'night' || state.nightActivity || state.cash < item.price) return false
+    set({ cash: state.cash - item.price, hasSmugglingTicket: true, phase: 'ended', endingType: 'true' })
+    return true
+  },
   restart: () => set({ ...initialGame }),
 }))
 
 export function getNetWorth(state) {
   return calculateNetWorth(state)
+}
+
+// 히든 엔딩(적대적 M&A) 자격 — 시지프 인텔리전스 주식을 51%(510주) 이상 보유했는가.
+export function isHiddenEndingEligible(state) {
+  return (state.holdings[SISYPHUS_STOCK_ID]?.quantity || 0) >= SISYPHUS_MAJORITY_SHARES
 }

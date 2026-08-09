@@ -267,3 +267,13 @@
 - `npm run lint`, `npm run build` 통과. 전체 내역을 `USD-spec/agent_workthrough_4.md` §6에 추가했다.
 2026-08-09: 최신 작업 지시서 반영. 날짜 전환 타이핑을 marketReady와 분리해 한 번만 재생하고 준비 완료까지 정지 상태로 유지하도록 수정했으며, 시작 직후 방 화면이 비치지 않게 했다. 정보·상점 인벤토리·채굴기 변화와 화면 전환을 즉시 저장하고 우측 하단에 저장중 스피너를 표시한다. AI RunPlan/worldState는 device별 저장 및 새 게임 시 초기화하도록 연결했다. 새 뉴스 효과음/테두리 강조와 장 종료 5초 전 효과음·중앙 숫자 카운트다운을 추가했다.
 2026-08-09: BGM 기본 볼륨을 35%에서 18%로 낮추고, 화면 우측에 드래그/클릭/키보드 조절이 가능한 세로형 볼륨 UI와 즉시 음소거 버튼을 추가했다. 볼륨과 음소거 설정은 localStorage에 유지한다.
+
+## 2026-08-10 00:54 KST (Claude, 15차)
+
+- `USD_작업지시서.md`(대화 엔진/시지프 인텔리전스 주식/4분기 엔딩 요청)와 `USD-spec/STORY.md`(세계관·엔딩 문서)를 반영해 대형 스토리 확장을 구현했다. 사전에 EnterPlanMode로 코드베이스를 탐색하고 계획을 세운 뒤 사용자 승인을 받아 진행했다(주요 결정: 히든 엔딩은 즉시 발동이 아니라 마켓 데스크톱에 "주주총회 메일" 탭이 뜨고 플레이어가 확인을 눌러야 발동, 대화 트리거는 요일/사이클/phase 진입 조건만 이번에 구현, 시지프 주식 가격은 기존 5개 기업과 동일한 확률 엔진 재사용, 7주차 에필로그는 풀 사이클이 아닌 1일 축약형).
+- **대화 스토리 엔진**: `src/data/storyScript.js`(캐릭터·장면 데이터, 프롤로그 샘플 대화 포함), `src/logic/storyTriggers.js`(day/cycle/phase 트리거 매칭), `src/components/DialogueScene.jsx`(좌우 초상화 슬롯 - 발화자 강조/비발화자 어둡게, 타이핑 애니메이션은 DayTransition 패턴 재사용, 초상화 아트 없으면 이니셜 placeholder로 자동 대체). `gameStore.js`에 `activeScene`/`playedSceneIds`/`checkStoryTriggers()`/`closeScene()` 추가, 주요 phase 전환 지점(completeDayIntro/finishDay/enterNight/endNight/settleCycle)에 연결.
+- **시지프 인텔리전스 주식**: `generateMarketCycle()`에 7번째 상시 상장 자산(`stock-sisyphus`, 프리미엄 기준가 ₡4,200, 회사들보다 가파른 사이클 성장) 추가 — id가 AI 서사 스키마의 STOCK_SLOT_IDS(stock-1~5) 밖이라 AI 컴파일러가 절대 안 건드림(확인 완료). `buy()`에 1000주 상한 clamp, `isHiddenEndingEligible()` 셀렉터(510주=51% 이상), Taskbar에 조건부 "주주총회" 메일 탭 + `ShareholderMail.jsx` + `triggerHiddenEnding()` 액션.
+- **4분기 엔딩**: `settleCycle()`의 청산 성공 분기가 바로 끝내지 않고 1일 에필로그(`phase:'epilogueIntro'`, 마지막 날 시세 재사용)로 진입, 에필로그 밤(`endNight`)이 끝나면 밀항선 티켓 구매 여부로 노멀/진 엔딩 분기. `nightContent.js`에 밀항선 티켓 아이템(에필로그 중에만 상점 노출, 구매 즉시 진 엔딩), `Ending` 컴포넌트를 배드/노멀/히든/진 4분기로 재작성.
+- `MARKET_ASSET_COUNT`(6→7), `.stock-list` 모바일 그리드(6→7), `scripts/check-coin-balance.mjs`의 자산 개수 단언 갱신. `sessionService.js`에 새 필드 저장 추가.
+- 검증: `npm run lint`/`npm run build`/`npm run check:coin`/`node scripts/check-debt-balance.mjs` 전부 통과(코인/주식 변동성 통계는 시지프 추가 후에도 기존 기준선과 일치). Playwright로 실제 새 게임 시작→프롤로그 대화 등장→끝까지 클릭→정상적으로 방 화면 복귀까지 브라우저에서 실측 확인(콘솔 에러 0개).
+- 아직 안 한 것: 초상화 아트(캐릭터 일러스트) 없음 — placeholder로 동작. 밀항선 티켓 가격(₡500,000)·시지프 기준가(₡4,200) 등 밸런싱 필요. 히든/진 엔딩 실제 플레이 시나리오(510주 매집, 티켓 구매)는 수동 테스트 못 함(시간 관계상 프롤로그 경로만 실측).

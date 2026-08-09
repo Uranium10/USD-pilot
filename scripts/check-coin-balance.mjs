@@ -27,7 +27,7 @@ const quantile = (values, ratio) => [...values].sort((left, right) => left - rig
 const weekSeconds = DAY_DURATION_SECONDS * DAYS_PER_CYCLE
 
 assert(DAY_DURATION_SECONDS === 480, '낮 스테이지는 8분(480초)이어야 합니다.')
-assert(LISTED_COMPANY_COUNT === 5 && MARKET_ASSET_COUNT === 6, '시장 구성은 기업 5 + 코인 1이어야 합니다.')
+assert(LISTED_COMPANY_COUNT === 5 && MARKET_ASSET_COUNT === 7, '시장 구성은 기업 5 + 코인 1 + 시지프 인텔리전스 1이어야 합니다.')
 assert(STOCK_SEGMENT_MOVE_LIMIT === 0.36, '주식 구간 변동 상한은 ±36%여야 합니다.')
 
 let cumulativeCost = 0
