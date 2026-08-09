@@ -21,6 +21,13 @@ export const NIGHT_ITEMS = {
     description: '폐기 구역 깊숙한 곳에서 발견한 작은 곰인형. 한쪽 눈은 단추로 다시 꿰매져 있다.',
     collectible: true,
   },
+  discardedBurger: {
+    id: 'discarded-burger',
+    name: '폐기 햄버거',
+    icon: '🍔',
+    description: '판매 기한 표시가 막 지난 편의점 햄버거. 아직 따뜻한지는 중요하지 않다.',
+    energyRestore: 30,
+  },
   hackingDeck: {
     id: 'hacking-deck',
     name: '해킹 덱 v.0',
@@ -47,7 +54,7 @@ export const NIGHT_ACTIVITIES = {
     fixed: true,
     unlockCycle: 1,
     energyCost: 85,
-    reward: { type: 'credits', amount: 600 },
+    reward: { type: 'mixed', credits: 600, itemId: 'discarded-burger', chance: 0.15 },
     actionLabel: '일하러 가기',
     loadingTitle: '편의점 야간 근무 중…',
     loadingText: '재고 수량과 삶의 의미를 세는 중입니다.',

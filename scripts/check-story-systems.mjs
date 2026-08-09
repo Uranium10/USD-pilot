@@ -90,6 +90,9 @@ for (let cycle = 2; cycle <= 6; cycle += 1) {
   assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.unlockCycle === cycle).length === 4, `${cycle}주차 활동 풀이 4개가 아닙니다.`)
 }
 assert(NIGHT_ITEMS.superCola.energyRestore === 60, '슈퍼 콜라의 활동력 회복량이 잘못됐습니다.')
+assert(NIGHT_ITEMS.discardedBurger.energyRestore === 30, '폐기 햄버거의 활동력 회복량이 잘못됐습니다.')
+assert(NIGHT_ACTIVITIES.convenienceJob.reward.itemId === NIGHT_ITEMS.discardedBurger.id && NIGHT_ACTIVITIES.convenienceJob.reward.chance === 0.15, '편의점 폐기 햄버거 보상이 잘못됐습니다.')
+assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.reward?.itemId === NIGHT_ITEMS.discardedBurger.id).length === 1, '폐기 햄버거는 편의점 활동에서만 획득할 수 있어야 합니다.')
 assert(NIGHT_ACTIVITIES.stationWalk.reward.itemId === NIGHT_ITEMS.superCola.id, '산책이 슈퍼 콜라를 지급하지 않습니다.')
 assert(Object.values(NIGHT_ACTIVITIES).filter((activity) => activity.reward?.itemId === NIGHT_ITEMS.superCola.id).length === 1, '슈퍼 콜라는 산책에서만 획득할 수 있어야 합니다.')
 assert(NIGHT_ACTIVITIES.recyclingRun.reward.collectibleItemId === NIGHT_ITEMS.teddyBear.id, '폐기물 수거에 곰인형 보상이 연결되지 않았습니다.')
