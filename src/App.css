@@ -1993,6 +1993,86 @@ button:hover {
   cursor: not-allowed
 }
 
+.night-tutorial {
+  position: absolute;
+  z-index: 210;
+  inset: 0;
+  overflow: hidden;
+  background: #0005
+}
+
+.night-tutorial-spotlight {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border: 3px solid var(--cyan);
+  box-shadow: 0 0 0 9999px #000a, 0 0 38px #55e7ffcc;
+  animation: tutorial-pulse 1.5s ease-in-out infinite
+}
+
+.night-tutorial-spotlight.target-activity {
+  top: 29%;
+  right: 4.4%;
+  width: 49%;
+  height: 38%
+}
+
+.night-tutorial-spotlight.target-tabs {
+  top: 23%;
+  right: 4.4%;
+  width: 49%;
+  height: 9%
+}
+
+.night-tutorial-spotlight.target-sleep {
+  right: 20px;
+  bottom: 16px;
+  width: 125px;
+  height: 57px
+}
+
+.night-tutorial-skip {
+  position: absolute;
+  z-index: 4;
+  top: 20px;
+  right: 22px;
+  padding: 8px 13px;
+  color: #ccd7e7;
+  background: #0b121de8;
+  border: 1px solid #52647d;
+  font-size: 11px
+}
+
+.night-tutorial-coach {
+  position: absolute;
+  z-index: 3;
+  left: 4%;
+  top: 25%;
+  width: min(430px, 39%);
+  padding: 20px 22px;
+  background: #080e17f5;
+  border: 1px solid var(--cyan);
+  border-left: 4px solid var(--cyan);
+  box-shadow: 0 18px 70px #000, 0 0 28px #55e7ff30
+}
+
+.night-tutorial-coach.coach-sleep { top: auto; bottom: 12% }
+.night-tutorial-coach>header, .night-tutorial-coach>footer { display: flex; align-items: center; justify-content: space-between }
+.night-tutorial-coach>header span { color: var(--cyan); font: 700 11px 'IBM Plex Mono'; letter-spacing: .1em }
+.night-tutorial-coach>header strong { color: var(--muted); font: 11px 'IBM Plex Mono' }
+.night-tutorial-coach h2 { margin: 11px 0 8px; font-size: 20px }
+.night-tutorial-coach p { margin: 0 0 17px; color: #bcc8d8; font: 13px/1.65 'Noto Sans KR', sans-serif }
+.night-tutorial-coach>footer>div { display: flex; gap: 5px }
+.night-tutorial-coach>footer i { width: 25px; height: 3px; background: #2a374b }
+.night-tutorial-coach>footer i.active { background: var(--cyan); box-shadow: 0 0 8px #55e7ff }
+.night-tutorial-coach button { min-width: 72px; padding: 7px 10px }
+
+@media (max-width: 760px) {
+  .night-tutorial-coach, .night-tutorial-coach.coach-sleep { left: 3%; top: auto; bottom: 12%; width: 58% }
+  .night-tutorial-spotlight.target-activity { right: 2%; width: 57%; height: 37% }
+  .night-tutorial-spotlight.target-tabs { right: 2%; width: 57% }
+}
+
 .empty-state {
   color: var(--muted);
   text-align: center;

@@ -52,6 +52,7 @@ export function sessionPayload(state) {
       totalMinedCoin: state.totalMinedCoin,
       showMonitorHint: state.showMonitorHint,
       playedSceneIds: state.playedSceneIds,
+      nightTutorialSeen: state.nightTutorialSeen,
       epilogue: state.epilogue,
       endingType: state.endingType,
       hasSmugglingTicket: state.hasSmugglingTicket,

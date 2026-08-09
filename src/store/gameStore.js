@@ -42,6 +42,8 @@ const initialGame = {
   activeScene: null,
   playedSceneIds: [],
   tutorialCompleted: false,
+  nightTutorialSeen: false,
+  showNightTutorial: false,
   // 4분기 엔딩 시스템
   epilogue: false, // 6주차 청산 성공 후 부채 없이 진행하는 7주차인지
   endingType: null, // 'normal' | 'hidden' | 'true' — phase가 'ended'일 때만 의미 있음
@@ -127,6 +129,7 @@ export const useGameStore = create((set, get) => ({
     const screen = phase === 'night' || phase === 'settlement'
       ? 'room'
       : session.screen === 'room' ? 'room' : 'monitor'
+    const nightTutorialSeen = Boolean(world.nightTutorialSeen)
     set({
       ...initialGame,
       screen,
@@ -164,6 +167,8 @@ export const useGameStore = create((set, get) => ({
       endingType: world.endingType || null,
       hasSmugglingTicket: Boolean(world.hasSmugglingTicket),
       tutorialCompleted: true,
+      nightTutorialSeen,
+      showNightTutorial: phase === 'night' && cycle === 1 && day === 1 && !nightTutorialSeen,
     })
   },
   purchaseRumor: (rumor) => {
@@ -270,9 +275,15 @@ export const useGameStore = create((set, get) => ({
       const bought = absoluteDay(rumor.purchasedCycle ?? state.cycle, rumor.purchasedDay ?? state.day)
       return today - bought < 1
     })
-    set({ phase: 'night', screen: 'room', paused: false, nightActivity: null, nightMessage: null, purchasedRumors })
+    const showNightTutorial = state.cycle === 1 && state.day === 1 && !state.nightTutorialSeen
+    set({
+      phase: 'night', screen: 'room', paused: false, nightActivity: null, nightMessage: null, purchasedRumors,
+      showNightTutorial,
+      nightTutorialSeen: state.nightTutorialSeen || showNightTutorial,
+    })
     get().checkStoryTriggers()
   },
+  closeNightTutorial: () => set({ showNightTutorial: false, nightTutorialSeen: true }),
   endNight: () => {
     const state = get()
     if (state.phase !== 'night' || state.nightActivity) return

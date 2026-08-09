@@ -4,6 +4,7 @@ import BgmController from './components/BgmController.jsx'
 import DialogueScene from './components/DialogueScene.jsx'
 import MarketDesktop from './components/MarketDesktop.jsx'
 import NightPanel from './components/NightPanel.jsx'
+import NightTutorialOverlay from './components/NightTutorialOverlay.jsx'
 import RoomScene from './components/RoomScene.jsx'
 import TutorialOverlay from './components/TutorialOverlay.jsx'
 import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE } from './config.js'
@@ -143,6 +144,7 @@ function AutoSave() {
       nightActivity: state.nightActivity?.id || null,
       purchasedRumors: state.purchasedRumors.map((rumor) => [rumor.id, rumor.status]),
       playedSceneIds: state.playedSceneIds,
+      nightTutorialSeen: state.nightTutorialSeen,
     })
     const persist = () => {
       timer = undefined
@@ -285,6 +287,7 @@ function Room() {
     <header className="room-title"><b>U.S.D</b><span>UNPAID SPACE DEBT</span></header>
     <aside className="room-status"><b>{state.cycle}주차 · {state.day}일차</b><span>현금 {money(state.cash)}</span><span>총부채 {money(state.debt)}</span><span>최소상환 {money(minPayment)}</span></aside>
     <NightPanel />
+    {state.showNightTutorial && <NightTutorialOverlay />}
     {state.phase === 'settlement' && <Settlement />}
   </RoomScene>
 }
