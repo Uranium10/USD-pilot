@@ -1,6 +1,13 @@
 const viteEnv = import.meta.env || {}
 
-export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 8 * 60
+// 2026-08-10: 8분 → 4분. "하루가 지루하다"는 피드백에 따른 페이싱 변경이며, 경제 규모를
+// 줄이려는 것이 아니다. 그래서 하루/주차당 벌 수 있는 금액은 그대로 두고 시간만 줄인다.
+// - 시간에 비례하는 것은 채굴뿐이라 MINE_BASE_RATE를 2배로 올려 하루 생산량을 보존했다.
+// - 알바·야간 활동은 밤(무제한)에 일어나므로 애초에 낮 길이와 무관하다.
+// - 주가 경로는 진행률(0~1) 기준이라 등락 폭이 그대로다. 같은 변동이 절반의 시간에
+//   일어나므로 하루 수익 기회는 유지되고 판단 시간만 짧아진다.
+// - 따라서 부채 곡선(FLOOR_BY_CYCLE)·정보 가격·7주차 시지프 목표는 조정하지 않는다.
+export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 4 * 60
 export const DAYS_PER_CYCLE = 7
 export const LISTED_COMPANY_COUNT = 5
 export const MARKET_ASSET_COUNT = 7 // 기업 5 + 코인 1 + 시지프 인텔리전스 1 (2026-08-10)
@@ -35,9 +42,12 @@ export const COIN_ABSOLUTE_MIN_MULTIPLIER = 0.2
 export const COIN_ABSOLUTE_MAX_MULTIPLIER = 5
 
 // 채굴기는 크레딧이 아니라 코인을 생산한다. T.0의 기준가 환산 생산력은
-// 0.0015 DUST/s × ₡250 × 480초 = 하루 ₡180. 거래일 길이가 바뀌어도 기존 경제 규모를
-// 거래일 기준 투자 회수기간은 유지된다.
-export const MINE_BASE_RATE = 0.0015
+// 0.003 DUST/s × ₡250 × 240초 = 하루 ₡180.
+// 2026-08-10 하루가 480초 → 240초로 줄면서 0.0015 → 0.003으로 2배 올렸다. 채굴만이
+// 유일하게 실시간에 비례하는 수입원이라, 레이트를 그대로 두면 하루 채굴 수입이 절반이
+// 되어 부채 곡선의 전제(안전망 커버율)가 무너진다. 2배로 올리면 하루 생산량(₡180),
+// 주차 생산량, 그리고 거래일 기준 투자 회수기간이 모두 이전과 정확히 동일하다.
+export const MINE_BASE_RATE = 0.003
 export const MINE_RATE_GROWTH = 1.2
 export const MINE_INSTALL_COST = 3000
 export const MINE_BASE_COST = 800

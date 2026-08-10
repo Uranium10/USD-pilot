@@ -28,7 +28,13 @@ const average = (values) => values.reduce((total, value) => total + value, 0) / 
 const quantile = (values, ratio) => [...values].sort((left, right) => left - right)[Math.floor(values.length * ratio)]
 const weekSeconds = DAY_DURATION_SECONDS * DAYS_PER_CYCLE
 
-assert(DAY_DURATION_SECONDS === 480, '낮 스테이지는 8분(480초)이어야 합니다.')
+assert(DAY_DURATION_SECONDS === 240, '낮 스테이지는 4분(240초)이어야 합니다.')
+// 하루 길이를 절반으로 줄이면서 채굴 레이트를 2배로 올려 하루/주차당 경제 규모를 보존했다.
+// 이 두 값은 항상 함께 움직여야 하므로 곱을 직접 검증한다(T.0 기준 하루 ₡180).
+assert(
+  Math.abs(mineRate(0) * DAY_DURATION_SECONDS * COIN_REFERENCE_PRICE - 180) < 0.01,
+  `T.0 하루 채굴 수입이 ₡180이 아닙니다: ₡${(mineRate(0) * DAY_DURATION_SECONDS * COIN_REFERENCE_PRICE).toFixed(2)}`,
+)
 assert(LISTED_COMPANY_COUNT === 5 && MARKET_ASSET_COUNT === 7, '시장 구성은 기업 5 + 코인 1 + 시지프 인텔리전스 1이어야 합니다.')
 assert(STOCK_SEGMENT_MOVE_LIMIT === 0.36, '주식 구간 변동 상한은 ±36%여야 합니다.')
 

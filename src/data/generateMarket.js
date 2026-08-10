@@ -9,7 +9,6 @@ import {
   COIN_REFERENCE_PRICE,
   COIN_SEGMENT_MOVE_LIMIT,
   COIN_VOLATILITY_BY_CYCLE,
-  DAY_DURATION_SECONDS,
   DAYS_PER_CYCLE,
   INFO_COST_MULTIPLIER,
   LISTED_COMPANY_COUNT,
@@ -25,6 +24,12 @@ import {
   STOCK_SHOCK_SIGMA,
   VOLATILITY_BY_CYCLE,
 } from '../config.js'
+
+// 뉴스 발표 시각이 가격 반영 시점에서 얼마나 앞서거나 뒤처지는지(하루 진행률 기준).
+// 기존 8분(480초) 기준의 -90초~+30초와 정확히 같은 비율이며, 하루 길이가 바뀌어도
+// 뉴스와 가격 반영 사이의 체감 간격이 유지되도록 초가 아니라 비율로 고정한다.
+const NEWS_LEAD_MIN_PROGRESS = -90 / 480
+const NEWS_LEAD_MAX_PROGRESS = 30 / 480
 
 const companies = [
   ['오비탈 레일', '궤도 건설', 128, 'orbital-rail'],
@@ -352,8 +357,13 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
       const impactPoint = stock.path[impactIndex]
       const previousPoint = stock.path[impactIndex - 1]
       const direction = impactPoint.price >= previousPoint.price ? 'up' : 'down'
-      const offsetSeconds = -90 + random() * 120
-      const progress = Math.min(0.99, Math.max(0.01, impactPoint.progress + offsetSeconds / DAY_DURATION_SECONDS))
+      // 뉴스는 가격에 반영되기 조금 전에 뜨는 것이 기본이고, 가끔 살짝 늦게 뜬다.
+      // 예전에는 -90~+30초라는 절대 시간으로 계산했는데, 하루 길이가 480초에서 240초로
+      // 줄면 같은 초가 하루에서 차지하는 비중이 두 배가 된다(-18.75%~+6.25% → -37.5%~+12.5%).
+      // 그러면 뉴스가 반영 시점보다 하루의 3분의 1 이상 앞서 떠서 "뉴스 → 곧 반영"이라는
+      // 인과 감각이 무너진다. 그래서 하루 진행률 기준 비율로 고정한다(기존 8분 기준과 동일).
+      const offsetProgress = NEWS_LEAD_MIN_PROGRESS + random() * (NEWS_LEAD_MAX_PROGRESS - NEWS_LEAD_MIN_PROGRESS)
+      const progress = Math.min(0.99, Math.max(0.01, impactPoint.progress + offsetProgress))
       return {
         id: `c${cycle}-d${dayIndex + 1}-n${index}`,
         progress: round(progress),
