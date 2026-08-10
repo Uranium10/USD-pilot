@@ -14,6 +14,7 @@ import { CYCLE_SCENARIO_SCHEMA, RUN_PLAN_SCHEMA } from '../server/ai/schemas.js'
 import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
 import { createDonationSchedule, getNightActivityOptions, nightActivityCashCost } from '../src/logic/nightActivities.js'
 import { chooseWeeklyModifier, getWeeklyModifier, modifiedNightEnergyCost, modifiedNightReward, modifiedRumorCost } from '../src/logic/weeklyModifiers.js'
+import { ENDING_BACKGROUNDS, ENDING_TEMPLATES } from '../src/data/endingTemplates.js'
 import { getNetWorth, useGameStore } from '../src/store/gameStore.js'
 
 const assert = (condition, message) => {
@@ -36,6 +37,12 @@ assert(chooseWeeklyModifier(2, 2026)?.id === modifier2.id, '같은 seed의 주�
 assert(chooseWeeklyModifier(1, 2026) === null && chooseWeeklyModifier(7, 2026) === null, '1·7주차에는 일반 모디파이어가 없어야 합니다.')
 assert(getWeeklyModifier(modifier2.id)?.detail, '주간 모디파이어의 안내 문구가 없습니다.')
 assert(modifiedRumorCost({ cost: 100 }, 'information-crackdown') === 75, '정보 단속 가격 보정이 잘못됐습니다.')
+assert(Object.keys(ENDING_BACKGROUNDS).length === 2, '엔딩 더미 배경은 두 장이어야 합니다.')
+for (const endingType of ['bad', 'normal', 'hidden', 'true']) {
+  const ending = ENDING_TEMPLATES[endingType]
+  assert(ending?.lines.length >= 3, `${endingType} 엔딩 대사 템플릿이 부족합니다.`)
+  assert(new Set(ending.lines.map((line) => line.background).filter(Boolean)).size >= 2, `${endingType} 엔딩이 두 배경을 사용하지 않습니다.`)
+}
 assert(modifiedNightEnergyCost(30, 'night-curfew') === 40 && modifiedNightReward(1000, 'night-curfew') === 1300, '야간 통행 제한 보정이 잘못됐습니다.')
 
 useGameStore.getState().restart()

@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { getWeeklyModifier } from '../logic/weeklyModifiers.js'
 import { useGameStore } from '../store/gameStore.js'
 
-const informationText = (rumors) => rumors.length === 0 ? '구입한 정보가 없습니다.' : rumors.map((rumor, index) => [
+const informationText = (rumors, modifier) => `${modifier ? `[이번 주 제약] ${modifier.name} — ${modifier.detail} ` : ''}${rumors.length === 0 ? '구입한 정보가 없습니다.' : rumors.map((rumor, index) => [
   `[정보 ${index + 1}${rumor.status === 'completed' ? ' · 완료됨' : ''}]`, `출처: ${rumor.source}`, `신뢰도: ${Math.round(rumor.accuracy * 100)}%`, rumor.text,
-].join(' ')).join(' ')
+].join(' ')).join(' ')}`
 const plainText = (html) => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
 
 export default function InformationNotepad({ rumors }) {
@@ -11,6 +12,7 @@ export default function InformationNotepad({ rumors }) {
   const initialContent = useRef(useGameStore.getState().notepadContent)
   const [characterCount, setCharacterCount] = useState(() => plainText(initialContent.current).length)
   const fontSize = useGameStore((state) => state.notepadFontSize)
+  const modifier = useGameStore((state) => getWeeklyModifier(state.weeklyModifierId))
   const setFontSize = useGameStore((state) => state.setNotepadFontSize)
 
   useLayoutEffect(() => {
@@ -61,6 +63,7 @@ export default function InformationNotepad({ rumors }) {
       </div>
     </div>
     <div className="notepad-document">
+      {modifier && <div className="notepad-weekly-modifier" aria-label="현재 주간 제약">[이번 주 제약] {modifier.name} — {modifier.detail}</div>}
       {rumors.length > 0 && <section className="locked-information" aria-label="구입한 정보 읽기 전용" style={{ fontFamily: "Gulim, '굴림', sans-serif", fontSize: '16px' }}>
         {rumors.map((rumor, index) => (
           <div key={rumor.id} style={{ marginBottom: '16px' }}>
@@ -75,6 +78,6 @@ export default function InformationNotepad({ rumors }) {
       </section>}
       <div ref={editorRef} className="notepad-editor editable-notes" contentEditable suppressContentEditableWarning data-placeholder="여기에 메모를 입력하세요..." onInput={saveContent} />
     </div>
-    <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>{informationText(rumors).length + characterCount}자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
+    <footer className="notepad-statusbar"><span>줄 1, 열 1</span><span>{informationText(rumors, modifier).length + characterCount}자</span><span className="status-spacer" /><span>일반 텍스트</span><span>100%</span><span>Windows (CRLF)</span><span>UTF-8</span></footer>
   </section>
 }

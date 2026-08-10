@@ -3191,3 +3191,55 @@ button:hover {
 .weekly-modifier-label b {
   color: #ffd34d;
 }
+
+.notepad-weekly-modifier {
+  margin: 0 0 18px;
+  padding: 7px 9px;
+  border: 1px solid #d7b132;
+  background: #fff9d9;
+  color: #312900;
+  font: 700 14px/1.35 Gulim, '굴림', sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ending.ending-scene {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background: #05070c var(--ending-background) center/cover no-repeat;
+  overflow: hidden;
+}
+
+.ending-scene-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, #0002 45%, #000d 100%);
+}
+
+.ending-dialogue {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 7%;
+  min-height: 150px;
+  padding: 34px 38px 28px;
+  border: 1px solid #55dbff;
+  background: #070c15ee;
+  color: #eaf4ff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ending-dialogue b { position: absolute; top: 8px; left: 18px; color: #55dbff; }
+.ending-dialogue span { display: block; font-size: 18px; line-height: 1.7; }
+.ending-dialogue small { position: absolute; right: 18px; bottom: 10px; color: #8296ad; }
+
+.ending-result {
+  width: min(700px, 80vw);
+  padding: 42px;
+  background: #070c15e8;
+  border: 1px solid #55dbff66;
+}
