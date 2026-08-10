@@ -16,7 +16,7 @@ export const ENDING_TEMPLATES = {
       { speaker: 'system', text: '귀하의 성실한 변제 노력을 높이 평가하여, 약정대로 **내부 연구직 특별 채용**을 진행합니다.' },
       { background: ENDING_BACKGROUNDS.exterior, speaker: 'system', text: '잠금장치가 바깥에서 해제된다. 복도 끝의 금속성 발소리가 문 앞에서 멎었다.' },
       { speaker: 'tarae', text: '엄마, 아빠… 미안해. 그래도 거기서 뭘 봤는지는, 내가 직접 알아낼게.' },
-      { speaker: 'system', text: '문이 열리고, 모니터에는 마지막 문장만 남았다.\n**시지프 인텔리전스는 귀하의 합류를 진심으로 환영합니다.**' },
+      { speaker: 'system', text: '문이 열리고, 모니터에는 마지막 문장만 남았다.\n**시지프 인텔리전스는 귀하의 자발적 합류를 진심으로 환영합니다.**' },
     ],
   },
   normal: {
