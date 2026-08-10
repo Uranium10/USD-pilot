@@ -47,6 +47,7 @@ const initialGame = {
   // 대화 스토리 엔진 (2026-08-10 도입)
   activeScene: null,
   playedSceneIds: [],
+  storyFlags: {},
   tutorialCompleted: false,
   introPrompt: null,
   nightTutorialSeen: false,
@@ -183,6 +184,7 @@ export const useGameStore = create((set, get) => ({
       dayIntroDestination: 'monitor',
       marketReady: true,
       playedSceneIds: Array.isArray(world.playedSceneIds) ? world.playedSceneIds : [],
+      storyFlags: world.storyFlags && typeof world.storyFlags === 'object' ? world.storyFlags : {},
       epilogue: Boolean(world.epilogue),
       endingType: world.endingType || null,
       hasSmugglingTicket: Boolean(world.hasSmugglingTicket),
@@ -433,11 +435,16 @@ export const useGameStore = create((set, get) => ({
     }
     const marketPrice = state.currentPrices[stockId]
     const price = buyExecutionPrice(asset, marketPrice)
-    const cost = price * amount
-    if (!price || amount <= 0 || state.cash < cost) return
+    if (!price || amount <= 0) return
     const previous = state.holdings[stockId] || { quantity: 0, average: 0 }
     const maxPositionRatio = modifierEffect(state.weeklyModifierId, 'maxPositionRatio', 1)
-    if ((previous.quantity * marketPrice) + cost > calculateNetWorth(state) * maxPositionRatio) return
+    const positionBudget = Math.max(0, calculateNetWorth(state) * maxPositionRatio - previous.quantity * marketPrice)
+    // 최대 매수를 누른 직후 가격이 오르면 UI가 계산했던 수량의 체결 비용이 현금을 근소하게
+    // 넘을 수 있다. 주문 전체를 거절하지 않고 체결 시점의 현금·포지션 한도로 다시 줄인다.
+    const executableAmount = normalizeTradeQuantity(asset, Math.min(state.cash, positionBudget) / price)
+    amount = Math.min(amount, executableAmount)
+    if (amount <= 0) return
+    const cost = price * amount
     const nextQuantity = previous.quantity + amount
     const average = (previous.average * previous.quantity + cost) / nextQuantity
     set({
@@ -445,7 +452,7 @@ export const useGameStore = create((set, get) => ({
       holdings: { ...state.holdings, [stockId]: { quantity: nextQuantity, average } },
       feedback: null,
     })
-    return { cost }
+    return { cost, quantity: amount }
   },
   sell: (stockId, quantity) => {
     const state = get()
@@ -621,11 +628,14 @@ export const useGameStore = create((set, get) => ({
     const state = get()
     if (!state.activeScene) return
     const playedSceneIds = [...state.playedSceneIds, state.activeScene.id]
+    const storyFlags = state.activeScene.id === 'week1-day2-easy-flag'
+      ? { ...state.storyFlags, earlyMarketConfidence: true }
+      : state.storyFlags
     if (state.phase === 'prologue' && state.activeScene.id === 'prologue-day1') {
-      set({ activeScene: null, phase: 'introChoice', introPrompt: 'tutorial', paused: true, playedSceneIds })
+      set({ activeScene: null, phase: 'introChoice', introPrompt: 'tutorial', paused: true, playedSceneIds, storyFlags })
       return
     }
-    set({ activeScene: null, paused: false, playedSceneIds })
+    set({ activeScene: null, paused: false, playedSceneIds, storyFlags })
     queueMicrotask(() => get().checkStoryTriggers())
   },
   completeTutorial: () => {

@@ -1375,3 +1375,10 @@
 - 뉴스 headline과 소문 angle에 자연스러운 기사체·구체적 정황·조사 사용을 강제하고 전보체, 번역투, 명사 나열을 금지하는 한국어 품질 규칙을 추가했다.
 - Terra/medium 실제 호출 2회 모두 구조 점수 100점, 평균 25.9초, 주간 호출당 평균 $0.0396이었으며 출력된 뉴스·소문 문장도 수동 검토를 통과했다.
 - `check:stock-path`, `check:coin`, `check:story-systems`, lint, production build를 통과했다.
+
+## 2026-08-11 00:00 KST (Claude, 28차)
+
+- 주가 생성 로직(`src/data/generateMarket.js`) 전체를 검증하다가 실제 버그를 발견해 고쳤다: **5개 기업 + 시지프 인텔리전스는 코인(coinStartPrice)과 달리 사이클 경계에서 직전 종가를 이어받지 못하고, 매 사이클 `base * (1+(cycle-1)*0.025)` 공식으로 조용히 리셋되고 있었다.** 시드 42로 cycle1→2 실측: stock-2가 +21.5%, stock-5가 -11.7%, 시지프가 -14.6% 괴리 — 플레이어가 보유 중이던 종목의 평가액이 사이클 전환 시 아무 인게임 사건 없이 순간이동하듯 바뀌는 문제였다.
+- 코인과 완전히 동일한 패턴으로 고쳤다: `generateMarketCycle()`에 `companyStartPrices`(stock-1~5 종가 배열)/`sisyphusStartPrice` 파라미터를 추가해 로스터가 그대로 유지된 사이클(companyIdsPinned)에 한해 직전 종가를 기준가로 쓰고, 없으면 기존 공식으로 폴백한다. `src/services/marketService.js`(buildUrl/requestMarketCycle/prefetchMarketCycle/fetchMarketCycle) → `api/market-cycle.js`(stockPrices/sisyphusPrice 쿼리 파싱) → `src/App.jsx`(정산 화면의 prefetch/next/epilogue 3곳, `companyStartPricesOf()` 헬퍼로 state.currentPrices에서 추출) 전체 경로를 관통시켰다. `src/services/sessionService.js`에도 세션 복원 시 world.market이 유실된 폴백 경로용으로 같은 필드를 저장하도록 추가했다.
+- 검증: 같은 시드로 재실측 — 수정 후 괴리가 전부 ±1.25%(의도된 오버나이트 갭 지터) 이내로 줄었다. 시지프 7주차 대폭락 스크립트도 진입가를 8000으로 강제해도 목표가(320) 근처로 정상 붕괴함을 확인해 연속성 수정이 스크립트를 깨지 않음을 검증했다. `npm run lint`/`build`/`check:coin`/`check-stock-path-progression.mjs`/`check-debt-balance.mjs` 전부 통과.
+- 그 외 확인한 것(문제 아님, 참고용): VOLATILITY_BY_CYCLE/COIN_VOLATILITY_BY_CYCLE/INFO_COST_MULTIPLIER는 배열 길이가 6(1~6주차)뿐이라 7주차는 `?? .at(-1)`로 6주차 값을 그대로 재사용— 안전한 폴백이라 버그는 아니지만, COIN_GROWTH_TARGET_BY_CYCLE/COIN_SEGMENT_DRIFT_BY_CYCLE는 이미 7개 항목으로 확장돼 있어 배열 길이가 일관되지 않는다(사용자 판단 필요, 지금은 손대지 않음).

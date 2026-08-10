@@ -47,6 +47,7 @@ export default function MarketDesktop() {
   const [activeApp, setActiveApp] = useState('market')
   const [listView, setListView] = useState(false)
   const [amountDraft, setAmountDraft] = useState('')
+  const [maxBuySelected, setMaxBuySelected] = useState(false)
   const [newestNewsIds, setNewestNewsIds] = useState([])
   const editingAmountRef = useRef(false)
   const previousNewsIdsRef = useRef(null)
@@ -114,7 +115,10 @@ export default function MarketDesktop() {
   const maxPositionRatio = modifierEffect(state.weeklyModifierId, 'maxPositionRatio', 1)
   const positionRoom = Math.max(0, netWorth * maxPositionRatio - holding.quantity * currentPrice)
   const maxBuyBudget = Math.min(state.cash, positionRoom)
-  const canBuy = !selectedIsCoin && canTradeSelected && quantity > 0 && buyTotal <= maxBuyBudget && state.phase === 'day'
+  const executableBuyQuantity = selectedIsCoin ? 0 : normalizeTradeQuantity(selected, maxBuyBudget / buyPrice)
+  const canBuy = !selectedIsCoin && canTradeSelected && quantity > 0
+    && (buyTotal <= maxBuyBudget || (maxBuySelected && executableBuyQuantity > 0))
+    && state.phase === 'day'
   const canSell = canTradeSelected && sellQuantity > 0 && state.phase === 'day'
   const previousSummary = state.dailySummaries.at(-1)
   const assetBaseline = previousSummary?.netWorth ?? state.dayStartNetWorth
@@ -134,16 +138,24 @@ export default function MarketDesktop() {
     const asset = data.stocks.find((stock) => stock.id === stockId)
     if (isCoinAsset(asset) && !coinUnlocked) return
     state.selectStock(stockId)
+    setMaxBuySelected(false)
     setQuantity(isCoinAsset(asset) ? 0.1 : 1)
     setListView(false)
     setActiveApp('market')
   }
   const toggleListView = () => setListView((isGrid) => !isGrid)
-  const buy = () => { const result = state.buy(selected.id, quantity); if (result) playCashOut() }
+  const buy = () => {
+    const result = state.buy(selected.id, quantity)
+    if (!result) return
+    setQuantity(result.quantity)
+    setMaxBuySelected(false)
+    playCashOut()
+  }
   const sell = () => { const result = state.sell(selected.id, sellQuantity); if (result) playCashRegister() }
   const handleAmountChange = (event) => {
     const raw = event.target.value
     setAmountDraft(raw)
+    setMaxBuySelected(false)
     if (raw.trim() === '') { setQuantity(0); return }
     const numeric = Number(raw)
     if (Number.isFinite(numeric)) setQuantity(normalizeTradeQuantity(selected, numeric / buyPrice))
@@ -206,14 +218,14 @@ export default function MarketDesktop() {
                 <div className="order-controls">
                   <div className="quantity-buttons">{selectedIsCoin
                     ? <><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity * 0.25))}>25%</button><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity * 0.5))}>50%</button><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity))}>전량</button></>
-                    : quantityButtons.map((amount) => <button key={amount} onClick={() => setQuantity((value) => normalizeTradeQuantity(selected, value + amount))}>+{amount}</button>)}</div>
+                    : quantityButtons.map((amount) => <button key={amount} onClick={() => { setMaxBuySelected(false); setQuantity((value) => normalizeTradeQuantity(selected, value + amount)) }}>+{amount}</button>)}</div>
                   <div className="max-buttons">
-                    {!selectedIsCoin && <button onClick={() => setQuantity(normalizeTradeQuantity(selected, maxBuyBudget / buyPrice))}>최대 매수</button>}
-                    <button onClick={() => setQuantity(holding.quantity)} disabled={!holding.quantity}>최대 매도</button>
-                    <button onClick={() => setQuantity(0)} disabled={quantity <= 0}>초기화</button>
+                    {!selectedIsCoin && <button onClick={() => { setMaxBuySelected(true); setQuantity(normalizeTradeQuantity(selected, maxBuyBudget / buyPrice)) }}>최대 매수</button>}
+                    <button onClick={() => { setMaxBuySelected(false); setQuantity(holding.quantity) }} disabled={!holding.quantity}>최대 매도</button>
+                    <button onClick={() => { setMaxBuySelected(false); setQuantity(0) }} disabled={quantity <= 0}>초기화</button>
                   </div>
                   <div className="order-fields">
-                    <label>수량<input type="number" min="0" step={selectedIsCoin ? 0.0001 : 1} value={quantity} onChange={(event) => setQuantity(normalizeTradeQuantity(selected, event.target.value))} /></label>
+                    <label>수량<input type="number" min="0" step={selectedIsCoin ? 0.0001 : 1} value={quantity} onChange={(event) => { setMaxBuySelected(false); setQuantity(normalizeTradeQuantity(selected, event.target.value)) }} /></label>
                     {!selectedIsCoin && <label>금액<input type="number" min="0" value={amountDraft} onFocus={() => { editingAmountRef.current = true }} onBlur={() => { editingAmountRef.current = false; setAmountDraft(String(Math.round(buyTotal))) }} onChange={handleAmountChange} /></label>}
                   </div>
                 </div>

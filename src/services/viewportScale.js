@@ -30,6 +30,24 @@ function apply() {
   document.documentElement.style.setProperty('--game-scale', String(scale))
 }
 
+function refreshFirefoxFontLayer() {
+  if (!navigator.userAgent.includes('Firefox') || !document.fonts?.ready) return
+  document.fonts.ready.then(() => {
+    let attempts = 0
+    const refresh = () => {
+      const frame = document.querySelector('.game-frame')
+      if (!frame && attempts++ < 20) {
+        window.requestAnimationFrame(refresh)
+        return
+      }
+      if (!frame) return
+      frame.classList.add('firefox-font-refresh')
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => frame.classList.remove('firefox-font-refresh')))
+    }
+    window.requestAnimationFrame(refresh)
+  })
+}
+
 let started = false
 
 export function startViewportScale() {
@@ -39,4 +57,5 @@ export function startViewportScale() {
   window.addEventListener('resize', apply, { passive: true })
   window.addEventListener('orientationchange', apply, { passive: true })
   window.visualViewport?.addEventListener('resize', apply, { passive: true })
+  refreshFirefoxFontLayer()
 }

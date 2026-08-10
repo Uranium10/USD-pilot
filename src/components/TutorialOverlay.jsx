@@ -18,7 +18,7 @@ const STEPS = [
   },
   {
     tag: '03 / 주식 거래',
-    title: '8분의 낮 시간 동안 거래할 수 있습니다.',
+    title: '4분의 낮 시간 동안 거래할 수 있습니다.',
     body: '왼쪽에서 종목을 고르고, 차트 아래에서 수량을 입력한 뒤 매수·매도하세요. 낮 시간이 끝나기 전에 주간 상환에 쓸 현금도 남겨야 합니다.',
     screen: 'market',
     target: 'trade',
@@ -87,7 +87,7 @@ function InfoMock() {
     <p>WEEK 1 · DAY 1 · 정보 거래소</p><h2>정보를 구입하세요.</h2>
     <div className="rumor-grid tutorial-static-focus">{rumors.map((rumor) => <button key={rumor.source} className={`rumor ${rumor.queued ? 'queued' : ''}`}><span>{rumor.queued ? '구매 선택됨' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>내용 및 신뢰도 미상 · ₡{rumor.cost}</small></button>)}</div>
     <p className="purchase-summary">구입 0건 · 선택 1건 (₡363) · 남은 현금 ₡12,000</p>
-    <div className="premarket-actions"><button className="secondary">선택 정보 구입</button><button className="primary">구입 완료</button></div>
+    <div className="premarket-actions"><button className="primary">구입 완료</button></div>
   </section>
 }
 

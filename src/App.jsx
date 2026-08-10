@@ -19,6 +19,10 @@ import { clearSavedSession, getDeviceId, getSavedSession, saveSession } from './
 import { useGameStore } from './store/gameStore.js'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
+// 다음 사이클을 요청할 때 stock-1~stock-5의 직전 종가를 슬롯 순서 그대로 넘긴다 —
+// coinStartPrice와 같은 목적으로, 사이클 경계에서 가격이 공식 기준가로 리셋되지 않고
+// 실제 종가를 이어받게 한다(src/data/generateMarket.js 참고, 2026-08-10 수정).
+const companyStartPricesOf = (currentPrices) => [1, 2, 3, 4, 5].map((n) => currentPrices?.[`stock-${n}`])
 const subtitles = [
   'Upside Down', 'Useless Decision', 'Unpaid Space Debt', 'Urgent Sell Disaster', 'Universal Space Depression',
   'Unbelievable Stock Drop', 'Ultimate Survival Day', 'Unfair System Design', 'Underground Stock Dealer', 'Unlimited Space Dream',
@@ -91,6 +95,8 @@ function Title() {
       world.coinStartPrice,
       savedSession.marketSeed,
       getDeviceId(),
+      world.companyStartPrices,
+      world.sisyphusStartPrice,
     )
     restoreSession(savedSession, market)
   }
@@ -256,15 +262,19 @@ function Premarket() {
   const toggleRumor = (rumorId) => setSelectedRumorIds((ids) => ids.includes(rumorId)
     ? ids.filter((id) => id !== rumorId)
     : ids.length < remainingSlots ? [...ids, rumorId] : ids)
-  const purchaseSelected = () => {
-    const purchased = state.purchaseRumors(selectedRumors)
-    if (!purchased) return
-    playCashOut()
-    setFlashingRumorIds(purchased.map((rumor) => rumor.id))
-    setSelectedRumorIds([])
-    window.setTimeout(() => setFlashingRumorIds([]), 450)
+  const completePurchase = () => {
+    if (selectedCost > state.cash) return
+    if (selectedRumors.length) {
+      const purchased = state.purchaseRumors(selectedRumors)
+      if (!purchased) return
+      playCashOut()
+      setFlashingRumorIds(purchased.map((rumor) => rumor.id))
+      setSelectedRumorIds([])
+      window.setTimeout(() => setFlashingRumorIds([]), 450)
+    }
+    state.showOverlay({ type: 'dayBriefing', title: `${state.day}일차 정보 브리핑` })
   }
-  return <section className="panel premarket"><p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p><h2>정보를 구입하세요.</h2>{modifier && <p className="weekly-modifier-label">이번 주 제약 · <b>{modifier.name}</b> — {modifier.detail}</p>}<div className="rumor-grid">{data.rumors.map((rumor) => { const purchased = state.purchasedRumors.some((item) => item.id === rumor.id); const queued = selectedRumorIds.includes(rumor.id); const sisyphusIntel = rumor.stockId === SISYPHUS_STOCK_ID; const soldOut = !purchased && !queued && remainingSlots <= selectedRumorIds.length; return <button key={rumor.id} className={`rumor ${sisyphusIntel ? 'sisyphus-intel' : ''} ${purchased ? 'selected' : ''} ${queued ? 'queued' : ''} ${flashingRumorIds.includes(rumor.id) ? 'purchase-flash' : ''}`} onClick={() => toggleRumor(rumor.id)} disabled={purchased || soldOut}><span>{purchased ? '구입됨' : queued ? '구매 선택됨' : sisyphusIntel ? '시지프 인텔 채널' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>{purchased ? `신뢰도 ${Math.round(rumor.accuracy * 100)}% 확인됨` : '내용 및 신뢰도 미상'} · {money(modifiedRumorCost(rumor, state.weeklyModifierId))}</small></button> })}</div><p className="purchase-summary">구입 {state.purchasedRumors.length}건 · 선택 {selectedRumors.length}건 ({money(selectedCost)}) · 남은 현금 {money(state.cash)}{Number.isFinite(maxRumors) ? ` · 오늘 ${remainingSlots}건 추가 가능` : ''}</p><div className="premarket-actions"><button className="secondary" onClick={purchaseSelected} disabled={selectedRumors.length === 0 || selectedCost > state.cash}>선택 정보 구입</button><button className="primary" onClick={() => state.showOverlay({ type: 'dayBriefing', title: `${state.day}일차 정보 브리핑` })}>구입 완료</button></div></section>
+  return <section className="panel premarket"><p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p><h2>정보를 구입하세요.</h2>{modifier && <p className="weekly-modifier-label">이번 주 제약 · <b>{modifier.name}</b> — {modifier.detail}</p>}<div className="rumor-grid">{data.rumors.map((rumor) => { const purchased = state.purchasedRumors.some((item) => item.id === rumor.id); const queued = selectedRumorIds.includes(rumor.id); const sisyphusIntel = rumor.stockId === SISYPHUS_STOCK_ID; const soldOut = !purchased && !queued && remainingSlots <= selectedRumorIds.length; return <button key={rumor.id} className={`rumor ${sisyphusIntel ? 'sisyphus-intel' : ''} ${purchased ? 'selected' : ''} ${queued ? 'queued' : ''} ${flashingRumorIds.includes(rumor.id) ? 'purchase-flash' : ''}`} onClick={() => toggleRumor(rumor.id)} disabled={purchased || soldOut}><span>{purchased ? '구입됨' : queued ? '구매 선택됨' : sisyphusIntel ? '시지프 인텔 채널' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>{purchased ? `신뢰도 ${Math.round(rumor.accuracy * 100)}% 확인됨` : '내용 및 신뢰도 미상'} · {money(modifiedRumorCost(rumor, state.weeklyModifierId))}</small></button> })}</div><p className="purchase-summary">오늘 구입 {boughtToday}건 · 선택 {selectedRumors.length}건 ({money(selectedCost)}) · 남은 현금 {money(state.cash)}{Number.isFinite(maxRumors) ? ` · 오늘 ${remainingSlots}건 추가 가능` : ''}</p><div className="premarket-actions"><button className="primary" onClick={completePurchase} disabled={selectedCost > state.cash}>{selectedRumors.length ? '구입 완료' : '정보 없이 진행'}</button></div></section>
 }
 
 function Settlement() {
@@ -287,7 +297,7 @@ function Settlement() {
   // 갚거나(clear) 게임오버가 나면 그냥 버려진다(약간의 낭비지만 대부분의 정산은 다음
   // 사이클로 이어지므로 감수할 만하다). 배경: USD-spec/agent_workthrough_2.md.
   useEffect(() => {
-    prefetchMarketCycle(state.cycle + 1, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId())
+    prefetchMarketCycle(state.cycle + 1, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId(), companyStartPricesOf(state.currentPrices), state.currentPrices[SISYPHUS_STOCK_ID])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -296,9 +306,9 @@ function Settlement() {
     const result = state.settleCycle(amount)
     if (result && useGameStore.getState().cash < cashBefore) playCashOut()
     if (result?.result === 'next') {
-      state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId()))
+      state.loadNextCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId(), companyStartPricesOf(state.currentPrices), state.currentPrices[SISYPHUS_STOCK_ID]))
     } else if (result?.result === 'epilogue') {
-      state.loadEpilogueCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId()))
+      state.loadEpilogueCycle(await fetchMarketCycle(result.cycle, state.market?.companyIds, state.currentPrices[COIN_ASSET_ID], undefined, getDeviceId(), companyStartPricesOf(state.currentPrices), state.currentPrices[SISYPHUS_STOCK_ID]))
     }
   }
 
@@ -350,7 +360,7 @@ function Overlay() {
 // 시간(체감 5~30초)이 주간 시나리오 생성 시간(평균 17~25초)과 거의 같아서 대기가
 // 자주 노출됐다. 다음 사이클 생성에 필요한 재료(runPlan·입력 worldState·기업 매핑)는
 // 이번 사이클이 생성되는 순간 서버에 이미 저장되므로, 이번 주 시작 시점에 발사하면
-// 7일 × 8분의 여유가 생긴다. 서버가 이번 주 응답을 돌려준 시점에는 다음 주의 입력
+// 7일 × 4분의 여유가 생긴다. 서버가 이번 주 응답을 돌려준 시점에는 다음 주의 입력
 // worldState 기록이 이미 끝나 있으므로(aiMarketCycle.js) 순서도 안전하다.
 function NextCycleScenarioPrefetch() {
   const cycle = useGameStore((state) => state.cycle)

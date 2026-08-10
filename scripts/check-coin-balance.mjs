@@ -235,6 +235,21 @@ useGameStore.setState({ miningTier: 0, cash: 100000 })
 useGameStore.getState().buy(COIN_ASSET_ID, 1)
 assert(!useGameStore.getState().holdings[COIN_ASSET_ID], 'DUST는 시장에서 매수할 수 없어야 합니다.')
 
+// 최대 매수 버튼으로 수량을 채운 직후 가격이 오른 상황을 재현한다. 과거에는 10주 전체가
+// 거절됐지만, 이제 체결 시점의 ₡1,000으로 살 수 있는 9주만 매수해야 한다.
+const edgeStock = tradeTestMarket.days[0].stocks.find((asset) => asset.assetType === 'company')
+useGameStore.setState({
+  phase: 'day',
+  cash: 1000,
+  holdings: {},
+  weeklyModifierId: null,
+  currentPrices: { ...useGameStore.getState().currentPrices, [edgeStock.id]: 101 },
+})
+const edgeBuy = useGameStore.getState().buy(edgeStock.id, 10)
+assert(edgeBuy?.quantity === 9, `가격 상승 후 최대 매수가 체결 가능 수량으로 줄지 않았습니다: ${edgeBuy?.quantity}`)
+assert(useGameStore.getState().holdings[edgeStock.id]?.quantity === 9, '가격 상승 엣지케이스의 실제 보유 수량이 잘못됐습니다.')
+assert(useGameStore.getState().cash === 91, `부분 체결 후 현금이 잘못됐습니다: ${useGameStore.getState().cash}`)
+
 const epilogueMarket = generateMarketCycle({ cycle: 7, seed: 777, companyIds: tradeTestMarket.companyIds })
 const epilogueSisyphus = epilogueMarket.days[0].stocks.find((asset) => asset.id === SISYPHUS_STOCK_ID)
 assert(epilogueSisyphus.path.at(-1).price <= SISYPHUS_EPILOGUE_TARGET_PRICE * 1.2, '7주차 시지프 종가가 매집 가능 가격까지 폭락하지 않았습니다.')

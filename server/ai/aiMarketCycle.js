@@ -239,7 +239,7 @@ export async function prefetchAiCycleScenario(options) {
 }
 
 /**
- * @param {{ cycle:number, companyIds?:string[], coinStartPrice?:number, seed?:number, deviceId?:string }} options
+ * @param {{ cycle:number, companyIds?:string[], coinStartPrice?:number, companyStartPrices?:number[], sisyphusStartPrice?:number, seed?:number, deviceId?:string }} options
  */
 export async function generateAiMarketCycle(options) {
   const fallback = generateMarketCycle(options)

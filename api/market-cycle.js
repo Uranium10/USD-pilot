@@ -7,6 +7,15 @@ export default async function handler(request, response) {
   const prefetchQuery = Array.isArray(request.query?.prefetch) ? request.query.prefetch[0] : request.query?.prefetch
   const coinPriceQuery = Array.isArray(request.query?.coinPrice) ? request.query.coinPrice[0] : request.query?.coinPrice
   const coinStartPrice = coinPriceQuery ? Number(coinPriceQuery) : undefined
+  // stockPrices=stock-1~stock-5 종가를 슬롯 순서 그대로 콤마로 이은 값(빈 칸 허용).
+  // 코인의 coinStartPrice와 동일한 목적 — 사이클 경계에서 가격이 리셋되지 않게 이어준다
+  // (src/data/generateMarket.js 참고, 2026-08-10 수정).
+  const stockPricesQuery = Array.isArray(request.query?.stockPrices) ? request.query.stockPrices[0] : request.query?.stockPrices
+  const companyStartPrices = stockPricesQuery
+    ? stockPricesQuery.split(',').map((value) => (value === '' ? undefined : Number(value)))
+    : undefined
+  const sisyphusPriceQuery = Array.isArray(request.query?.sisyphusPrice) ? request.query.sisyphusPrice[0] : request.query?.sisyphusPrice
+  const sisyphusStartPrice = sisyphusPriceQuery ? Number(sisyphusPriceQuery) : undefined
   const seedQuery = Array.isArray(request.query?.seed) ? request.query.seed[0] : request.query?.seed
   const seed = seedQuery ? Number(seedQuery) : undefined
   const deviceIdQuery = Array.isArray(request.query?.deviceId) ? request.query.deviceId[0] : request.query?.deviceId
@@ -20,5 +29,5 @@ export default async function handler(request, response) {
     return
   }
 
-  response.status(200).json(await generateAiMarketCycle({ cycle, companyIds, coinStartPrice, seed, deviceId }))
+  response.status(200).json(await generateAiMarketCycle({ cycle, companyIds, coinStartPrice, companyStartPrices, sisyphusStartPrice, seed, deviceId }))
 }

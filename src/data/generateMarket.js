@@ -218,7 +218,11 @@ function selectCompanies(random, companyIds) {
 
 export function getStockPathProfile(cycle, day) {
   const elapsedDays = Math.max(0, (cycle - 1) * DAYS_PER_CYCLE + (day - 1))
-  const jaggedness = clamp(0.38 + (elapsedDays / (DAYS_PER_CYCLE * 2)) * 0.62, 0.38, 1)
+  // 첫 이틀은 플레이어가 주문 UI와 정보 흐름을 익히는 구간이라 거의 평탄하게 둔다.
+  // 3일차부터 변동을 눈에 띄게 되살리고, 3주차 시작에는 기존 강도 1에 도달한다.
+  const jaggedness = elapsedDays < 2
+    ? 0.08 + elapsedDays * 0.02
+    : clamp(0.18 + ((elapsedDays - 2) / 12) * 0.82, 0.18, 1)
   return {
     jaggedness,
     minPointCount: jaggedness >= 1 ? 4 : 3,
@@ -283,14 +287,24 @@ function makeCoinPath(startPrice, random, cycle) {
   return points
 }
 
-export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, coinStartPrice } = {}) {
+export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, coinStartPrice, companyStartPrices, sisyphusStartPrice } = {}) {
   const random = seeded(Number(seed) + cycle * 7919)
   const companyIdsPinned = Array.isArray(companyIds)
     && [...new Set(companyIds)].length === LISTED_COMPANY_COUNT
     && companyIds.every((id) => companyIndexById.has(id))
   const listedCompanies = selectCompanies(random, companyIds)
   const listedCompanyIds = listedCompanies.map((company) => company[3])
-  const previousCloses = listedCompanies.map(([, , base]) => base * (1 + (cycle - 1) * 0.025))
+  // 2026-08-10: 코인은 원래부터 coinStartPrice로 직전 사이클 종가를 이어받는데, 5개
+  // 기업/시지프는 그 연속성이 없어 매 사이클 시작가가 "직전 종가"가 아니라 원본
+  // base * (1+(cycle-1)*0.025) 공식으로 조용히 리셋됐다(실측: 사이클 경계에서 최대
+  // ±20%대 괴리). 로스터가 그대로 유지된 사이클(companyIdsPinned)에 한해, 넘겨받은
+  // 직전 종가가 있으면 그걸 기준가로 쓰도록 코인과 동일한 패턴으로 고쳤다. 로스터가
+  // 바뀌었거나 값이 없으면(최초 진입 등) 기존 공식으로 안전하게 폴백한다.
+  const previousCloses = listedCompanies.map(([, , base], index) => {
+    const formulaAnchor = base * (1 + (cycle - 1) * 0.025)
+    const carried = companyIdsPinned && Array.isArray(companyStartPrices) ? Number(companyStartPrices[index]) : NaN
+    return Number.isFinite(carried) ? clamp(carried, base * 0.15, base * 8) : formulaAnchor
+  })
   const requestedCoinStart = Number(coinStartPrice)
   const cycleCoinStartPrice = Number.isFinite(requestedCoinStart)
     ? clamp(requestedCoinStart, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MIN_MULTIPLIER, COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MAX_MULTIPLIER)
@@ -299,8 +313,14 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
   // 시지프 인텔리전스 — 상시 상장 특수 자산(작업지시서/STORY.md). AI 서사 스키마의
   // STOCK_SLOT_IDS(stock-1~5)와 겹치지 않는 id라 AI 컴파일러가 절대 안 건드린다
   // (server/ai/aiMarketCycle.js 참고). 5개 기업과 같은 makePath() 확률 엔진을 그대로
-  // 쓰되, 회사들보다 가파르게 성장하는 별도 프리미엄 기준가 트랙을 갖는다.
-  let previousSisyphusClose = SISYPHUS_BASE_PRICE * (1 + (cycle - 1) * SISYPHUS_CYCLE_GROWTH)
+  // 쓰되, 회사들보다 가파르게 성장하는 별도 프리미엄 기준가 트랙을 갖는다. 기업과
+  // 마찬가지로 직전 종가가 넘어오면 그걸 이어받는다(단, 7주기 대폭락 스크립트는 목표가가
+  // 절대값(SISYPHUS_EPILOGUE_TARGET_PRICE)이라 진입가와 무관하게 항상 정상 동작한다).
+  const requestedSisyphusStart = Number(sisyphusStartPrice)
+  const sisyphusFormulaAnchor = SISYPHUS_BASE_PRICE * (1 + (cycle - 1) * SISYPHUS_CYCLE_GROWTH)
+  let previousSisyphusClose = Number.isFinite(requestedSisyphusStart)
+    ? clamp(requestedSisyphusStart, SISYPHUS_BASE_PRICE * 0.15, SISYPHUS_BASE_PRICE * 8)
+    : sisyphusFormulaAnchor
   // 시지프 정보는 매일 별도 4번째 카드로 붙이지 않는다. 한 주의 2~4일차 사이에
   // 처음 등장하고, 이후 2~4일 간격으로 다시 나타나며 그날의 일반 정보 한 장을
   // 교체한다. 따라서 정보 거래소는 항상 3열 한 줄을 유지하면서 희소 정보의 인상도
@@ -310,8 +330,8 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
     sisyphusRumorDays.add(intelDay)
   }
   const days = Array.from({ length: DAYS_PER_CYCLE }, (_, dayIndex) => {
-    const companyStocks = listedCompanies.map(([name, sector, base, companyId], stockIndex) => {
-      const referencePrice = dayIndex === 0 ? base * (1 + (cycle - 1) * 0.025) : previousCloses[stockIndex]
+    const companyStocks = listedCompanies.map(([name, sector, , companyId], stockIndex) => {
+      const referencePrice = previousCloses[stockIndex]
       const startPrice = round(referencePrice * (1 + (random() - 0.5) * 0.025))
       const stock = {
         id: `stock-${stockIndex + 1}`,
@@ -336,10 +356,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
       path: makeCoinPath(coinStart, random, cycle),
     }
     previousCoinClose = coin.path.at(-1).price
-    const sisyphusReference = dayIndex === 0
-      ? SISYPHUS_BASE_PRICE * (1 + (cycle - 1) * SISYPHUS_CYCLE_GROWTH)
-      : previousSisyphusClose
-    const sisyphusStart = round(sisyphusReference * (1 + (random() - 0.5) * 0.02))
+    const sisyphusStart = round(previousSisyphusClose * (1 + (random() - 0.5) * 0.02))
     const sisyphus = {
       id: SISYPHUS_STOCK_ID,
       assetType: 'company',

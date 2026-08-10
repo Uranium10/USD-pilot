@@ -53,7 +53,8 @@ assert(chooseWeeklyModifier(2, 2026)?.id === modifier2.id, '같은 seed의 주�
 assert(chooseWeeklyModifier(1, 2026) === null && chooseWeeklyModifier(7, 2026) === null, '1·7주차에는 일반 모디파이어가 없어야 합니다.')
 assert(getWeeklyModifier(modifier2.id)?.detail, '주간 모디파이어의 안내 문구가 없습니다.')
 assert(modifiedRumorCost({ cost: 100 }, 'information-crackdown') === 75, '정보 단속 가격 보정이 잘못됐습니다.')
-assert(Object.keys(ENDING_BACKGROUNDS).length === 2, '엔딩 더미 배경은 두 장이어야 합니다.')
+assert(Object.keys(ENDING_BACKGROUNDS).length === 8, '네 엔딩의 실내·외 배경 8장이 모두 등록되어야 합니다.')
+assert(Object.values(ENDING_BACKGROUNDS).every((path) => path.endsWith('.png')), '엔딩 배경은 완성된 PNG 에셋을 사용해야 합니다.')
 for (const endingType of ['bad', 'normal', 'hidden', 'true']) {
   const ending = ENDING_TEMPLATES[endingType]
   assert(ending?.lines.length >= 3, `${endingType} 엔딩 대사 템플릿이 부족합니다.`)
@@ -369,6 +370,7 @@ assert(useGameStore.getState().cash === 9000 && useGameStore.getState().donation
 useGameStore.getState().restart()
 const infoMarket = generateMarketCycle({ cycle: 1, seed: 313 })
 useGameStore.getState().loadMarket(infoMarket)
+useGameStore.setState({ playedSceneIds: ['prologue-day1'] })
 useGameStore.getState().completeDayIntro()
 const stock = infoMarket.days[0].stocks[0]
 const eventPoint = stock.path[1]
@@ -392,6 +394,10 @@ assert(useGameStore.getState().purchasedRumors.some((rumor) => rumor.id === fals
 useGameStore.getState().endNight()
 useGameStore.setState({ phase: 'dayReport' })
 useGameStore.getState().enterNight()
+assert(useGameStore.getState().activeScene?.id === 'week1-day2-easy-flag', '1주차 2일차 밤의 방심 플래그 장면이 시작되지 않았습니다.')
+useGameStore.getState().closeScene()
+assert(useGameStore.getState().playedSceneIds.includes('week1-day2-easy-flag'), '2일차 밤 방심 플래그가 세션 상태에 기록되지 않았습니다.')
+assert(useGameStore.getState().storyFlags.earlyMarketConfidence === true, '초반 시장에 대한 타래의 자신감 플래그가 설정되지 않았습니다.')
 assert(!useGameStore.getState().showNightTutorial, '첫날 밤 튜토리얼이 같은 세션에서 다시 열렸습니다.')
 assert(!useGameStore.getState().purchasedRumors.some((rumor) => rumor.id === falseRumor.id), '가짜 정보가 이틀차 밤에 사라지지 않았습니다.')
 

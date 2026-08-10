@@ -37,6 +37,10 @@ export function sessionPayload(state) {
       companyIds: state.market.companyIds,
       companyIdsPinned: state.market.companyIdsPinned,
       coinStartPrice: state.market.coinStartPrice,
+      // world.market이 유실됐을 때(구버전 저장분 등)의 fetchMarketCycle() 폴백 경로용 —
+      // 코인과 동일한 목적으로 사이클 경계 가격 리셋을 막는다(App.jsx 참고).
+      companyStartPrices: [1, 2, 3, 4, 5].map((n) => state.currentPrices?.[`stock-${n}`]),
+      sisyphusStartPrice: state.currentPrices?.['stock-sisyphus'],
       purchasedRumorIds,
       purchasedRumors: state.purchasedRumors,
       notepadContent: state.notepadContent,
@@ -55,6 +59,7 @@ export function sessionPayload(state) {
       totalMinedCoin: state.totalMinedCoin,
       showMonitorHint: state.showMonitorHint,
       playedSceneIds: state.playedSceneIds,
+      storyFlags: state.storyFlags,
       nightTutorialSeen: state.nightTutorialSeen,
       epilogue: state.epilogue,
       endingType: state.endingType,

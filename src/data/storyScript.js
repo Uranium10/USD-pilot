@@ -69,4 +69,11 @@ export const SCENES = {
       { speaker: 'tarae', portrait: 'neutral', text: '무섭지만 해보자. **빚을 갚고, 살아남고, 부모님을 찾는 거야.**' },
     ],
   },
+  'week1-day2-easy-flag': {
+    trigger: { type: 'phaseEnter', phase: 'night', cycle: 1, day: 2 },
+    background: null,
+    lines: [
+      { speaker: 'tarae', portrait: 'neutral', text: '그래도 생각보단 쉬운 것 같기도 하고...' },
+    ],
+  },
 }

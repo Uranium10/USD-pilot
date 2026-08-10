@@ -9,7 +9,11 @@ export function findMatchingScene(state, playedSceneIds) {
     if (played.has(id)) return false
     const trigger = scene.trigger
     if (trigger.type === 'dayStart') return trigger.cycle === state.cycle && trigger.day === state.day
-    if (trigger.type === 'phaseEnter') return trigger.phase === state.phase
+    if (trigger.type === 'phaseEnter') {
+      return trigger.phase === state.phase
+        && (trigger.cycle == null || trigger.cycle === state.cycle)
+        && (trigger.day == null || trigger.day === state.day)
+    }
     return false
   })
   return entry ? { id: entry[0], scene: entry[1] } : null

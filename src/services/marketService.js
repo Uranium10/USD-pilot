@@ -16,40 +16,48 @@ export function resetMarketCycleCache() {
   prefetchedScenarioCycles.clear()
 }
 
-function buildUrl(cycle, companyIds, coinStartPrice, seed, deviceId) {
+// 2026-08-10: 코인은 원래부터 coinStartPrice로 직전 사이클 종가를 이어받는데, 5개
+// 기업/시지프는 이 연속성이 없어 사이클 경계마다 가격이 조용히 리셋됐다(실측: 최대
+// ±20%대 괴리, src/data/generateMarket.js 참고). companyStartPrices(stock-1~5 종가
+// 배열)/sisyphusStartPrice를 코인과 동일한 패턴으로 추가해 같은 문제를 없앤다.
+function buildUrl(cycle, companyIds, coinStartPrice, seed, deviceId, companyStartPrices, sisyphusStartPrice) {
   const params = new URLSearchParams({ cycle: String(cycle) })
   if (companyIds?.length) params.set('companies', companyIds.join(','))
   if (Number.isFinite(coinStartPrice)) params.set('coinPrice', String(coinStartPrice))
+  if (Array.isArray(companyStartPrices) && companyStartPrices.some((price) => Number.isFinite(price))) {
+    params.set('stockPrices', companyStartPrices.map((price) => (Number.isFinite(price) ? price : '')).join(','))
+  }
+  if (Number.isFinite(sisyphusStartPrice)) params.set('sisyphusPrice', String(sisyphusStartPrice))
   if (Number.isFinite(seed)) params.set('seed', String(seed))
   if (deviceId) params.set('deviceId', deviceId)
   return `/api/market-cycle?${params}`
 }
 
-async function requestMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId) {
+async function requestMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId, companyStartPrices, sisyphusStartPrice) {
   try {
-    const response = await fetch(buildUrl(cycle, companyIds, coinStartPrice, seed, deviceId))
+    const response = await fetch(buildUrl(cycle, companyIds, coinStartPrice, seed, deviceId, companyStartPrices, sisyphusStartPrice))
     if (!response.ok) throw new Error(`market api: ${response.status}`)
     const market = await response.json()
     return injectMarketNoise(market)
   } catch (error) {
     console.warn('시장 API를 사용할 수 없어 로컬 대체 데이터를 사용합니다.', error)
-    return injectMarketNoise(generateMarketCycle({ cycle, companyIds, coinStartPrice, seed }))
+    return injectMarketNoise(generateMarketCycle({ cycle, companyIds, coinStartPrice, seed, companyStartPrices, sisyphusStartPrice }))
   }
 }
 
 // 정산 화면에 들어가는 시점처럼 "곧 다음 사이클이 필요해질 것"을 미리 아는 곳에서
 // 호출한다. 반환값은 버리고 fire-and-forget으로 써도 되고, await해서 바로 써도 된다 —
 // 어느 쪽이든 fetchMarketCycle()이 같은 cycle을 요청하면 이 프로미스를 재사용한다.
-export function prefetchMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId) {
+export function prefetchMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId, companyStartPrices, sisyphusStartPrice) {
   if (inFlightByCycle.has(cycle)) return inFlightByCycle.get(cycle)
-  const promise = requestMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId)
+  const promise = requestMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId, companyStartPrices, sisyphusStartPrice)
   inFlightByCycle.set(cycle, promise)
   return promise
 }
 
 // 다음 주 AI 시나리오만 서버에 미리 만들어 두게 한다(가격 경로는 그 주 마지막 코인
 // 종가가 필요해 미리 못 만든다 — server/ai/aiMarketCycle.js의 prefetchAiCycleScenario 참고).
-// 주가 시작될 때 발사하면 7일 × 8분의 여유가 생겨서, 플레이어가 실제로 다음 주차에
+// 주가 시작될 때 발사하면 7일 × 4분의 여유가 생겨서, 플레이어가 실제로 다음 주차에
 // 도달할 때는 GPT 호출 없이 저장된 시나리오를 합치기만 하면 된다.
 // 응답을 기다리지 않는 fire-and-forget이며, 실패해도 기존 경로가 그대로 동작한다.
 export function prefetchCycleScenario(cycle, companyIds, deviceId) {
@@ -65,11 +73,11 @@ export function prefetchCycleScenario(cycle, companyIds, deviceId) {
   })
 }
 
-export async function fetchMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId) {
+export async function fetchMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId, companyStartPrices, sisyphusStartPrice) {
   if (inFlightByCycle.has(cycle)) {
     const cached = inFlightByCycle.get(cycle)
     inFlightByCycle.delete(cycle)
     return cached
   }
-  return requestMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId)
+  return requestMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId, companyStartPrices, sisyphusStartPrice)
 }
