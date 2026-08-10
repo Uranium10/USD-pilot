@@ -803,3 +803,25 @@
 
 - `server/ai/runPlanModel.js`에 자동 검증+재시도를 추가했다: `generateRunPlanOnce()`로 실제 API 호출을 분리하고, `isValidRunPlan()`(arcs>=4개, worldTone/theme 최소 길이, 각 아크의 involvedStockIds 비어있지 않음)을 통과할 때까지 최대 3회 재시도하는 `generateRunPlan()` 래퍼를 씌웠다. 실패 시도는 console.error로 남기되 예외를 던지지 않고 계속 재시도하며, 3회 모두 실패해야 최종 예외를 던진다. 배치 스크립트(`generate-run-plan-pool.mjs`)와 라이브 폴백 경로(`aiMarketCycle.js`) 둘 다 이 함수를 그대로 쓰므로 시그니처 변경 없이 두 경로 모두 자동 보호된다.
 - 검증: `npm run lint` 통과. 6개 생성 테스트 중 실제로 1회 손상이 재현됐고(theme에 또 다른 형태의 깨진 문구 "dir\ndir case-file 0417" 등) 재시도 로직이 사람 개입 없이 자동으로 잡아내 정상 결과로 대체하는 것을 실측 확인했다. 6/6 전부 검증 통과 상태로 `run_plan_pool`에 저장(56개 → 62개).
+
+## 2026-08-10 13:40 KST (Claude, 24차)
+
+- Batches API로 RunPlan 20개를 비동기 예약했다(정가 대비 50% 할인, 최대 24시간 내 완료). 제출/회수용 스크립트를 새로 만들었다: `scripts/submit-run-plan-batch.mjs`(요청마다 buildRunPlanUserPrompt()를 개별 호출해 어조 다양성 유지), `scripts/collect-run-plan-batch.mjs <batch_id>`(완료 후 runPlanModel.js와 동일한 isValidRunPlan() 기준으로 걸러 통과분만 run_plan_pool에 저장, 폴링 루프 없이 아직 처리 중이면 상태만 보고 종료).
+- **batch_id: msgbatch_012gUUppbtPtC1hWdttnNNPR** — 나중에 `node --env-file=.env.local scripts/collect-run-plan-batch.mjs msgbatch_012gUUppbtPtC1hWdttnNNPR`로 회수. 분석/저장은 사용자 요청대로 지금 하지 않고 보류.
+
+## 2026-08-10 13:57 KST (Claude, 25차)
+
+- run_plan_pool 최신 RunPlan(id=105, "궤도 안전 점검표 137항...")으로 실제 라이브 함수(generateCycleScenario, gpt-5.6-terra)를 cycle 1→7 순차 호출해 worldState를 이어가며 7주차(에필로그)까지 실측했다.
+- 총 비용 $0.2322, 순차 총 시간 144.3s(평균 사이클당 $0.0332, 20.6s) — cf60746(슬림화) 이전 실측치(사이클당 58~73초대)보다 대폭 빨라졌다. cycle 2부터 prompt caching이 매번 1,392토큰씩 안정적으로 적용됨을 확인.
+- `openingNarration`/`weeklyTheme`/`marketMood`/`companyStates`가 슬림 스키마에서 완전히 빠진 것을 확인했고, `compileScenario()`와 `src/` 전체를 grep해 이 필드들을 실제로 소비하는 코드가 전혀 없음을 확인했다 — 즉 이번 슬림화는 기능 손실 없는 순수 토큰/비용 절감이다.
+- 품질 점수(scoreScenario, 100점 만점): cycle1~3은 90~80(event-volume 미달, 초반이라 자연스러움), cycle4~6은 100, **cycle7은 90(rumor-volume 미달 — 7일치 전체에서 rumorSeeds가 0개)**. cycle7 스토리 내용 자체는 좋음 — 유일한 landingCycle:7 아크("청문회 최종 배분")가 day6 이벤트로 정확히 회수됐고 nextWorldState.tensions/unresolvedEvents가 둘 다 빈 배열로 깔끔하게 마무리됨, selfCheck 7회 전부 통과.
+- 발견한 이슈: 에필로그 프롬프트("새 떡밥 시작 안 함")를 모델이 "소문 자체가 필요 없음"으로 확대 해석해 7주차엔 AI 소문이 0개 생성됨 — 그런데 이 게임의 소문 해소 방식(resolutionBasis:'eventMove')은 사이클을 넘기지 않고 같은 주 안에서 해소되므로, 에필로그라도 같은 주 사건에 대한 소문은 구조적으로 문제없이 낼 수 있다. 즉 마지막 주엔 정보상점이 AI 소문 기준으로는 완전히 비어버리는 게임플레이 공백 — 수정 여부는 사용자 판단 대기 중.
+
+## 2026-08-10 14:03 KST (Claude, 26차)
+
+- 7주차 rumor-0 이슈를 고쳤다. `server/ai/prompts/cycleScenario.js`의 "7주기 전용 원칙"에 "소문은 다음 사이클로 넘어가는 장기 떡밥이 아니라 같은 주 사건에 대한 단기 정보이므로, '새 떡밥 금지' 원칙이 소문 생성까지 막는 게 아님"을 명시하는 조항을 추가했고, 사용자 프롬프트의 7주차 라벨에도 "rumorSeeds는 이번 주도 평소처럼 매일 채울 것"을 덧붙였다.
+- 같은 RunPlan(id=105)으로 cycle 7을 격리 테스트(worldState=null) 3회 반복 — 이전엔 0개였던 rumorSeeds가 매번 7~14개(일별 1~2개)로 정상 생성됨을 확인했다.
+
+## 2026-08-10 14:06 KST (Claude, 27차)
+
+- 7주차 소문 수정으로 인한 비용 증가분을 실측했다: 수정 전 $0.0263(출력 1,596토큰, 소문 0개) → 수정 후 3회 평균 $0.0363(출력 2,385토큰, 소문 12.7개) — 사이클당 약 +$0.01(+35~40%), 출력 토큰 증가가 원인(입력/캐시 비용은 거의 불변). 7주차는 게임당 1회만 호출되므로 전체 AI 비용(판당 $0.23~0.36)에 미치는 영향은 미미하다고 판단.

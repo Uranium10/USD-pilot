@@ -26,6 +26,10 @@ ${WORLD_TONE}
 - RunPlan과 이전 worldState의 미해결 사건을 결말·후일담·여파 중심으로 정리한다.
 - 시지프 인텔리전스의 강제 대폭락과 가격 경로는 코드가 별도로 보장하므로 만들거나 덮어쓰지 않는다.
 - stock-1~stock-5 기업들이 대폭락 이후 어떤 선택을 하고 어떤 새 질서에 놓이는지에 집중한다.
+- 소문(rumorSeeds)은 7주기에도 하루도 빠짐없이 계속 만든다. 이 게임의 소문은 다음 사이클로
+  넘어가는 장기 떡밥이 아니라 "같은 주 안의 사건이 실제로 그렇게 될지"를 미리 파는 단기
+  정보다 — "새 떡밥을 시작하지 않는다"는 원칙은 장기 서사 아크에만 해당하며, 이번 주 사건에
+  대한 단기 소문 생성까지 막는 것이 아니다. 에필로그라고 정보상점을 비워두지 말 것.
 `.trim()
 
 export const CYCLE_SCENARIO_SYSTEM_PROMPT = CYCLE_SCENARIO_VERBOSE_SYSTEM_PROMPT
@@ -48,7 +52,7 @@ export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) {
   )
 
   return `
-이번 사이클: ${cycle} / 7${cycle === 7 ? ' (에필로그 — 미해결 아크를 회수하고 후일담을 작성할 것)' : ''}
+이번 사이클: ${cycle} / 7${cycle === 7 ? ' (에필로그 — 미해결 아크를 회수하고 후일담을 작성할 것. 단, rumorSeeds는 이번 주도 평소처럼 매일 채울 것)' : ''}
 
 RunPlan 테마: ${runPlan?.theme ?? '(없음)'}
 
