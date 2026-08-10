@@ -10,6 +10,7 @@ import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
 import { compileScenario, isAiScenarioCycle } from '../server/ai/aiMarketCycle.js'
 import { cycleScenarioOutputConfig, findScenarioCopyIssues } from '../server/ai/cycleScenarioModel.js'
 import { newsBody } from '../src/logic/newsText.js'
+import { computeGameScale } from '../src/services/viewportScale.js'
 import { buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
 import { buildRunPlanUserPrompt } from '../server/ai/prompts/runPlan.js'
 import { CYCLE_SCENARIO_SCHEMA, CYCLE_SCENARIO_VERBOSE_SCHEMA, RUN_PLAN_SCHEMA } from '../server/ai/schemas.js'
@@ -176,6 +177,20 @@ assert(
   newsBody('오비탈 레일이 신규 계약을 체결했다.', '오비탈 레일') === '오비탈 레일이 신규 계약을 체결했다.',
   '구분자 없이 이어지는 종목명을 잘못 잘라냈습니다.',
 )
+// 화면 배율: 고정 1024×768을 화면에 맞춰 균일 축소한다(가로/세로 중 더 빡빡한 쪽 기준).
+assert(computeGameScale(1024, 768) === 1, '디자인 해상도에서 배율이 1이 아닙니다.')
+assert(computeGameScale(2048, 1536) === 2, '큰 화면에서 배율이 확대되지 않습니다.')
+// 4:3보다 넓은 화면은 높이가, 좁은 화면은 폭이 배율을 결정해야 레터박스가 유지된다.
+assert(computeGameScale(1920, 768) === 1, '가로로 넓은 화면에서 높이 기준 배율이 아닙니다.')
+assert(computeGameScale(1024, 384) === 0.5, '세로로 낮은 화면에서 높이 기준 배율이 아닙니다.')
+assert(computeGameScale(512, 768) === 0.5, '세로로 긴 화면에서 폭 기준 배율이 아닙니다.')
+// 모바일 가로(844×390)가 세로(390×844)보다 커야 가로 전환 안내가 의미를 갖는다.
+assert(
+  computeGameScale(844, 390) > computeGameScale(390, 844),
+  '모바일 가로 배율이 세로보다 크지 않습니다.',
+)
+assert(computeGameScale(0, 0) === 1 && computeGameScale(-1, 100) === 1, '비정상 크기에서 배율이 1로 보호되지 않습니다.')
+
 const compiledEpilogue = compileScenario(generateMarketCycle({ cycle: 7, seed: 711, companyIds: cycleSix.companyIds }), {
   cycle: 7,
   title: 'AI 에필로그 검증',

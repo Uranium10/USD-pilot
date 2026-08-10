@@ -9,14 +9,22 @@
   --yellow: #ffd15c;
 }
 
+/* 고정 디자인 해상도로 그리고 화면 크기에 맞춰 통째로 축소·확대한다.
+   내부 레이아웃이 CSS 픽셀로 하드코딩돼 있어, 뷰포트에 따라 프레임만 줄이면 내용물이
+   프레임을 밀고 나온다. 배율(--game-scale)은 src/services/viewportScale.js가 계산한다. */
 .game-frame {
-  width: min(100vw, calc(100vh * 4 / 3));
-  height: min(100vh, calc(100vw * 3 / 4));
+  width: 1024px;
+  height: 768px;
   aspect-ratio: 4/3;
   position: relative;
   overflow: hidden;
   background: #070a10;
   box-shadow: 0 0 80px #000;
+  transform: scale(var(--game-scale, 1));
+  transform-origin: center center;
+  /* 축소된 뒤에도 레이아웃 상자는 1024×768 그대로라, 좁은 화면에서는 상자가 화면 밖으로
+     대칭으로 넘친다. #root/body의 overflow:hidden이 스크롤바를 막고 가운데 정렬을 유지한다. */
+  flex: none;
 }
 
 .game-frame>div {
@@ -33,7 +41,19 @@
   background: radial-gradient(circle at 50% 45%, #172b3e 0, #080b12 45%, #030508 100%);
 }
 
-.title-screen { position: relative }
+.title-screen {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none
+}
+
+.title-screen>.eyebrow,
+.title-screen>h1,
+.title-screen>.subtitle,
+.title-screen>.save-summary {
+  cursor: default;
+  pointer-events: none
+}
 
 .title-screen>.title-market-line {
   position: absolute;
@@ -658,13 +678,10 @@
   box-shadow: 0 0 22px #55e7ff77
 }
 
-@media (max-width: 760px) {
-  .tutorial-account-strip { grid-template-columns: repeat(5, minmax(120px, 1fr)); overflow: hidden }
-  .tutorial-market-grid { grid-template-columns: 28% 72% }
-  .tutorial-news { display: none }
-  .tutorial-coach { bottom: 14px; width: calc(100% - 24px) }
-  .tutorial-night-desktop { right: 2%; width: 58% }
-}
+/* 2026-08-10: 뷰포트 폭 기준 미디어쿼리를 제거했다. 게임 프레임은 이제 항상 1024×768로
+   그려지고 --game-scale로만 축소되므로(App.css .game-frame), 내부 배치는 화면 크기와
+   무관해야 한다. 뷰포트 기준으로 배치를 바꾸면 프레임 내부 폭(1024px)과 어긋나 작은
+   화면에서만 레이아웃이 달라지는 불일치가 생긴다. */
 
 .game-frame>.save-indicator {
   width: auto;
@@ -2433,9 +2450,6 @@ button:hover {
 .night-tutorial-coach>footer i.active { background: var(--cyan); box-shadow: 0 0 8px #55e7ff }
 .night-tutorial-coach button { min-width: 72px; padding: 7px 10px }
 
-@media (max-width: 760px) {
-  .night-tutorial-coach, .night-tutorial-coach.coach-sleep { left: 3%; top: auto; bottom: 12%; width: 58% }
-}
 
 .empty-state {
   color: var(--muted);
@@ -2818,71 +2832,9 @@ button:hover {
   min-height: 1.65em
 }
 
-@media(max-width:950px) {
-  .trading-grid {
-    grid-template-columns: 1fr
-  }
 
-  .stock-list {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr)
-  }
 
-  .stock-list button {
-    min-width: 0;
-    display: block
-  }
 
-  .news-panel {
-    max-height: 260px
-  }
-
-  .rumor-grid {
-    grid-template-columns: 1fr
-  }
-
-  .room-status {
-    left: 10px;
-    right: 10px;
-    justify-content: center
-  }
-}
-
-@media(max-width:600px) {
-  .terminal-bar {
-    gap: 8px;
-    font-size: 10px
-  }
-
-  .account-strip strong {
-    font-size: 14px
-  }
-
-  .trading-grid {
-    display: block
-  }
-
-  .stock-list {
-    display: flex;
-    overflow: auto
-  }
-
-  .stock-list button {
-    min-width: 155px
-  }
-
-  .chart-panel {
-    min-height: 500px
-  }
-
-  .order-bar {
-    flex-wrap: wrap
-  }
-
-  .news-panel {
-    margin-top: 10px
-  }
-}
 
 .account-strip {
   display: grid;

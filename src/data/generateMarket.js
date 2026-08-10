@@ -413,3 +413,57 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
     days,
   }
 }
+
+function addBrownianBridge(coarsePoints, seed, volatilityScale) {
+  const random = seeded(seed)
+  const densePoints = []
+  const PROGRESS_STEP = 0.01
+
+  for (let i = 0; i < coarsePoints.length - 1; i++) {
+    const p0 = coarsePoints[i]
+    const p1 = coarsePoints[i + 1]
+    
+    const steps = Math.max(2, Math.floor((p1.progress - p0.progress) / PROGRESS_STEP))
+    
+    const walk = [0]
+    for (let j = 1; j < steps; j++) {
+      walk.push(walk[j-1] + gaussian(random))
+    }
+    const walkEnd = walk[steps - 1]
+    
+    for (let j = 0; j < steps; j++) {
+      const t = j / steps
+      const progress = p0.progress + t * (p1.progress - p0.progress)
+      const linearPrice = p0.price + t * (p1.price - p0.price)
+      
+      const bridge = walk[j] - t * walkEnd 
+      const price = Math.max(0.01, linearPrice + bridge * volatilityScale)
+      
+      if (i === 0 && j === 0) {
+        densePoints.push({ progress: round(progress), price: round(price) })
+      } else if (j > 0) {
+        densePoints.push({ progress: round(progress), price: round(price) })
+      }
+    }
+  }
+  densePoints.push(coarsePoints[coarsePoints.length - 1])
+  return densePoints
+}
+
+export function injectMarketNoise(market) {
+  const seed = market.seed || Date.now()
+  const cycle = market.cycle || 1
+  
+  market.days.forEach((dayData, dayIndex) => {
+    dayData.stocks.forEach((stock, stockIndex) => {
+      const subSeed = Number(seed) + cycle * 1000 + dayIndex * 100 + stockIndex
+      let volatilityScale = stock.startPrice * 0.003
+      if (stock.assetType === 'coin') {
+        volatilityScale = stock.startPrice * 0.006
+      }
+      stock.path = addBrownianBridge(stock.path, subSeed, volatilityScale)
+    })
+  })
+  
+  return market
+}

@@ -1,4 +1,4 @@
-import { generateMarketCycle } from '../data/generateMarket.js'
+import { generateMarketCycle, injectMarketNoise } from '../data/generateMarket.js'
 
 // 사이클 번호를 키로 하는 진행 중/완료된 fetch 프로미스 캐시.
 // prefetchMarketCycle()이 미리 채워두면, 나중에 fetchMarketCycle()이 같은 cycle을
@@ -29,10 +29,11 @@ async function requestMarketCycle(cycle, companyIds, coinStartPrice, seed, devic
   try {
     const response = await fetch(buildUrl(cycle, companyIds, coinStartPrice, seed, deviceId))
     if (!response.ok) throw new Error(`market api: ${response.status}`)
-    return await response.json()
+    const market = await response.json()
+    return injectMarketNoise(market)
   } catch (error) {
     console.warn('시장 API를 사용할 수 없어 로컬 대체 데이터를 사용합니다.', error)
-    return generateMarketCycle({ cycle, companyIds, coinStartPrice, seed })
+    return injectMarketNoise(generateMarketCycle({ cycle, companyIds, coinStartPrice, seed }))
   }
 }
 
