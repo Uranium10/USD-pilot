@@ -6,6 +6,7 @@ import { computeSettlement } from '../logic/debtSystem.js'
 import { canUpgradeMine, mineRate, mineUpgradeCost } from '../logic/miningSystem.js'
 import { createDonationSchedule, getNightActivity, getNightActivityOptions, nightActivityCashCost } from '../logic/nightActivities.js'
 import { findMatchingScene } from '../logic/storyTriggers.js'
+import { chooseWeeklyModifier, getWeeklyModifier, modifiedMiningCost, modifiedNightEnergyCost, modifiedNightReward, modifiedRumorCost, modifiedShopPrice, modifierEffect, weeklyModifierScene } from '../logic/weeklyModifiers.js'
 
 const initialGame = {
   screen: 'title',
@@ -51,6 +52,8 @@ const initialGame = {
   nightTutorialSeen: false,
   nightTutorialPrompt: false,
   showNightTutorial: false,
+  weeklyModifierId: null,
+  weeklyModifierHistory: {},
   // 4분기 엔딩 시스템
   epilogue: false, // 6주차 청산 성공 후 부채 없이 진행하는 7주차인지
   endingType: null, // 'normal' | 'hidden' | 'true' — phase가 'ended'일 때만 의미 있음
@@ -104,6 +107,8 @@ export const useGameStore = create((set, get) => ({
     const firstDay = market.days[0]
     const currentPhase = get().phase
     const donationSchedule = get().donationSchedule.length ? get().donationSchedule : createDonationSchedule(market.seed)
+    const weeklyModifierHistory = get().weeklyModifierHistory
+    const weeklyModifier = chooseWeeklyModifier(market.cycle, market.seed, weeklyModifierHistory[market.cycle - 1])
     set({
       market,
       phase: ['introChoice', 'prologue', 'tutorial'].includes(currentPhase) ? currentPhase : 'dayIntro',
@@ -114,6 +119,8 @@ export const useGameStore = create((set, get) => ({
       selectedStockId: firstDay.stocks[0].id,
       currentPrices: Object.fromEntries(firstDay.stocks.map((stock) => [stock.id, stock.startPrice])),
       donationSchedule,
+      weeklyModifierId: weeklyModifier?.id || null,
+      weeklyModifierHistory: weeklyModifier ? { ...weeklyModifierHistory, [market.cycle]: weeklyModifier.id } : weeklyModifierHistory,
     })
   },
   completeDayIntro: () => {
@@ -138,6 +145,8 @@ export const useGameStore = create((set, get) => ({
       ? 'room'
       : session.screen === 'room' ? 'room' : 'monitor'
     const nightTutorialSeen = Boolean(world.nightTutorialSeen)
+    const restoredModifierId = world.weeklyModifierId || chooseWeeklyModifier(cycle, market.seed, world.weeklyModifierHistory?.[cycle - 1])?.id || null
+    const restoredModifierHistory = world.weeklyModifierHistory || {}
     set({
       ...initialGame,
       screen,
@@ -181,31 +190,40 @@ export const useGameStore = create((set, get) => ({
       nightTutorialSeen,
       nightTutorialPrompt: phase === 'night' && cycle === 1 && day === 1 && !nightTutorialSeen,
       showNightTutorial: false,
+      weeklyModifierId: restoredModifierId,
+      weeklyModifierHistory: restoredModifierId ? { ...restoredModifierHistory, [cycle]: restoredModifierId } : restoredModifierHistory,
     })
+    if (cycle >= 2 && day === 1 && phase === 'premarket') queueMicrotask(() => get().checkStoryTriggers())
   },
   purchaseRumor: (rumor) => {
-    const { cash, purchasedRumors, phase, cycle, day } = get()
-    if (phase !== 'premarket' || purchasedRumors.some((item) => item.id === rumor.id) || cash < rumor.cost) return false
+    const { cash, purchasedRumors, phase, cycle, day, weeklyModifierId } = get()
+    const cost = modifiedRumorCost(rumor, weeklyModifierId)
+    const dailyCount = purchasedRumors.filter((item) => item.purchasedCycle === cycle && item.purchasedDay === day).length
+    const maxRumors = modifierEffect(weeklyModifierId, 'maxRumorsPerDay', Infinity)
+    if (phase !== 'premarket' || dailyCount >= maxRumors || purchasedRumors.some((item) => item.id === rumor.id) || cash < cost) return false
     set({
-      cash: cash - rumor.cost,
+      cash: cash - cost,
       purchasedRumors: [...purchasedRumors, { ...rumor, purchasedCycle: cycle, purchasedDay: day, status: 'active' }],
-      feedback: { amount: -rumor.cost, id: Date.now() },
+      feedback: { amount: -cost, id: Date.now() },
     })
     return true
   },
   purchaseRumors: (rumors) => {
-    const { cash, purchasedRumors, phase, cycle, day } = get()
+    const { cash, purchasedRumors, phase, cycle, day, weeklyModifierId } = get()
     if (phase !== 'premarket') return false
     const purchasedIds = new Set(purchasedRumors.map((item) => item.id))
     const uniqueRumors = rumors.filter((rumor, index, items) => !purchasedIds.has(rumor.id) && items.findIndex((item) => item.id === rumor.id) === index)
-    const totalCost = uniqueRumors.reduce((total, rumor) => total + rumor.cost, 0)
-    if (uniqueRumors.length === 0 || totalCost > cash) return false
+    const dailyCount = purchasedRumors.filter((item) => item.purchasedCycle === cycle && item.purchasedDay === day).length
+    const maxRumors = modifierEffect(weeklyModifierId, 'maxRumorsPerDay', Infinity)
+    const acceptedRumors = uniqueRumors.slice(0, Math.max(0, maxRumors - dailyCount))
+    const totalCost = acceptedRumors.reduce((total, rumor) => total + modifiedRumorCost(rumor, weeklyModifierId), 0)
+    if (acceptedRumors.length === 0 || totalCost > cash) return false
     set({
       cash: cash - totalCost,
-      purchasedRumors: [...purchasedRumors, ...uniqueRumors.map((rumor) => ({ ...rumor, purchasedCycle: cycle, purchasedDay: day, status: 'active' }))],
+      purchasedRumors: [...purchasedRumors, ...acceptedRumors.map((rumor) => ({ ...rumor, purchasedCycle: cycle, purchasedDay: day, status: 'active' }))],
       feedback: { amount: -totalCost, id: Date.now() },
     })
-    return uniqueRumors
+    return acceptedRumors
   },
   startDay: () => {
     const state = get()
@@ -228,7 +246,7 @@ export const useGameStore = create((set, get) => ({
     if (state.phase !== 'day' || state.paused) return
     const elapsed = Math.min(DAY_DURATION_SECONDS, state.elapsed + deltaSeconds)
     const activeSeconds = elapsed - state.elapsed
-    const minedCoin = mineRate(state.miningTier) * activeSeconds
+    const minedCoin = mineRate(state.miningTier) * modifierEffect(state.weeklyModifierId, 'miningRateMultiplier') * activeSeconds
     const progress = elapsed / DAY_DURATION_SECONDS
     const data = dayData(state)
     const currentPrices = Object.fromEntries(data.stocks.map((stock) => [stock.id, interpolate(stock.path, progress)]))
@@ -355,12 +373,16 @@ export const useGameStore = create((set, get) => ({
       })
       return { result: 'epilogue', cycle: EPILOGUE_CYCLE }
     }
-    set({ cash, debt: result.debt, cycle: result.nextCycle, day: 1, phase: 'dayIntro', screen: 'room', marketReady: false, completedNightActivityIds: [] })
+    set({ cash, debt: result.debt, cycle: result.nextCycle, day: 1, phase: 'dayIntro', screen: 'room', marketReady: false, completedNightActivityIds: [], dayStartNetWorth: cash })
     get().checkStoryTriggers()
     return { result: 'next', cycle: result.nextCycle }
   },
   loadNextCycle: (market) => {
     const data = market.days[0]
+    const state = get()
+    const currentPrices = Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice]))
+    const weeklyModifier = chooseWeeklyModifier(market.cycle, market.seed, state.weeklyModifierHistory[market.cycle - 1])
+    const dayStartNetWorth = calculateNetWorth({ ...state, currentPrices })
     set({
       cycle: market.cycle,
       day: 1,
@@ -372,22 +394,27 @@ export const useGameStore = create((set, get) => ({
       purchasedRumors: get().purchasedRumors,
       dailySummaries: [],
       selectedStockId: data.stocks[0].id,
-      currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
+      currentPrices,
+      dayStartNetWorth,
       visibleNews: [],
       elapsed: 0,
       dailyDrinkPurchased: 0,
       minedCoinToday: 0,
       completedNightActivityIds: [],
       marketReady: true,
+      weeklyModifierId: weeklyModifier?.id || null,
+      weeklyModifierHistory: weeklyModifier ? { ...state.weeklyModifierHistory, [market.cycle]: weeklyModifier.id } : state.weeklyModifierHistory,
     })
   },
   loadEpilogueCycle: (market) => {
     const data = market.days[0]
+    const state = get()
+    const currentPrices = Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice]))
     set({
       cycle: EPILOGUE_CYCLE, day: 1, market, phase: 'epilogueIntro', epilogue: true,
       screen: 'room', dayIntroDestination: 'monitor', showMonitorHint: false,
       purchasedRumors: get().purchasedRumors, dailySummaries: [], selectedStockId: data.stocks[0].id,
-      currentPrices: Object.fromEntries(data.stocks.map((stock) => [stock.id, stock.startPrice])),
+      currentPrices, dayStartNetWorth: calculateNetWorth({ ...state, currentPrices }), weeklyModifierId: null,
       visibleNews: [], elapsed: 0, dailyDrinkPurchased: 0, minedCoinToday: 0, completedNightActivityIds: [], marketReady: true,
     })
   },
@@ -409,6 +436,8 @@ export const useGameStore = create((set, get) => ({
     const cost = price * amount
     if (!price || amount <= 0 || state.cash < cost) return
     const previous = state.holdings[stockId] || { quantity: 0, average: 0 }
+    const maxPositionRatio = modifierEffect(state.weeklyModifierId, 'maxPositionRatio', 1)
+    if ((previous.quantity * marketPrice) + cost > calculateNetWorth(state) * maxPositionRatio) return
     const nextQuantity = previous.quantity + amount
     const average = (previous.average * previous.quantity + cost) / nextQuantity
     set({
@@ -439,10 +468,11 @@ export const useGameStore = create((set, get) => ({
   },
   buyNightItem: (item) => {
     const state = get()
-    if (state.phase !== 'night' || state.nightActivity || state.cash < item.price) return false
+    const price = modifiedShopPrice(item.price, state.weeklyModifierId)
+    if (state.phase !== 'night' || state.nightActivity || state.cash < price) return false
     if (item.id === 'chili-energy' && state.dailyDrinkPurchased >= 2) return false
     set({
-      cash: state.cash - item.price,
+      cash: state.cash - price,
       inventory: { ...state.inventory, [item.id]: (state.inventory[item.id] || 0) + 1 },
       dailyDrinkPurchased: item.id === 'chili-energy' ? state.dailyDrinkPurchased + 1 : state.dailyDrinkPurchased,
     })
@@ -450,7 +480,7 @@ export const useGameStore = create((set, get) => ({
   },
   upgradeMiningMachine: () => {
     const state = get()
-    const cost = mineUpgradeCost(state.miningTier)
+    const cost = modifiedMiningCost(mineUpgradeCost(state.miningTier), state.weeklyModifierId)
     if (state.phase !== 'night' || state.nightActivity || state.cash < cost || !canUpgradeMine(state.miningTier, state.cycle)) return false
     set({ cash: state.cash - cost, miningTier: state.miningTier + 1 })
     return true
@@ -458,7 +488,7 @@ export const useGameStore = create((set, get) => ({
   upgradeHackingDeck: () => {
     const state = get()
     const nextLevel = state.hackingDeckLevel + 1
-    const cost = HACKING_DECK_COSTS[nextLevel]
+    const cost = modifiedShopPrice(HACKING_DECK_COSTS[nextLevel], state.weeklyModifierId)
     if (state.phase !== 'night' || state.nightActivity || !Number.isFinite(cost) || state.cash < cost) return false
     set({ cash: state.cash - cost, hackingDeckLevel: nextLevel })
     return true
@@ -479,7 +509,8 @@ export const useGameStore = create((set, get) => ({
     if (!getNightActivityOptions(state.cycle, state.day, state.market?.seed, state.donationSchedule).some((option) => option.id === activity.id)) return false
     const cashCost = nightActivityCashCost(activity, state.donationCount)
     if (state.cash < cashCost) return false
-    if (state.completedNightActivityIds.includes(activity.id) || state.energy < activity.energyCost) return false
+    const energyCost = modifiedNightEnergyCost(activity.energyCost, state.weeklyModifierId)
+    if (state.completedNightActivityIds.includes(activity.id) || state.energy < energyCost) return false
     set({ nightActivity: { id: activity.id, startedAt: Date.now() }, nightMessage: null })
     return true
   },
@@ -492,8 +523,8 @@ export const useGameStore = create((set, get) => ({
     const cashSpent = reward.type === 'donation' ? nightActivityCashCost(activity, state.donationCount) : 0
     let itemEarned = false
     const inventory = { ...state.inventory }
-    if (reward.type === 'credits') cashEarned = reward.amount
-    if (reward.type === 'mixed') cashEarned = reward.credits
+    if (reward.type === 'credits') cashEarned = modifiedNightReward(reward.amount, state.weeklyModifierId)
+    if (reward.type === 'mixed') cashEarned = modifiedNightReward(reward.credits, state.weeklyModifierId)
     if (['itemChance', 'mixed'].includes(reward.type) && Math.random() < reward.chance) {
       inventory[reward.itemId] = (inventory[reward.itemId] || 0) + 1
       itemEarned = true
@@ -513,7 +544,7 @@ export const useGameStore = create((set, get) => ({
     set({
       nightActivity: null,
       completedNightActivityIds: [...state.completedNightActivityIds, activity.id],
-      energy: Math.max(0, state.energy - activity.energyCost),
+      energy: Math.max(0, state.energy - modifiedNightEnergyCost(activity.energyCost, state.weeklyModifierId)),
       cash: state.cash + cashEarned - cashSpent,
       donationCount: state.donationCount + (reward.type === 'donation' ? 1 : 0),
       inventory,
@@ -531,7 +562,8 @@ export const useGameStore = create((set, get) => ({
   completeNightJob: () => get().completeNightActivity(),
   startCyberRunner: () => {
     const state = get()
-    if (state.phase !== 'night' || state.nightActivity || state.completedNightActivityIds.includes('cyber-runner') || state.hackingDeckLevel < 0 || state.energy < CYBER_RUNNER_ENERGY_COST) return false
+    const energyCost = modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)
+    if (state.phase !== 'night' || state.nightActivity || state.completedNightActivityIds.includes('cyber-runner') || state.hackingDeckLevel < 0 || state.energy < energyCost) return false
     set({ nightActivity: { id: 'cyber-runner', startedAt: Date.now() }, nightMessage: null })
     return true
   },
@@ -545,7 +577,7 @@ export const useGameStore = create((set, get) => ({
     let cash = state.cash
     let message
     if (roll < 0.45) {
-      const credits = Math.round((700 + Math.random() * 800) * scale)
+      const credits = modifiedNightReward(Math.round((700 + Math.random() * 800) * scale), state.weeklyModifierId)
       cash += credits
       message = `시지프의 유령 계좌를 비웠다. +₡${credits.toLocaleString('ko-KR')}`
     } else if (roll < 0.75) {
@@ -560,12 +592,12 @@ export const useGameStore = create((set, get) => ({
         holdings[SISYPHUS_STOCK_ID] = { quantity: previous.quantity + quantity, average: previous.average }
         message = `명의가 지워진 주권을 회수했다. 시지프 인텔리전스 +${quantity}주`
       } else {
-        const credits = 1000 * scale
+        const credits = modifiedNightReward(1000 * scale, state.weeklyModifierId)
         cash += credits
         message = `주권 보관소가 비어 있어 추적 방지 예치금만 회수했다. +₡${credits.toLocaleString('ko-KR')}`
       }
     }
-    set({ cash, holdings, nightActivity: null, completedNightActivityIds: [...state.completedNightActivityIds, 'cyber-runner'], energy: Math.max(0, state.energy - CYBER_RUNNER_ENERGY_COST), nightMessage: message })
+    set({ cash, holdings, nightActivity: null, completedNightActivityIds: [...state.completedNightActivityIds, 'cyber-runner'], energy: Math.max(0, state.energy - modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)), nightMessage: message })
     return { rewardEarned: true, cashEarned: Math.max(0, cash - state.cash) }
   },
   clearNightMessage: () => set({ nightMessage: null }),
@@ -577,7 +609,12 @@ export const useGameStore = create((set, get) => ({
   checkStoryTriggers: () => {
     const state = get()
     if (state.activeScene) return
-    const match = findMatchingScene(state, state.playedSceneIds)
+    const modifier = getWeeklyModifier(state.weeklyModifierId)
+    const modifierSceneId = modifier ? `weekly-modifier-c${state.cycle}-${modifier.id}` : null
+    const modifierMatch = modifier && state.day === 1 && state.phase === 'premarket' && !state.playedSceneIds.includes(modifierSceneId)
+      ? { id: modifierSceneId, scene: weeklyModifierScene(modifier) }
+      : null
+    const match = findMatchingScene(state, state.playedSceneIds) || modifierMatch
     if (match) set({ activeScene: match, paused: true })
   },
   closeScene: () => {
@@ -623,8 +660,9 @@ export const useGameStore = create((set, get) => ({
   triggerHiddenEnding: () => set({ phase: 'ended', endingType: 'hidden' }),
   buySmugglingTicket: (item) => {
     const state = get()
-    if (!state.epilogue || state.phase !== 'night' || state.nightActivity || state.cash < item.price) return false
-    set({ cash: state.cash - item.price, hasSmugglingTicket: true, phase: 'ended', endingType: 'true' })
+    const price = modifiedShopPrice(item.price, state.weeklyModifierId)
+    if (!state.epilogue || state.phase !== 'night' || state.nightActivity || state.cash < price) return false
+    set({ cash: state.cash - price, hasSmugglingTicket: true, phase: 'ended', endingType: 'true' })
     return true
   },
   restart: () => set({ ...initialGame }),

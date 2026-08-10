@@ -3177,3 +3177,17 @@ button:hover {
 .night-entry.smuggling-ticket {
   border-color: var(--yellow)
 }
+
+.weekly-modifier-label {
+  max-width: 980px;
+  margin: 0 auto 18px;
+  padding: 9px 12px;
+  border-left: 3px solid #ffd34d;
+  background: rgba(255, 211, 77, 0.08);
+  color: #b9c8d8;
+  font-size: 12px;
+}
+
+.weekly-modifier-label b {
+  color: #ffd34d;
+}

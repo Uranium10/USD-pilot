@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { COIN_ASSET_ID, COIN_REFERENCE_PRICE, CYBER_RUNNER_ENERGY_COST, DAY_DURATION_SECONDS, HACKING_DECK_COSTS, MAX_ENERGY } from '../config.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../data/nightContent.js'
-import { canUpgradeMine, maxMineTier, minePaybackSeconds, mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
+import { canUpgradeMine, maxMineTier, mineRate, mineUpgradeCost, nextMineTier } from '../logic/miningSystem.js'
 import { getNightActivity, getNightActivityOptions, nightActivityCashCost } from '../logic/nightActivities.js'
+import { getWeeklyModifier, modifiedMiningCost, modifiedNightEnergyCost, modifiedNightReward, modifiedShopPrice, modifierEffect } from '../logic/weeklyModifiers.js'
 import { playCashOut, playCashRegister } from '../services/audioService.js'
 import { useGameStore } from '../store/gameStore.js'
 
@@ -17,11 +18,17 @@ export default function NightPanel() {
   const deck = NIGHT_ITEMS.hackingDeck
   const cyberRunner = NIGHT_ACTIVITIES.cyberRunner
   const activityOptions = getNightActivityOptions(state.cycle, state.day, state.market?.seed, state.donationSchedule)
-  const miningCost = mineUpgradeCost(state.miningTier)
-  const currentMiningRate = mineRate(state.miningTier)
-  const upgradedMiningRate = mineRate(nextMineTier(state.miningTier))
+  const modifier = getWeeklyModifier(state.weeklyModifierId)
+  const miningCost = modifiedMiningCost(mineUpgradeCost(state.miningTier), state.weeklyModifierId)
+  const miningMultiplier = modifierEffect(state.weeklyModifierId, 'miningRateMultiplier')
+  const currentMiningRate = mineRate(state.miningTier) * miningMultiplier
+  const upgradedMiningRate = mineRate(nextMineTier(state.miningTier)) * miningMultiplier
+  const drinkPrice = modifiedShopPrice(drink.price, state.weeklyModifierId)
+  const deckPrice = modifiedShopPrice(HACKING_DECK_COSTS[state.hackingDeckLevel + 1], state.weeklyModifierId)
+  const ticketPrice = modifiedShopPrice(ticket.price, state.weeklyModifierId)
   const coinPrice = state.miningTier < 0 ? COIN_REFERENCE_PRICE : state.currentPrices[COIN_ASSET_ID] || COIN_REFERENCE_PRICE
-  const paybackSeconds = Math.ceil(minePaybackSeconds(state.miningTier, coinPrice))
+  const additionalCreditRate = Math.max(0, upgradedMiningRate - currentMiningRate) * coinPrice
+  const paybackSeconds = additionalCreditRate > 0 ? Math.ceil(miningCost / additionalCreditRate) : Infinity
   const paybackDays = Math.ceil(paybackSeconds / DAY_DURATION_SECONDS)
   const tierLimit = maxMineTier(state.cycle)
   const canUpgrade = canUpgradeMine(state.miningTier, state.cycle)
@@ -39,7 +46,7 @@ export default function NightPanel() {
   const spend = (action) => { const result = action(); if (result) playCashOut(); return result }
 
   return <section className="night-desktop">
-    <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>{state.cycle}주차 {state.day}일차 밤</h2></div><div className="energy-meter"><span>활동력 {state.energy}/{MAX_ENERGY}</span><progress max={MAX_ENERGY} value={state.energy} /></div></header>
+    <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>{state.cycle}주차 {state.day}일차 밤</h2>{modifier && <small>이번 주 제약 · {modifier.name}</small>}</div><div className="energy-meter"><span>활동력 {state.energy}/{MAX_ENERGY}</span><progress max={MAX_ENERGY} value={state.energy} /></div></header>
     <nav className="night-tabs" data-night-tutorial-target="tabs">
       <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>활동</button>
       <button className={tab === 'shop' ? 'active' : ''} onClick={() => setTab('shop')}>상점</button>
@@ -50,22 +57,23 @@ export default function NightPanel() {
         {activityOptions.map((activity, index) => {
           const completed = state.completedNightActivityIds.includes(activity.id)
           const cashCost = nightActivityCashCost(activity, state.donationCount)
+          const energyCost = modifiedNightEnergyCost(activity.energyCost, state.weeklyModifierId)
           const reward = activity.reward.type === 'donation'
             ? `기부금 ${money(cashCost)}`
             : activity.reward.type === 'credits'
-            ? `보상 ${money(activity.reward.amount)}`
+            ? `보상 ${money(modifiedNightReward(activity.reward.amount, state.weeklyModifierId))}`
             : activity.reward.type === 'mixed'
-              ? `기본 보상 ${money(activity.reward.credits)}`
+              ? `기본 보상 ${money(modifiedNightReward(activity.reward.credits, state.weeklyModifierId))}`
               : '뜻밖의 발견 가능'
           const start = () => { const started = state.startNightActivity(activity.id); if (started && cashCost > 0) playCashOut() }
-          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{activity.energyCost} · {reward}</small></div><button onClick={start} disabled={Boolean(state.nightActivity) || completed || state.energy < activity.energyCost || state.cash < cashCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
+          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{energyCost} · {reward}</small></div><button onClick={start} disabled={Boolean(state.nightActivity) || completed || state.energy < energyCost || state.cash < cashCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
         })}
-        {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{CYBER_RUNNER_ENERGY_COST} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < CYBER_RUNNER_ENERGY_COST}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
+        {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
       </>}
       {tab === 'shop' && <div className="night-shop-list">
-        <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drink.price)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => spend(() => state.buyNightItem(drink))} disabled={Boolean(state.nightActivity) || state.cash < drink.price || state.dailyDrinkPurchased >= 2}>구입</button></article>
-        {state.hackingDeckLevel < HACKING_DECK_COSTS.length - 1 && <article className="night-entry hacking-deck"><img src={`/imgs/items/hacking_deck_${Math.max(0, state.hackingDeckLevel + 1)}.png`} alt="" className="item-thumbnail" /><div><h3>{state.hackingDeckLevel < 0 ? deck.name : `해킹 덱 v.${state.hackingDeckLevel + 1} 개조`}</h3><p>{deck.description}</p><small>{money(HACKING_DECK_COSTS[state.hackingDeckLevel + 1])} · 보상량 배율 ×{state.hackingDeckLevel + 2}</small></div><button onClick={() => spend(state.upgradeHackingDeck)} disabled={Boolean(state.nightActivity) || state.cash < HACKING_DECK_COSTS[state.hackingDeckLevel + 1]}>{state.hackingDeckLevel < 0 ? '구입' : '업그레이드'}</button></article>}
-        {state.epilogue && <article className="night-entry smuggling-ticket"><img src={ticket.img} alt="" className="item-thumbnail" /><div><h3>{ticket.name}</h3><p>{ticket.description}</p><small>{money(ticket.price)} · 구매 즉시 우주로 도주합니다(되돌릴 수 없음)</small></div><button onClick={() => spend(() => state.buySmugglingTicket(ticket))} disabled={Boolean(state.nightActivity) || state.cash < ticket.price}>구입하고 탈출한다</button></article>}
+        <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drinkPrice)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => spend(() => state.buyNightItem(drink))} disabled={Boolean(state.nightActivity) || state.cash < drinkPrice || state.dailyDrinkPurchased >= 2}>구입</button></article>
+        {state.hackingDeckLevel < HACKING_DECK_COSTS.length - 1 && <article className="night-entry hacking-deck"><img src={`/imgs/items/hacking_deck_${Math.max(0, state.hackingDeckLevel + 1)}.png`} alt="" className="item-thumbnail" /><div><h3>{state.hackingDeckLevel < 0 ? deck.name : `해킹 덱 v.${state.hackingDeckLevel + 1} 개조`}</h3><p>{deck.description}</p><small>{money(deckPrice)} · 보상량 배율 ×{state.hackingDeckLevel + 2}</small></div><button onClick={() => spend(state.upgradeHackingDeck)} disabled={Boolean(state.nightActivity) || state.cash < deckPrice}>{state.hackingDeckLevel < 0 ? '구입' : '업그레이드'}</button></article>}
+        {state.epilogue && <article className="night-entry smuggling-ticket"><img src={ticket.img} alt="" className="item-thumbnail" /><div><h3>{ticket.name}</h3><p>{ticket.description}</p><small>{money(ticketPrice)} · 구매 즉시 우주로 도주합니다(되돌릴 수 없음)</small></div><button onClick={() => spend(() => state.buySmugglingTicket(ticket))} disabled={Boolean(state.nightActivity) || state.cash < ticketPrice}>구입하고 탈출한다</button></article>}
         <article className="night-entry mining-machine">
           <img src={`/imgs/items/mining_machine_${canUpgrade ? nextMineTier(state.miningTier) : Math.max(0, state.miningTier)}.png`} alt="" className="item-thumbnail" />
           <div>

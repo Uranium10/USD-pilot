@@ -13,7 +13,8 @@ import { buildRunPlanUserPrompt } from '../server/ai/prompts/runPlan.js'
 import { CYCLE_SCENARIO_SCHEMA, RUN_PLAN_SCHEMA } from '../server/ai/schemas.js'
 import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
 import { createDonationSchedule, getNightActivityOptions, nightActivityCashCost } from '../src/logic/nightActivities.js'
-import { useGameStore } from '../src/store/gameStore.js'
+import { chooseWeeklyModifier, getWeeklyModifier, modifiedNightEnergyCost, modifiedNightReward, modifiedRumorCost } from '../src/logic/weeklyModifiers.js'
+import { getNetWorth, useGameStore } from '../src/store/gameStore.js'
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message)
@@ -27,6 +28,15 @@ assert(JSON.stringify(parseDialogueBold('평문 **강조** 끝')) === JSON.strin
   { text: '강조', bold: true },
   { text: ' 끝', bold: false },
 ]), '대화 굵은 글씨 구문을 올바르게 분리하지 못했습니다.')
+
+const modifier2 = chooseWeeklyModifier(2, 2026)
+const modifier3 = chooseWeeklyModifier(3, 2027, modifier2.id)
+assert(modifier2 && modifier3 && modifier2.id !== modifier3.id, '주간 모디파이어가 없거나 연속 중복되었습니다.')
+assert(chooseWeeklyModifier(2, 2026)?.id === modifier2.id, '같은 seed의 주간 모디파이어가 바뀝니다.')
+assert(chooseWeeklyModifier(1, 2026) === null && chooseWeeklyModifier(7, 2026) === null, '1·7주차에는 일반 모디파이어가 없어야 합니다.')
+assert(getWeeklyModifier(modifier2.id)?.detail, '주간 모디파이어의 안내 문구가 없습니다.')
+assert(modifiedRumorCost({ cost: 100 }, 'information-crackdown') === 75, '정보 단속 가격 보정이 잘못됐습니다.')
+assert(modifiedNightEnergyCost(30, 'night-curfew') === 40 && modifiedNightReward(1000, 'night-curfew') === 1300, '야간 통행 제한 보정이 잘못됐습니다.')
 
 useGameStore.getState().restart()
 useGameStore.getState().beginLoading()
@@ -45,6 +55,19 @@ assert(useGameStore.getState().phase === 'dayIntro', '튜토리얼 종료 후 �
 useGameStore.getState().completeDayIntro()
 assert(useGameStore.getState().phase === 'premarket', '날짜 전환 후 정보 선택 화면으로 이어지지 않았습니다.')
 assert(useGameStore.getState().screen === 'monitor', '첫 날짜 전환 후 정보 선택 화면이 열리지 않았습니다.')
+
+useGameStore.getState().restart()
+const settlementMarket = generateMarketCycle({ cycle: 1, seed: 1201 })
+useGameStore.getState().loadMarket(settlementMarket)
+useGameStore.setState({ phase: 'settlement', cycle: 1, day: 7, cash: 50000, debt: 165000, holdings: {}, activeScene: null })
+const nextSettlement = useGameStore.getState().settleCycle(20000)
+assert(nextSettlement?.result === 'next' && useGameStore.getState().cash === 30000, '1주차 상환액이 현금에서 차감되지 않았습니다.')
+const secondMarket = generateMarketCycle({ cycle: 2, seed: 2202, companyIds: settlementMarket.companyIds })
+useGameStore.getState().loadNextCycle(secondMarket)
+assert(getNetWorth(useGameStore.getState()) === 30000 && useGameStore.getState().dayStartNetWorth === 30000, '2주차 총자산 기준이 상환 전 금액을 유지합니다.')
+useGameStore.getState().completeDayIntro()
+assert(useGameStore.getState().activeScene?.id.startsWith('weekly-modifier-c2-'), '2주차 시작 모디파이어 대화가 열리지 않았습니다.')
+useGameStore.getState().closeScene()
 
 const cycleSix = generateMarketCycle({ cycle: 6, seed: 610 })
 useGameStore.getState().loadMarket(cycleSix)

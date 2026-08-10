@@ -3,6 +3,7 @@ import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, 
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
+import { getWeeklyModifier, modifierEffect } from '../logic/weeklyModifiers.js'
 import { playCashOut, playCashRegister, playMarketCountdown, playNewsUpdate } from '../services/audioService.js'
 import { getNetWorth, isHiddenEndingEligible, useGameStore } from '../store/gameStore.js'
 import DayReport from './DayReport.jsx'
@@ -115,9 +116,12 @@ export default function MarketDesktop() {
   const sellQuantity = Math.min(quantity, holding.quantity)
   const sellTotal = sellPrice * sellQuantity
   const canTradeSelected = !selectedIsCoin || coinUnlocked
-  const canBuy = !selectedIsCoin && canTradeSelected && quantity > 0 && buyTotal <= state.cash && state.phase === 'day'
-  const canSell = canTradeSelected && sellQuantity > 0 && state.phase === 'day'
   const netWorth = getNetWorth(state)
+  const maxPositionRatio = modifierEffect(state.weeklyModifierId, 'maxPositionRatio', 1)
+  const positionRoom = Math.max(0, netWorth * maxPositionRatio - holding.quantity * currentPrice)
+  const maxBuyBudget = Math.min(state.cash, positionRoom)
+  const canBuy = !selectedIsCoin && canTradeSelected && quantity > 0 && buyTotal <= maxBuyBudget && state.phase === 'day'
+  const canSell = canTradeSelected && sellQuantity > 0 && state.phase === 'day'
   const previousSummary = state.dailySummaries.at(-1)
   const assetBaseline = previousSummary?.netWorth ?? state.dayStartNetWorth
   const showAssetChange = Boolean(previousSummary) || state.phase === 'day' || state.phase === 'dayReport'
@@ -125,7 +129,8 @@ export default function MarketDesktop() {
   const profitDiff = holding.quantity > 0 ? sellPrice - holding.average : 0
   const profitPct = holding.quantity > 0 && holding.average > 0 ? profitDiff / holding.average * 100 : null
   const minPayment = getMinPayment(state.debt, state.cycle)
-  const miningRate = mineRate(state.miningTier)
+  const miningRate = mineRate(state.miningTier) * modifierEffect(state.weeklyModifierId, 'miningRateMultiplier')
+  const weeklyModifier = getWeeklyModifier(state.weeklyModifierId)
   const coinPrice = state.currentPrices[COIN_ASSET_ID] || data.stocks.find((stock) => stock.id === COIN_ASSET_ID)?.startPrice || 0
   const coinAsset = data.stocks.find((stock) => stock.id === COIN_ASSET_ID)
   const quantityUnit = selectedIsCoin ? ` ${selected.symbol}` : '주'
@@ -157,7 +162,7 @@ export default function MarketDesktop() {
         : <section className="desktop-window market-window">
         <div className="window-titlebar">
           <b>U.S.D Market Terminal</b>
-          <span className={remaining < 60 ? 'red' : ''}>장 마감 {Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}　— □ ×</span>
+          <span className={remaining < 60 ? 'red' : ''}>{weeklyModifier ? `${weeklyModifier.name} · ` : ''}장 마감 {Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}　— □ ×</span>
         </div>
         <section className="account-strip">
           <div className="asset-cell">
@@ -209,7 +214,7 @@ export default function MarketDesktop() {
                     ? <><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity * 0.25))}>25%</button><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity * 0.5))}>50%</button><button onClick={() => setQuantity(normalizeTradeQuantity(selected, holding.quantity))}>전량</button></>
                     : quantityButtons.map((amount) => <button key={amount} onClick={() => setQuantity((value) => normalizeTradeQuantity(selected, value + amount))}>+{amount}</button>)}</div>
                   <div className="max-buttons">
-                    {!selectedIsCoin && <button onClick={() => setQuantity(normalizeTradeQuantity(selected, state.cash / buyPrice))}>최대 매수</button>}
+                    {!selectedIsCoin && <button onClick={() => setQuantity(normalizeTradeQuantity(selected, maxBuyBudget / buyPrice))}>최대 매수</button>}
                     <button onClick={() => setQuantity(holding.quantity)} disabled={!holding.quantity}>최대 매도</button>
                     <button onClick={() => setQuantity(0)} disabled={quantity <= 0}>초기화</button>
                   </div>

@@ -11,6 +11,7 @@ import { IntroChoiceOverlay, NightTutorialChoiceOverlay } from './components/Tut
 import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE, SISYPHUS_STOCK_ID } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
+import { getWeeklyModifier, modifiedRumorCost, modifierEffect } from './logic/weeklyModifiers.js'
 import { playCashOut, playTitleClick, playTitleHover } from './services/audioService.js'
 import { fetchMarketCycle, prefetchMarketCycle, resetMarketCycleCache } from './services/marketService.js'
 import { clearSavedSession, getDeviceId, getSavedSession, saveSession } from './services/sessionService.js'
@@ -246,8 +247,14 @@ function Premarket() {
   if (!state.market) return null
   const data = state.market.days[state.day - 1]
   const selectedRumors = data.rumors.filter((rumor) => selectedRumorIds.includes(rumor.id))
-  const selectedCost = selectedRumors.reduce((total, rumor) => total + rumor.cost, 0)
-  const toggleRumor = (rumorId) => setSelectedRumorIds((ids) => ids.includes(rumorId) ? ids.filter((id) => id !== rumorId) : [...ids, rumorId])
+  const selectedCost = selectedRumors.reduce((total, rumor) => total + modifiedRumorCost(rumor, state.weeklyModifierId), 0)
+  const modifier = getWeeklyModifier(state.weeklyModifierId)
+  const boughtToday = state.purchasedRumors.filter((rumor) => rumor.purchasedCycle === state.cycle && rumor.purchasedDay === state.day).length
+  const maxRumors = modifierEffect(state.weeklyModifierId, 'maxRumorsPerDay', Infinity)
+  const remainingSlots = Math.max(0, maxRumors - boughtToday)
+  const toggleRumor = (rumorId) => setSelectedRumorIds((ids) => ids.includes(rumorId)
+    ? ids.filter((id) => id !== rumorId)
+    : ids.length < remainingSlots ? [...ids, rumorId] : ids)
   const purchaseSelected = () => {
     const purchased = state.purchaseRumors(selectedRumors)
     if (!purchased) return
@@ -256,7 +263,7 @@ function Premarket() {
     setSelectedRumorIds([])
     window.setTimeout(() => setFlashingRumorIds([]), 450)
   }
-  return <section className="panel premarket"><p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p><h2>정보를 구입하세요.</h2><div className="rumor-grid">{data.rumors.map((rumor) => { const purchased = state.purchasedRumors.some((item) => item.id === rumor.id); const queued = selectedRumorIds.includes(rumor.id); const sisyphusIntel = rumor.stockId === SISYPHUS_STOCK_ID; return <button key={rumor.id} className={`rumor ${sisyphusIntel ? 'sisyphus-intel' : ''} ${purchased ? 'selected' : ''} ${queued ? 'queued' : ''} ${flashingRumorIds.includes(rumor.id) ? 'purchase-flash' : ''}`} onClick={() => toggleRumor(rumor.id)} disabled={purchased}><span>{purchased ? '구입됨' : queued ? '구매 선택됨' : sisyphusIntel ? '시지프 인텔 채널' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>{purchased ? `신뢰도 ${Math.round(rumor.accuracy * 100)}% 확인됨` : '내용 및 신뢰도 미상'} · {money(rumor.cost)}</small></button> })}</div><p className="purchase-summary">구입 {state.purchasedRumors.length}건 · 선택 {selectedRumors.length}건 ({money(selectedCost)}) · 남은 현금 {money(state.cash)}</p><div className="premarket-actions"><button className="secondary" onClick={purchaseSelected} disabled={selectedRumors.length === 0 || selectedCost > state.cash}>선택 정보 구입</button><button className="primary" onClick={() => state.showOverlay({ type: 'dayBriefing', title: `${state.day}일차 정보 브리핑` })}>구입 완료</button></div></section>
+  return <section className="panel premarket"><p className="eyebrow">WEEK {state.cycle} · DAY {state.day} · 정보 거래소</p><h2>정보를 구입하세요.</h2>{modifier && <p className="weekly-modifier-label">이번 주 제약 · <b>{modifier.name}</b> — {modifier.detail}</p>}<div className="rumor-grid">{data.rumors.map((rumor) => { const purchased = state.purchasedRumors.some((item) => item.id === rumor.id); const queued = selectedRumorIds.includes(rumor.id); const sisyphusIntel = rumor.stockId === SISYPHUS_STOCK_ID; const soldOut = !purchased && !queued && remainingSlots <= selectedRumorIds.length; return <button key={rumor.id} className={`rumor ${sisyphusIntel ? 'sisyphus-intel' : ''} ${purchased ? 'selected' : ''} ${queued ? 'queued' : ''} ${flashingRumorIds.includes(rumor.id) ? 'purchase-flash' : ''}`} onClick={() => toggleRumor(rumor.id)} disabled={purchased || soldOut}><span>{purchased ? '구입됨' : queued ? '구매 선택됨' : sisyphusIntel ? '시지프 인텔 채널' : '암호화된 정보'}</span><strong>출처: {rumor.source}</strong><small>{purchased ? `신뢰도 ${Math.round(rumor.accuracy * 100)}% 확인됨` : '내용 및 신뢰도 미상'} · {money(modifiedRumorCost(rumor, state.weeklyModifierId))}</small></button> })}</div><p className="purchase-summary">구입 {state.purchasedRumors.length}건 · 선택 {selectedRumors.length}건 ({money(selectedCost)}) · 남은 현금 {money(state.cash)}{Number.isFinite(maxRumors) ? ` · 오늘 ${remainingSlots}건 추가 가능` : ''}</p><div className="premarket-actions"><button className="secondary" onClick={purchaseSelected} disabled={selectedRumors.length === 0 || selectedCost > state.cash}>선택 정보 구입</button><button className="primary" onClick={() => state.showOverlay({ type: 'dayBriefing', title: `${state.day}일차 정보 브리핑` })}>구입 완료</button></div></section>
 }
 
 function Settlement() {

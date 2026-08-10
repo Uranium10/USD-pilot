@@ -59,6 +59,8 @@ export function sessionPayload(state) {
       epilogue: state.epilogue,
       endingType: state.endingType,
       hasSmugglingTicket: state.hasSmugglingTicket,
+      weeklyModifierId: state.weeklyModifierId,
+      weeklyModifierHistory: state.weeklyModifierHistory,
     },
     updatedAt: (lastSaveRevision = Math.max(Date.now(), lastSaveRevision + 1)),
   }
