@@ -10,7 +10,6 @@ import {
   COIN_SEGMENT_MOVE_LIMIT,
   COIN_VOLATILITY_BY_CYCLE,
   DAYS_PER_CYCLE,
-  INFO_COST_MULTIPLIER,
   LISTED_COMPANY_COUNT,
   SISYPHUS_BASE_PRICE,
   SISYPHUS_CYCLE_GROWTH,
@@ -24,6 +23,7 @@ import {
   STOCK_SHOCK_SIGMA,
   VOLATILITY_BY_CYCLE,
 } from '../config.js'
+import { classifyImpactMagnitude, informationCost } from '../logic/informationEconomy.js'
 
 // 뉴스 발표 시각이 가격 반영 시점에서 얼마나 앞서거나 뒤처지는지(하루 진행률 기준).
 // 기존 8분(480초) 기준의 -90초~+30초와 정확히 같은 비율이며, 하루 길이가 바뀌어도
@@ -181,6 +181,7 @@ const rumorEvents = [
 ]
 
 const round = (value) => Math.round(value * 100) / 100
+const roundRate = (value) => Math.round(value * 10000) / 10000
 const pick = (items, random) => items[Math.floor(random() * items.length)]
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
@@ -379,6 +380,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
     const rumors = Array.from({ length: 3 }, (_, index) => {
       const stock = companyStocks[(index + dayIndex) % companyStocks.length]
       const wentUp = stock.path.at(-1).price >= stock.startPrice
+      const expectedImpact = roundRate(Math.abs(stock.path.at(-1).price / stock.startPrice - 1))
       const accuracy = round(0.58 + random() * 0.32)
       const truthful = random() <= accuracy
       const predictedUp = truthful ? wentUp : !wentUp
@@ -388,8 +390,10 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
         id: `c${cycle}-d${dayIndex + 1}-r${index}`,
         stockId: stock.id,
         direction: predictedUp ? 'up' : 'down',
-        cost: Math.round((100 + accuracy * 350) * (INFO_COST_MULTIPLIER[cycle - 1] ?? INFO_COST_MULTIPLIER.at(-1))),
+        cost: informationCost({ accuracy, expectedImpact, cycle }),
         accuracy,
+        expectedImpact,
+        impactMagnitude: classifyImpactMagnitude(expectedImpact),
         resolveProgress: 1,
         resolutionBasis: 'dayClose',
         source: pick(rumorSources, random),
@@ -401,13 +405,16 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
       const sisyphusAccuracy = round(0.62 + random() * 0.28)
       const sisyphusTruthful = random() <= sisyphusAccuracy
       const sisyphusPredictedUp = sisyphusTruthful ? sisyphusWentUp : !sisyphusWentUp
+      const sisyphusExpectedImpact = roundRate(Math.abs(sisyphus.path.at(-1).price / sisyphus.startPrice - 1))
       const replaceIndex = Math.floor(random() * rumors.length)
       rumors[replaceIndex] = {
         id: `c${cycle}-d${dayIndex + 1}-r-sisyphus`,
         stockId: SISYPHUS_STOCK_ID,
         direction: sisyphusPredictedUp ? 'up' : 'down',
-        cost: Math.round((220 + sisyphusAccuracy * 520) * (INFO_COST_MULTIPLIER[cycle - 1] ?? INFO_COST_MULTIPLIER.at(-1))),
+        cost: Math.round(informationCost({ accuracy: sisyphusAccuracy, expectedImpact: sisyphusExpectedImpact, cycle }) * 1.35),
         accuracy: sisyphusAccuracy,
+        expectedImpact: sisyphusExpectedImpact,
+        impactMagnitude: classifyImpactMagnitude(sisyphusExpectedImpact),
         resolveProgress: 1,
         resolutionBasis: 'dayClose',
         source: pick(rumorSources, random),

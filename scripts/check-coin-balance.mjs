@@ -18,6 +18,7 @@ import {
   SISYPHUS_EPILOGUE_TARGET_PRICE,
 } from '../src/config.js'
 import { generateMarketCycle, injectMarketNoise } from '../src/data/generateMarket.js'
+import { informationCost } from '../src/logic/informationEconomy.js'
 import { minePaybackSeconds, mineRate, mineUpgradeCost } from '../src/logic/miningSystem.js'
 import { useGameStore } from '../src/store/gameStore.js'
 
@@ -78,6 +79,12 @@ for (let seed = 1; seed <= 500; seed += 1) {
     assert(day.news.every((item) => day.stocks.some((asset) => asset.id === item.stockId)), '상장되지 않은 회사의 뉴스가 생성됐습니다.')
     assert(day.news.some((item) => item.stockId === SISYPHUS_STOCK_ID), '시지프 전용 뉴스가 없습니다.')
     assert(day.rumors.length === 3, '정보 거래소는 항상 정보 카드 3개를 제공해야 합니다.')
+    for (const rumor of day.rumors) {
+      assert(Number.isFinite(rumor.expectedImpact) && rumor.expectedImpact >= 0, '정보에 내부 예상 충격량이 없습니다.')
+      if (rumor.stockId !== SISYPHUS_STOCK_ID) {
+        assert(rumor.cost === informationCost({ accuracy: rumor.accuracy, expectedImpact: rumor.expectedImpact, cycle: market.cycle }), '정보 가격이 신뢰도·충격량·주차와 일치하지 않습니다.')
+      }
+    }
     if (day.rumors.some((item) => item.stockId === SISYPHUS_STOCK_ID)) sisyphusRumorDays.push(day.day)
     for (const asset of day.stocks) {
       const prices = asset.path.map((point) => point.price)

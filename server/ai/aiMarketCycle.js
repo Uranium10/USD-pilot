@@ -1,4 +1,5 @@
 import { generateMarketCycle } from '../../src/data/generateMarket.js'
+import { IMPACT_BY_MAGNITUDE, informationCost } from '../../src/logic/informationEconomy.js'
 import { generateCycleScenario } from './cycleScenarioModel.js'
 import { generateRunPlan } from './runPlanModel.js'
 import { createAiStateRepository } from '../aiStateRepository.js'
@@ -13,7 +14,7 @@ import { createRestartGuardRepository } from '../restartGuardRepository.js'
 // Turso(`ai_market_state` 테이블)에 영구 저장하도록 바꿨다. 자세한 발견 경위와 실측치는
 // USD-spec/agent_workthrough_2.md 참고.
 
-const impactByMagnitude = { minor: 0.08, medium: 0.16, major: 0.28 }
+const EVENT_CLOSE_RETENTION = 0.65
 const rumorSourceByArchetype = {
   insider: '기업 내부 관계자',
   hacker: '익명 해커',
@@ -83,15 +84,27 @@ export function compileScenario(market, scenario) {
     const scenarioDay = scenario.days.find((item) => item.day === day.day)
     if (!scenarioDay) continue
     const generatedNews = []
-    for (const event of scenarioDay.events || []) {
+    const retainedImpactByEventId = new Map()
+    const orderedEvents = [...(scenarioDay.events || [])]
+      .sort((left, right) => Number(left.impactProgress) - Number(right.impactProgress))
+    for (const event of orderedEvents) {
       const stock = day.stocks.find((asset) => asset.id === event.primaryStockId)
       if (!stock || stock.assetType !== 'company') continue
       const progress = clamp(Number(event.impactProgress) || 0.5, 0.04, 0.98)
       let pointIndex = stock.path.findIndex((point) => point.progress >= progress)
       if (pointIndex < 1) pointIndex = Math.min(1, stock.path.length - 1)
-      const signedImpact = (impactByMagnitude[event.magnitude] || impactByMagnitude.minor) * (event.direction === 'down' ? -1 : 1)
+      const expectedImpact = IMPACT_BY_MAGNITUDE[event.magnitude] || IMPACT_BY_MAGNITUDE.minor
+      const signedImpact = expectedImpact * (event.direction === 'down' ? -1 : 1)
       const previousPrice = stock.path[pointIndex - 1].price
+      const closeBeforeImpact = stock.path.at(-1).price
       stock.path[pointIndex].price = Math.round(clamp(previousPrice * (1 + signedImpact), stock.startPrice * 0.5, stock.startPrice * 1.5) * 100) / 100
+      for (let laterIndex = pointIndex + 1; laterIndex < stock.path.length; laterIndex += 1) {
+        const point = stock.path[laterIndex]
+        const elapsedAfterImpact = clamp((point.progress - progress) / Math.max(0.01, 1 - progress), 0, 1)
+        const retainedImpact = signedImpact * (1 - (1 - EVENT_CLOSE_RETENTION) * elapsedAfterImpact)
+        point.price = Math.round(clamp(point.price * (1 + retainedImpact), stock.startPrice * 0.5, stock.startPrice * 1.5) * 100) / 100
+      }
+      retainedImpactByEventId.set(event.eventId, Math.abs(stock.path.at(-1).price / closeBeforeImpact - 1))
       const headline = String(event.headline || event.detail || '').trim()
       generatedNews.push({
         id: event.eventId || `ai-c${market.cycle}-d${day.day}-n${generatedNews.length}`,
@@ -111,12 +124,16 @@ export function compileScenario(market, scenario) {
       const stock = day.stocks.find((asset) => asset.id === event.primaryStockId)
       if (!stock) return null
       const accuracy = { low: 0.58, medium: 0.72, high: 0.86 }[seed.confidence] || 0.65
+      const expectedImpact = retainedImpactByEventId.get(event.eventId)
+        ?? (IMPACT_BY_MAGNITUDE[event.magnitude] || IMPACT_BY_MAGNITUDE.minor) * EVENT_CLOSE_RETENTION
       return {
         id: `ai-c${market.cycle}-d${day.day}-r${index}`,
         stockId: event.primaryStockId,
         direction: event.direction,
-        cost: Math.round((100 + accuracy * 350) * (1 + (market.cycle - 1) * 0.2)),
+        cost: informationCost({ accuracy, expectedImpact, cycle: market.cycle }),
         accuracy,
+        expectedImpact,
+        impactMagnitude: event.magnitude || 'minor',
         resolveProgress: clamp(Number(event.impactProgress) || 0.5, 0.04, 0.98),
         resolutionBasis: 'eventMove',
         source: rumorSourceByArchetype[seed.sourceArchetype] || '익명 제보자',

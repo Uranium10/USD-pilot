@@ -11,6 +11,7 @@ import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
 import { compileScenario, isAiScenarioCycle } from '../server/ai/aiMarketCycle.js'
 import { cycleScenarioOutputConfig, findScenarioCopyIssues } from '../server/ai/cycleScenarioModel.js'
 import { formatMarketTime, formatMarketTimeFromElapsed } from '../src/logic/marketClock.js'
+import { IMPACT_BY_MAGNITUDE, informationCost } from '../src/logic/informationEconomy.js'
 import { newsBody } from '../src/logic/newsText.js'
 import { computeGameScale } from '../src/services/viewportScale.js'
 import { buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
@@ -209,7 +210,10 @@ assert(
 )
 assert(computeGameScale(0, 0) === 1 && computeGameScale(-1, 100) === 1, '비정상 크기에서 배율이 1로 보호되지 않습니다.')
 
-const compiledEpilogue = compileScenario(generateMarketCycle({ cycle: 7, seed: 711, companyIds: cycleSix.companyIds }), {
+const epilogueCompileBase = generateMarketCycle({ cycle: 7, seed: 711, companyIds: cycleSix.companyIds })
+const epilogueBaseStock = epilogueCompileBase.days[0].stocks.find((item) => item.id === 'stock-1')
+const epilogueBaseClose = epilogueBaseStock.path.at(-1).price
+const compiledEpilogue = compileScenario(structuredClone(epilogueCompileBase), {
   cycle: 7,
   title: 'AI 에필로그 검증',
   days: Array.from({ length: 7 }, (_, index) => ({
@@ -221,6 +225,14 @@ const compiledEpilogue = compileScenario(generateMarketCycle({ cycle: 7, seed: 7
 assert(compiledEpilogue.aiGenerated && compiledEpilogue.days[0].news.some((item) => item.id === 'ai-c7-d1-e1'), '7주차 AI 기업 뉴스가 시장에 컴파일되지 않았습니다.')
 assert(compiledEpilogue.days[0].news.some((item) => item.id === 'c7-d1-sisyphus-collapse'), '7주차 AI 컴파일이 시지프 고정 폭락 뉴스를 제거했습니다.')
 assert(compiledEpilogue.days[0].rumors.some((item) => item.source === '현장 노동자'), 'AI 정보원 유형이 내부 영어 ID로 노출됩니다.')
+const compiledAiRumor = compiledEpilogue.days[0].rumors.find((item) => item.stockId === 'stock-1')
+const compiledAiStock = compiledEpilogue.days[0].stocks.find((item) => item.id === 'stock-1')
+const retainedAiImpact = Math.abs(compiledAiStock.path.at(-1).price / epilogueBaseClose - 1)
+assert(Math.abs(compiledAiRumor.expectedImpact - retainedAiImpact) < 1e-9 && compiledAiRumor.impactMagnitude === 'minor', 'AI 정보가 종가에 남은 내부 충격량을 보존하지 않습니다.')
+assert(compiledAiRumor.cost === informationCost({ accuracy: 0.72, expectedImpact: retainedAiImpact, cycle: 7 }), 'AI 정보 가격이 신뢰도·실제 충격량·주차를 반영하지 않습니다.')
+assert(compiledAiStock.path.at(-1).price <= epilogueBaseClose * (1 - IMPACT_BY_MAGNITUDE.minor * 0.6), 'AI 하락 사건의 영향이 종가 전에 과도하게 사라집니다.')
+assert(informationCost({ accuracy: 0.72, expectedImpact: 0.03, cycle: 1 }) < informationCost({ accuracy: 0.72, expectedImpact: 0.08, cycle: 1 }), '저변동 정보가 충분히 할인되지 않습니다.')
+assert(informationCost({ accuracy: 0.86, expectedImpact: 0.16, cycle: 1 }) > informationCost({ accuracy: 0.58, expectedImpact: 0.08, cycle: 1 }), '정보 가격이 신뢰도와 충격량에 따라 증가하지 않습니다.')
 useGameStore.getState().loadEpilogueCycle(epilogueMarket)
 assert(useGameStore.getState().cycle === 7 && useGameStore.getState().day === 1, '7주차 첫날을 불러오지 못했습니다.')
 useGameStore.getState().completeDayIntro()

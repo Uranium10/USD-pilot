@@ -1,3 +1,6 @@
+Play: https://usd-pilot.vercel.app/
+
+
 # U.S.D
 
 빚 상환일까지 7일 동안 실시간 주식 거래로 살아남는 로그라이크 웹게임 파일럿입니다.
