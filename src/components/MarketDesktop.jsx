@@ -3,6 +3,7 @@ import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, 
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
+import { newsBody } from '../logic/newsText.js'
 import { getWeeklyModifier, modifierEffect } from '../logic/weeklyModifiers.js'
 import { playCashOut, playCashRegister, playMarketCountdown, playNewsUpdate } from '../services/audioService.js'
 import { getNetWorth, isHiddenEndingEligible, useGameStore } from '../store/gameStore.js'
@@ -14,7 +15,6 @@ import StockChart from './StockChart.jsx'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
 const assetClass = (stock) => stock?.id === SISYPHUS_STOCK_ID ? 'asset-sisyphus' : stock?.id === COIN_ASSET_ID ? 'asset-coin' : ''
-const newsBody = (text) => String(text || '').replace(/^[^,，:：]{1,30}[,，:：]\s*/, '')
 const formatMarketTime = (progress) => {
   const totalMinutes = 9 * 60 + Math.min(1, Math.max(0, progress)) * 9 * 60
   const hours = Math.floor(totalMinutes / 60)
@@ -232,7 +232,7 @@ export default function MarketDesktop() {
                 </div>
               </div>
             </section>}
-          <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const related = data.stocks.find((stock) => stock.id === item.stockId); if (!related) return null; return <article key={item.id} className={`${assetClass(related)} ${newestNewsIds.includes(item.id) ? 'news-new' : ''}`}><small>{formatMarketTime(item.progress)} · {related.name}</small><p>{newsBody(item.text)}</p></article> })}{state.visibleNews.every((item) => !data.stocks.some((stock) => stock.id === item.stockId)) && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
+          <aside className="news-panel"><h3>LIVE WIRE</h3>{[...state.visibleNews].reverse().map((item) => { const related = data.stocks.find((stock) => stock.id === item.stockId); if (!related) return null; return <article key={item.id} className={`${assetClass(related)} ${newestNewsIds.includes(item.id) ? 'news-new' : ''}`}><small>{formatMarketTime(item.progress)} · {related.name}</small><p>{newsBody(item.text, related.name)}</p></article> })}{state.visibleNews.every((item) => !data.stocks.some((stock) => stock.id === item.stockId)) && <p className="muted">첫 속보를 기다리는 중…</p>}</aside>
         </div>
       </section>}
     </div>

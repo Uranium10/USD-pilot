@@ -12,7 +12,7 @@ function localMarketApi() {
     configureServer(server) {
       server.middlewares.use('/api/market-cycle', async (request, response) => {
         const url = new URL(request.url || '/', 'http://localhost')
-        const cycle = Math.min(6, Math.max(1, Number(url.searchParams.get('cycle')) || 1))
+        const cycle = Math.min(7, Math.max(1, Number(url.searchParams.get('cycle')) || 1))
         const companyIds = url.searchParams.get('companies')?.split(',').filter(Boolean)
         const coinPriceQuery = url.searchParams.get('coinPrice')
         const coinStartPrice = coinPriceQuery ? Number(coinPriceQuery) : undefined

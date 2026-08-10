@@ -13,6 +13,7 @@
     "check:ai": "node --env-file=.env.local scripts/test-ai-models.mjs",
     "check:ai-cost": "node --env-file=.env.local scripts/check-ai-cost.mjs",
     "check:ai-persistence": "node --env-file=.env.local scripts/check-ai-persistence.mjs",
+    "benchmark:weekly-runs": "node --env-file=.env.local scripts/benchmark-weekly-runs.mjs",
     "gen:run-plan-pool": "node --env-file=.env.local scripts/generate-run-plan-pool.mjs",
     "lint": "oxlint",
     "preview": "vite preview",

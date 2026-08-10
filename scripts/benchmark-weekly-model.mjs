@@ -3,6 +3,8 @@
 // 실행: node --env-file=.env.local scripts/benchmark-weekly-model.mjs
 
 import { createRunPlanPoolRepository } from '../server/runPlanPoolRepository.js'
+import { createClient } from '@libsql/client'
+import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { getOpenAIClient } from '../server/ai/clients.js'
 import { CYCLE_SCENARIO_SCHEMA } from '../server/ai/schemas.js'
 import { CYCLE_SCENARIO_SYSTEM_PROMPT, buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
@@ -13,9 +15,18 @@ const ALL_VARIANTS = [
   { name: 'terra-none', model: 'gpt-5.6-terra', effort: 'none', input: 2.5, cached: 0.25, output: 15 },
   { name: 'luna-medium', model: 'gpt-5.6-luna', effort: 'medium', input: 1, cached: 0.1, output: 6 },
 ]
-const VARIANTS = process.argv.includes('--quick') ? ALL_VARIANTS.slice(0, 1) : ALL_VARIANTS
-const REPEATS = 2
-const CYCLE = 4
+function option(name, fallback) {
+  const index = process.argv.indexOf(`--${name}`)
+  return index >= 0 ? process.argv[index + 1] : fallback
+}
+
+const variantName = option('variant', null)
+const VARIANTS = variantName
+  ? ALL_VARIANTS.filter((variant) => variant.name === variantName)
+  : process.argv.includes('--quick') ? ALL_VARIANTS.slice(0, 1) : ALL_VARIANTS
+const REPEATS = Number(option('repeats', 2))
+const CYCLE = Number(option('cycle', 4))
+const RUN_PLAN_ID = option('run-plan-id', null)
 const STOCK_IDS = new Set(['stock-1', 'stock-2', 'stock-3', 'stock-4', 'stock-5'])
 
 function scoreScenario(value) {
@@ -81,10 +92,26 @@ async function generate(client, variant, prompt) {
 const average = (values) => values.reduce((sum, value) => sum + value, 0) / values.length
 
 async function main() {
+  if (!VARIANTS.length) throw new Error(`Unknown variant: ${variantName}`)
+  if (!Number.isInteger(CYCLE) || CYCLE < 1 || CYCLE > 7) throw new Error(`Invalid cycle: ${CYCLE}`)
+  if (!Number.isInteger(REPEATS) || REPEATS < 1) throw new Error(`Invalid repeats: ${REPEATS}`)
+
   const pool = createRunPlanPoolRepository({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN })
-  const runPlan = await pool.pickRandom()
+  let runPlan = await pool.pickRandom()
+  if (RUN_PLAN_ID) {
+    const db = createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN })
+    const result = await db.execute({
+      sql: 'SELECT run_plan_json FROM run_plan_pool WHERE id = ? LIMIT 1',
+      args: [Number(RUN_PLAN_ID)],
+    })
+    runPlan = result.rows[0] ? JSON.parse(String(result.rows[0].run_plan_json)) : null
+  }
   if (!runPlan) throw new Error('run_plan_pool이 비어 있습니다.')
-  const prompt = buildCycleScenarioUserPrompt({ cycle: CYCLE, runPlan, worldState: null })
+  const market = generateMarketCycle({ cycle: CYCLE, seed: 20260810 + CYCLE })
+  const companies = market.days[0].stocks
+    .filter((stock) => STOCK_IDS.has(stock.id))
+    .map(({ id, name, sector }) => ({ id, name, sector }))
+  const prompt = buildCycleScenarioUserPrompt({ cycle: CYCLE, runPlan, worldState: null, companies })
   const client = getOpenAIClient()
   const report = { cycle: CYCLE, runPlanTheme: runPlan.theme, promptCharacters: prompt.length, variants: [] }
 
@@ -94,6 +121,9 @@ async function main() {
       const result = await generate(client, variant, prompt)
       runs.push(result)
       console.log(`${variant.name} ${index + 1}/${REPEATS}: ${result.elapsed.toFixed(1)}s $${result.cost.toFixed(4)} score=${result.quality.score} cached=${result.usage.cached} reasoning=${result.usage.reasoning}`)
+      const firstDay = result.sample.days?.[0]
+      console.log(`  headline: ${firstDay?.events?.[0]?.headline || '(none)'}`)
+      console.log(`  intel: ${firstDay?.rumorSeeds?.[0]?.angle || '(none)'}`)
     }
     report.variants.push({
       ...variant,

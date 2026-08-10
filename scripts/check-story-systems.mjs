@@ -8,7 +8,8 @@ import {
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
 import { compileScenario, isAiScenarioCycle } from '../server/ai/aiMarketCycle.js'
-import { cycleScenarioOutputConfig } from '../server/ai/cycleScenarioModel.js'
+import { cycleScenarioOutputConfig, findScenarioCopyIssues } from '../server/ai/cycleScenarioModel.js'
+import { newsBody } from '../src/logic/newsText.js'
 import { buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
 import { buildRunPlanUserPrompt } from '../server/ai/prompts/runPlan.js'
 import { CYCLE_SCENARIO_SCHEMA, CYCLE_SCENARIO_VERBOSE_SCHEMA, RUN_PLAN_SCHEMA } from '../server/ai/schemas.js'
@@ -104,17 +105,89 @@ assert(cycleScenarioOutputConfig().schema === CYCLE_SCENARIO_SCHEMA, '기본 Cyc
 assert(RUN_PLAN_SCHEMA.properties.arcs.items.properties.landingCycle.enum.includes(7), 'RunPlan 스키마가 7주차 결말 아크를 거부합니다.')
 assert(buildRunPlanUserPrompt().includes('cycle 1~7'), 'RunPlan 프롬프트가 7주차를 요청하지 않습니다.')
 assert(buildCycleScenarioUserPrompt({ cycle: 7, runPlan: { arcs: [] } }).includes('에필로그'), '7주차 시나리오 프롬프트에 에필로그 지시가 없습니다.')
+const companyPrompt = buildCycleScenarioUserPrompt({
+  cycle: 1,
+  runPlan: { arcs: [] },
+  companies: [{ id: 'stock-1', name: '오비탈 레일', sector: '궤도 건설' }],
+})
+assert(companyPrompt.includes('stock-1: 오비탈 레일 (궤도 건설)'), '주간 GPT 프롬프트에 종목별 실제 기업명이 전달되지 않습니다.')
+const validCopyScenario = {
+  days: Array.from({ length: 7 }, (_, index) => ({
+    day: index + 1,
+    events: [{ headline: '오비탈 레일이 신규 보수 계약을 체결해 매출 증가가 예상됐다.' }],
+    rumorSeeds: [{ angle: '건설 자재가 신규 작업 구역으로 이송되면서 계약 확대 가능성이 커졌다.' }],
+  })),
+}
+assert(findScenarioCopyIssues(validCopyScenario).length === 0, '정상적인 한국어 뉴스와 정보가 문장 검증에서 거부됐습니다.')
+const brokenCopyScenario = structuredClone(validCopyScenario)
+brokenCopyScenario.days[0].events[0].headline = 'stock-1 급여명세서에 새 공제 코드 등장...'
+assert(findScenarioCopyIssues(brokenCopyScenario).some((issue) => issue.includes('internal stock id')), '내부 종목 ID가 노출된 뉴스를 걸러내지 못했습니다.')
+
+// 소문이 같은 날 사건을 가리키지 않으면 compileScenario가 그 소문을 버린다 —
+// 검증에서 먼저 잡아 재생성으로 이어져야 정보 상점이 조용히 비지 않는다.
+const orphanRumorScenario = {
+  days: [{
+    day: 1,
+    events: [{ eventId: 'e1', headline: '오비탈 레일이 신규 보수 계약을 체결해 매출 증가가 예상됐다.' }],
+    rumorSeeds: [{ targetEventId: 'e-does-not-exist', angle: '건설 자재가 신규 작업 구역으로 이송되면서 계약 확대 가능성이 커졌다.' }],
+  }],
+}
+assert(
+  findScenarioCopyIssues(orphanRumorScenario).some((issue) => issue.includes('orphan target')),
+  '존재하지 않는 사건을 가리키는 소문을 걸러내지 못했습니다.',
+)
+
+// 자기 종목은 언급하지 않고 다른 상장사만 언급하는 헤드라인 — 화면에서는 A 종목 뉴스인데
+// 본문은 B 이야기만 하는 상태가 된다(2026-08-10 Luna low 실측에서 발견된 어색함).
+const scenarioCompanies = [
+  { id: 'stock-1', name: '오비탈 레일', sector: '궤도 건설' },
+  { id: 'stock-2', name: '리본 안드로이드', sector: '폐기물 재활용' },
+]
+const mismatchScenario = {
+  days: [{
+    day: 1,
+    events: [{ eventId: 'e1', primaryStockId: 'stock-1', headline: '궤도 위생국이 리본 안드로이드의 폐기물 처리 인증을 취소했다.' }],
+    rumorSeeds: [{ targetEventId: 'e1', angle: '감사 인력이 처리장 계측 기록을 따로 확보했다는 이야기가 돌고 있다.' }],
+  }],
+}
+assert(
+  findScenarioCopyIssues(mismatchScenario, { companies: scenarioCompanies }).some((issue) => issue.includes('subject mismatch')),
+  '다른 기업만 언급하는 헤드라인을 주체 불일치로 잡아내지 못했습니다.',
+)
+// 어떤 기업도 언급하지 않는 문장은 종목명 표시가 주어 역할을 하므로 통과해야 한다.
+const neutralSubjectScenario = structuredClone(mismatchScenario)
+neutralSubjectScenario.days[0].events[0].headline = '규제 당국이 임상 자료 제출 기한을 2주 연장했다.'
+assert(
+  !findScenarioCopyIssues(neutralSubjectScenario, { companies: scenarioCompanies }).some((issue) => issue.includes('subject mismatch')),
+  '기업명이 없는 정상 문장을 주체 불일치로 잘못 판정했습니다.',
+)
+
+// 속보 본문의 종목명 접두사 제거는 실제로 그 이름으로 시작할 때만 일어나야 한다.
+assert(
+  newsBody('오비탈 레일, 궤도 6구역 수주가 확대됐다.', '오비탈 레일') === '궤도 6구역 수주가 확대됐다.',
+  '본문 앞의 중복 종목명 접두사가 제거되지 않았습니다.',
+)
+assert(
+  newsBody('감사원 발표에 따르면, 오비탈 레일이 계약을 재검증받는다.', '오비탈 레일')
+    === '감사원 발표에 따르면, 오비탈 레일이 계약을 재검증받는다.',
+  '종목명으로 시작하지 않는 문장의 앞부분이 잘렸습니다.',
+)
+assert(
+  newsBody('오비탈 레일이 신규 계약을 체결했다.', '오비탈 레일') === '오비탈 레일이 신규 계약을 체결했다.',
+  '구분자 없이 이어지는 종목명을 잘못 잘라냈습니다.',
+)
 const compiledEpilogue = compileScenario(generateMarketCycle({ cycle: 7, seed: 711, companyIds: cycleSix.companyIds }), {
   cycle: 7,
   title: 'AI 에필로그 검증',
   days: Array.from({ length: 7 }, (_, index) => ({
     day: index + 1,
     events: index === 0 ? [{ eventId: 'ai-c7-d1-e1', primaryStockId: 'stock-1', direction: 'down', magnitude: 'minor', impactProgress: 0.45, headline: 'AI 후일담 뉴스' }] : [],
-    rumorSeeds: [],
+    rumorSeeds: index === 0 ? [{ targetEventId: 'ai-c7-d1-e1', sourceArchetype: 'worker', confidence: 'medium', angle: '현장 인력이 후속 정리 작업에 착수했다.' }] : [],
   })),
 })
 assert(compiledEpilogue.aiGenerated && compiledEpilogue.days[0].news.some((item) => item.id === 'ai-c7-d1-e1'), '7주차 AI 기업 뉴스가 시장에 컴파일되지 않았습니다.')
 assert(compiledEpilogue.days[0].news.some((item) => item.id === 'c7-d1-sisyphus-collapse'), '7주차 AI 컴파일이 시지프 고정 폭락 뉴스를 제거했습니다.')
+assert(compiledEpilogue.days[0].rumors.some((item) => item.source === '현장 노동자'), 'AI 정보원 유형이 내부 영어 ID로 노출됩니다.')
 useGameStore.getState().loadEpilogueCycle(epilogueMarket)
 assert(useGameStore.getState().cycle === 7 && useGameStore.getState().day === 1, '7주차 첫날을 불러오지 못했습니다.')
 useGameStore.getState().completeDayIntro()

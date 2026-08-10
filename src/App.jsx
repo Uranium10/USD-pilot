@@ -9,12 +9,12 @@ import NightTutorialOverlay from './components/NightTutorialOverlay.jsx'
 import RoomScene from './components/RoomScene.jsx'
 import TutorialOverlay from './components/TutorialOverlay.jsx'
 import { IntroChoiceOverlay, NightTutorialChoiceOverlay } from './components/TutorialChoiceOverlay.jsx'
-import { COIN_ASSET_ID, DAYS_PER_CYCLE, INTEREST_RATE, SISYPHUS_STOCK_ID } from './config.js'
+import { COIN_ASSET_ID, DAYS_PER_CYCLE, EPILOGUE_CYCLE, INTEREST_RATE, SISYPHUS_STOCK_ID } from './config.js'
 import { stageEngine } from './engine/StageEngine.js'
 import { getMinPayment } from './logic/debtSystem.js'
 import { getWeeklyModifier, modifiedRumorCost, modifierEffect } from './logic/weeklyModifiers.js'
 import { playCashOut, playTitleClick, playTitleHover } from './services/audioService.js'
-import { fetchMarketCycle, prefetchMarketCycle, resetMarketCycleCache } from './services/marketService.js'
+import { fetchMarketCycle, prefetchCycleScenario, prefetchMarketCycle, resetMarketCycleCache } from './services/marketService.js'
 import { clearSavedSession, getDeviceId, getSavedSession, saveSession } from './services/sessionService.js'
 import { useGameStore } from './store/gameStore.js'
 
@@ -344,6 +344,32 @@ function Overlay() {
   return <div className="overlay-backdrop"><div className="overlay-modal">{state.overlay.title && <h2>{state.overlay.title}</h2>}{state.overlay.text && <p>{state.overlay.text}</p>}{information && <div className="information-list">{state.purchasedRumors.length === 0 && <p className="muted">구입한 정보가 없습니다.</p>}{state.purchasedRumors.map((rumor) => <article key={rumor.id}><small>{rumor.source} · 신뢰도 {Math.round(rumor.accuracy * 100)}%</small><p>{rumor.text}</p></article>)}</div>}{state.overlay.type === 'dayBriefing' ? <button className="primary" onClick={state.startDay}>{state.day}일차 시작</button> : <button className="primary" onClick={state.closeOverlay}>닫기</button>}</div></div>
 }
 
+// 다음 주 AI 시나리오를 이번 주가 시작될 때 미리 만들어 두게 한다.
+//
+// 예전에는 정산 화면에 들어갈 때 프리페치를 발사했는데, 플레이어가 상환액을 고르는
+// 시간(체감 5~30초)이 주간 시나리오 생성 시간(평균 17~25초)과 거의 같아서 대기가
+// 자주 노출됐다. 다음 사이클 생성에 필요한 재료(runPlan·입력 worldState·기업 매핑)는
+// 이번 사이클이 생성되는 순간 서버에 이미 저장되므로, 이번 주 시작 시점에 발사하면
+// 7일 × 8분의 여유가 생긴다. 서버가 이번 주 응답을 돌려준 시점에는 다음 주의 입력
+// worldState 기록이 이미 끝나 있으므로(aiMarketCycle.js) 순서도 안전하다.
+function NextCycleScenarioPrefetch() {
+  const cycle = useGameStore((state) => state.cycle)
+  const marketReady = useGameStore((state) => state.marketReady)
+  const companyIds = useGameStore((state) => state.market?.companyIds)
+  const restartProtected = useGameStore((state) => state.market?.restartProtected)
+  useEffect(() => {
+    if (!marketReady) return
+    const next = cycle + 1
+    if (next > EPILOGUE_CYCLE) return
+    // 재시작 보호로 받은 1주차는 캐시된 결과다. 여기서 다음 주까지 미리 만들면 보호
+    // 대상이 아닌 2주차 생성비가 반복 재시작마다 그대로 나가므로 발사하지 않는다.
+    // 이 경우엔 기존처럼 정산 화면 프리페치가 담당한다.
+    if (restartProtected) return
+    prefetchCycleScenario(next, companyIds, getDeviceId())
+  }, [cycle, marketReady, companyIds, restartProtected])
+  return null
+}
+
 export default function App() {
   const screen = useGameStore((state) => state.screen)
   const phase = useGameStore((state) => state.phase)
@@ -351,5 +377,5 @@ export default function App() {
   useEffect(() => { stageEngine.start(); return () => stageEngine.stop() }, [])
   const ending = phase === 'gameover' || phase === 'ended'
   const isDayIntro = phase === 'dayIntro' || phase === 'epilogueIntro'
-  return <div className="game-frame"><BgmController /><AutoSave /><div style={{ display: ending ? 'block' : 'none' }}><EndingScene /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !isDayIntro && phase !== 'tutorial' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !isDayIntro && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{isDayIntro && <DayTransition />}{phase === 'introChoice' && <IntroChoiceOverlay />}{phase === 'tutorial' && <TutorialOverlay />}<Overlay />{activeScene && <DialogueScene />}</div>
+  return <div className="game-frame"><BgmController /><AutoSave /><NextCycleScenarioPrefetch /><div style={{ display: ending ? 'block' : 'none' }}><EndingScene /></div>{screen === 'title' && !ending && <Title />}<div style={{ display: screen === 'room' && !isDayIntro && phase !== 'tutorial' && !ending ? 'block' : 'none' }}><Room /></div><div style={{ display: screen === 'monitor' && phase === 'premarket' && !ending ? 'block' : 'none' }}><main className="monitor-shell"><Premarket /></main></div><div style={{ display: screen === 'monitor' && phase !== 'premarket' && !isDayIntro && !ending ? 'block' : 'none' }}><MarketDesktop /></div>{isDayIntro && <DayTransition />}{phase === 'introChoice' && <IntroChoiceOverlay />}{phase === 'tutorial' && <TutorialOverlay />}<Overlay />{activeScene && <DialogueScene />}</div>
 }

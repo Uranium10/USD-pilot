@@ -16,9 +16,18 @@ ${WORLD_TONE}
 당신이 만들지 않는 것 (코드가 계산함): 정확한 주가 숫자, 정보 최종 가격, 소문 정확도 실수값,
 소문의 실제 진위, 부채/이자/채굴 관련 수치, 구간별 최대 변동폭.
 
+플레이어에게 바로 보이는 한국어 문장 규칙:
+- headline은 실제 기업명과 구체적인 주체·행동·결과가 있는 짧은 한 문장으로 쓴다.
+- rumorSeeds.angle은 정보원이 포착한 구체적인 사실과 예상 영향을 1~2문장으로 쓴다.
+- 문장은 조사와 서술어를 갖추고 '다.', '했다.', '됐다.' 등으로 완결한다. 명사만 나열하거나 문장 중간을 생략하지 말 것.
+- 'stock-1' 같은 내부 ID, 스키마 필드명, placeholder, 영어 오류 문구를 노출하지 말 것.
+- '...'/ '…'로 뜻을 생략하거나, ‘무엇인가’·‘어떤 이유’처럼 모호한 대상으로 핵심 정보를 대체하지 말 것.
+- 서사적인 여운보다 첫 번째로 읽어도 사건과 주가 방향을 이해할 수 있는 명료함을 우선한다.
+
 반드시 지킬 개수 제약 (스키마가 강제하지 못하니 반드시 지시대로 만들 것):
 - companyStates는 정확히 5개, stock-1~stock-5 각각 하나씩 빠짐없이.
 - days는 정확히 7개, day 1~7 각각 하나씩 빠짐없이.
+- 각 day에 events는 1개 이상, rumorSeeds는 1개 이상 만들어 매일 뉴스와 정보 거래가 작동하게 할 것.
 - causeEventId가 없는 사건은 null로 채울 것 (필드 자체를 생략하지 말 것).
 
 7주기 전용 원칙:
@@ -42,7 +51,7 @@ export const CYCLE_SCENARIO_SYSTEM_PROMPT = CYCLE_SCENARIO_VERBOSE_SYSTEM_PROMPT
 - 플레이어가 보는 headline과 소문 angle에는 기존과 같은 구체성·세계관 어조를 유지한다.
 - nextWorldState에는 다음 주 서사 연속성에 꼭 필요한 미해결 상태만 간결하게 남긴다.`)
 
-export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) {
+export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState, companies = [] }) {
   const activeArcs = (runPlan?.arcs ?? []).filter(
     (arc) => arc.startCycle <= cycle && arc.landingCycle >= cycle
   )
@@ -55,6 +64,11 @@ export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) {
 이번 사이클: ${cycle} / 7${cycle === 7 ? ' (에필로그 — 미해결 아크를 회수하고 후일담을 작성할 것. 단, rumorSeeds는 이번 주도 평소처럼 매일 채울 것)' : ''}
 
 RunPlan 테마: ${runPlan?.theme ?? '(없음)'}
+
+이번 런의 종목 ID↔기업명 매핑(플레이어 노출 문장에서는 반드시 기업명을 사용):
+${companies.length
+    ? companies.map((company) => `- ${company.id}: ${company.name} (${company.sector})`).join('\n')
+    : '- 매핑 없음: 내부 ID를 문장에 쓰지 말고 ‘해당 기업’처럼 자연스럽게 표현할 것'}
 
 이번 주 확정(landing)되어야 하는 아크:
 ${landingArcs.length ? JSON.stringify(landingArcs, null, 2) : '(없음)'}

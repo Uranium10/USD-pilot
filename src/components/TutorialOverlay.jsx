@@ -124,7 +124,7 @@ function NightMock() {
       <header><div><p className="eyebrow">NIGHT SHIFT</p><h2>1주차 1일차 밤</h2></div><div className="energy-meter"><span>활동력 100/100</span><progress max="100" value="100" /></div></header>
       <nav className="night-tabs"><button className="active">활동</button><button>상점</button><button>인벤토리 (0)</button></nav>
       <div className="night-content">
-        <article className="night-entry"><img src="/imgs/items/convenience_job.png" alt="" className="item-thumbnail" /><div><h3>편의점 아르바이트</h3><p>궤도 정거장 편의점의 야간 재고를 정리한다.</p><small>활동력 -85 · 보상 약 ₡600</small></div><button>일하러 가기</button></article>
+        <article className="night-entry"><img src="/imgs/items/convenience_job.png" alt="" className="item-thumbnail" /><div><h3>편의점 아르바이트</h3><p>궤도 정거장 편의점의 야간 재고를 정리한다.</p><small className="night-meta"><span>활동력 -85</span><span className="night-meta-separator" aria-hidden="true">·</span><span className="credit-flow credit-income">수입 +₡600</span></small></div><button>일하러 가기</button></article>
       </div>
     </section>
     <button className="sleep-button tutorial-sleep-button">자기</button>

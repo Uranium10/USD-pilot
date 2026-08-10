@@ -2334,6 +2334,30 @@ button:hover {
   color: var(--yellow)
 }
 
+.night-entry .night-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px
+}
+
+.night-meta-separator {
+  color: var(--muted)
+}
+
+.night-entry .credit-flow {
+  font-weight: 800;
+  white-space: nowrap
+}
+
+.night-entry .credit-income {
+  color: var(--green)
+}
+
+.night-entry .credit-expense {
+  color: var(--red)
+}
+
 .night-entry button {
   align-self: center;
   padding: 10px 14px
@@ -2952,6 +2976,10 @@ button:hover {
   color: var(--cyan);
   font-size: 13px;
   font-weight: 700
+}
+
+.mining-machine dd.credit-expense {
+  color: var(--red)
 }
 
 .mining-machine .mining-payback {

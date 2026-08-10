@@ -8,6 +8,11 @@ import { playCashOut, playCashRegister } from '../services/audioService.js'
 import { useGameStore } from '../store/gameStore.js'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
+const CreditFlow = ({ type, value, children }) => (
+  <span className={`credit-flow credit-${type}`}>
+    {type === 'expense' ? '지출' : '수입'} {Number.isFinite(value) ? `${type === 'expense' ? '-' : '+'}${money(value)}` : children}
+  </span>
+)
 
 export default function NightPanel() {
   const state = useGameStore()
@@ -59,21 +64,21 @@ export default function NightPanel() {
           const cashCost = nightActivityCashCost(activity, state.donationCount)
           const energyCost = modifiedNightEnergyCost(activity.energyCost, state.weeklyModifierId)
           const reward = activity.reward.type === 'donation'
-            ? `기부금 ${money(cashCost)}`
+            ? <CreditFlow type="expense" value={cashCost} />
             : activity.reward.type === 'credits'
-            ? `보상 ${money(modifiedNightReward(activity.reward.amount, state.weeklyModifierId))}`
+            ? <CreditFlow type="income" value={modifiedNightReward(activity.reward.amount, state.weeklyModifierId)} />
             : activity.reward.type === 'mixed'
-              ? `기본 보상 ${money(modifiedNightReward(activity.reward.credits, state.weeklyModifierId))}`
-              : '뜻밖의 발견 가능'
+              ? <CreditFlow type="income" value={modifiedNightReward(activity.reward.credits, state.weeklyModifierId)} />
+              : <span>뜻밖의 발견 가능</span>
           const start = () => { const started = state.startNightActivity(activity.id); if (started && cashCost > 0) playCashOut() }
-          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small>활동력 -{energyCost} · {reward}</small></div><button onClick={start} disabled={Boolean(state.nightActivity) || completed || state.energy < energyCost || state.cash < cashCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
+          return <article key={activity.id} className="night-entry" {...(index === 0 ? { 'data-night-tutorial-target': 'activity' } : {})}><img src={activity.img} alt="" className="item-thumbnail" /><div><h3>{activity.name}</h3><p>{activity.description}</p><small className="night-meta"><span>활동력 -{energyCost}</span><span className="night-meta-separator" aria-hidden="true">·</span>{reward}</small></div><button onClick={start} disabled={Boolean(state.nightActivity) || completed || state.energy < energyCost || state.cash < cashCost}>{completed ? '오늘 완료' : activity.actionLabel}</button></article>
         })}
-        {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small>덱 v.{state.hackingDeckLevel} · 활동력 -{modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)} · 크레딧/DUST/시지프 주식 중 무작위 획득</small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
+        {state.hackingDeckLevel >= 0 && <article className="night-entry cyber-runner"><img src={cyberRunner.img} alt="" className="item-thumbnail" /><div><h3>{cyberRunner.name}</h3><p>{cyberRunner.description}</p><small className="night-meta"><span>덱 v.{state.hackingDeckLevel}</span><span className="night-meta-separator" aria-hidden="true">·</span><span>활동력 -{modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)}</span><span className="night-meta-separator" aria-hidden="true">·</span><CreditFlow type="income">크레딧/DUST/시지프 주식 중 무작위</CreditFlow></small></div><button onClick={state.startCyberRunner} disabled={Boolean(state.nightActivity) || state.completedNightActivityIds.includes(cyberRunner.id) || state.energy < modifiedNightEnergyCost(CYBER_RUNNER_ENERGY_COST, state.weeklyModifierId)}>{state.completedNightActivityIds.includes(cyberRunner.id) ? '오늘 완료' : '침투 시작'}</button></article>}
       </>}
       {tab === 'shop' && <div className="night-shop-list">
-        <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small>{money(drinkPrice)} (하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</small></div><button onClick={() => spend(() => state.buyNightItem(drink))} disabled={Boolean(state.nightActivity) || state.cash < drinkPrice || state.dailyDrinkPurchased >= 2}>구입</button></article>
-        {state.hackingDeckLevel < HACKING_DECK_COSTS.length - 1 && <article className="night-entry hacking-deck"><img src={`/imgs/items/hacking_deck_${Math.max(0, state.hackingDeckLevel + 1)}.png`} alt="" className="item-thumbnail" /><div><h3>{state.hackingDeckLevel < 0 ? deck.name : `해킹 덱 v.${state.hackingDeckLevel + 1} 개조`}</h3><p>{deck.description}</p><small>{money(deckPrice)} · 보상량 배율 ×{state.hackingDeckLevel + 2}</small></div><button onClick={() => spend(state.upgradeHackingDeck)} disabled={Boolean(state.nightActivity) || state.cash < deckPrice}>{state.hackingDeckLevel < 0 ? '구입' : '업그레이드'}</button></article>}
-        {state.epilogue && <article className="night-entry smuggling-ticket"><img src={ticket.img} alt="" className="item-thumbnail" /><div><h3>{ticket.name}</h3><p>{ticket.description}</p><small>{money(ticketPrice)} · 구매 즉시 우주로 도주합니다(되돌릴 수 없음)</small></div><button onClick={() => spend(() => state.buySmugglingTicket(ticket))} disabled={Boolean(state.nightActivity) || state.cash < ticketPrice}>구입하고 탈출한다</button></article>}
+        <article className="night-entry"><img src={drink.img} alt="" className="item-thumbnail" /><div><h3>{drink.name}</h3><p>{drink.description}</p><small className="night-meta"><CreditFlow type="expense" value={drinkPrice} /><span>(하루 2개 제한, {2 - (state.dailyDrinkPurchased || 0)}개 남음)</span></small></div><button onClick={() => spend(() => state.buyNightItem(drink))} disabled={Boolean(state.nightActivity) || state.cash < drinkPrice || state.dailyDrinkPurchased >= 2}>구입</button></article>
+        {state.hackingDeckLevel < HACKING_DECK_COSTS.length - 1 && <article className="night-entry hacking-deck"><img src={`/imgs/items/hacking_deck_${Math.max(0, state.hackingDeckLevel + 1)}.png`} alt="" className="item-thumbnail" /><div><h3>{state.hackingDeckLevel < 0 ? deck.name : `해킹 덱 v.${state.hackingDeckLevel + 1} 개조`}</h3><p>{deck.description}</p><small className="night-meta"><CreditFlow type="expense" value={deckPrice} /><span className="night-meta-separator" aria-hidden="true">·</span><span>보상량 배율 ×{state.hackingDeckLevel + 2}</span></small></div><button onClick={() => spend(state.upgradeHackingDeck)} disabled={Boolean(state.nightActivity) || state.cash < deckPrice}>{state.hackingDeckLevel < 0 ? '구입' : '업그레이드'}</button></article>}
+        {state.epilogue && <article className="night-entry smuggling-ticket"><img src={ticket.img} alt="" className="item-thumbnail" /><div><h3>{ticket.name}</h3><p>{ticket.description}</p><small className="night-meta"><CreditFlow type="expense" value={ticketPrice} /><span className="night-meta-separator" aria-hidden="true">·</span><span>구매 즉시 우주로 도주합니다(되돌릴 수 없음)</span></small></div><button onClick={() => spend(() => state.buySmugglingTicket(ticket))} disabled={Boolean(state.nightActivity) || state.cash < ticketPrice}>구입하고 탈출한다</button></article>}
         <article className="night-entry mining-machine">
           <img src={`/imgs/items/mining_machine_${canUpgrade ? nextMineTier(state.miningTier) : Math.max(0, state.miningTier)}.png`} alt="" className="item-thumbnail" />
           <div>
@@ -83,7 +88,7 @@ export default function NightPanel() {
             <dl>
               <div><dt>현재 생산</dt><dd>{currentMiningRate.toFixed(4)} DUST/초</dd></div>
               <div><dt>{state.miningTier < 0 ? '설치 후' : `T.${nextMineTier(state.miningTier)} 생산`}</dt><dd>{upgradedMiningRate.toFixed(4)} DUST/초</dd></div>
-              <div><dt>{state.miningTier < 0 ? '설치 비용' : '업그레이드 비용'}</dt><dd>{money(miningCost)}</dd></div>
+              <div><dt>{state.miningTier < 0 ? '설치 비용' : '업그레이드 비용'}</dt><dd className="credit-flow credit-expense">지출 -{money(miningCost)}</dd></div>
             </dl>
             {canUpgrade
               ? <small className="mining-payback">현재 코인값 {money(coinPrice)} 기준 추가 생산분 회수 약 {paybackDays}거래일</small>

@@ -7,8 +7,13 @@ import { generateMarketCycle } from '../data/generateMarket.js'
 // 배경: USD-spec/agent_workthrough_2.md (프리페치가 없을 때 로딩 화면 체감 시간 실측).
 const inFlightByCycle = new Map()
 
+// 시나리오 프리페치를 이미 요청한 사이클. 같은 사이클에 대해 두 번 쏘지 않기 위한
+// 클라이언트 측 중복 방지용(React StrictMode의 이중 마운트 포함).
+const prefetchedScenarioCycles = new Set()
+
 export function resetMarketCycleCache() {
   inFlightByCycle.clear()
+  prefetchedScenarioCycles.clear()
 }
 
 function buildUrl(cycle, companyIds, coinStartPrice, seed, deviceId) {
@@ -39,6 +44,24 @@ export function prefetchMarketCycle(cycle, companyIds, coinStartPrice, seed, dev
   const promise = requestMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId)
   inFlightByCycle.set(cycle, promise)
   return promise
+}
+
+// 다음 주 AI 시나리오만 서버에 미리 만들어 두게 한다(가격 경로는 그 주 마지막 코인
+// 종가가 필요해 미리 못 만든다 — server/ai/aiMarketCycle.js의 prefetchAiCycleScenario 참고).
+// 주가 시작될 때 발사하면 7일 × 8분의 여유가 생겨서, 플레이어가 실제로 다음 주차에
+// 도달할 때는 GPT 호출 없이 저장된 시나리오를 합치기만 하면 된다.
+// 응답을 기다리지 않는 fire-and-forget이며, 실패해도 기존 경로가 그대로 동작한다.
+export function prefetchCycleScenario(cycle, companyIds, deviceId) {
+  if (prefetchedScenarioCycles.has(cycle)) return
+  prefetchedScenarioCycles.add(cycle)
+  const params = new URLSearchParams({ cycle: String(cycle), prefetch: '1' })
+  if (companyIds?.length) params.set('companies', companyIds.join(','))
+  if (deviceId) params.set('deviceId', deviceId)
+  fetch(`/api/market-cycle?${params}`).catch((error) => {
+    // 다음 기회에 다시 시도할 수 있도록 실패한 사이클은 표시를 지운다.
+    prefetchedScenarioCycles.delete(cycle)
+    console.warn('다음 주 시나리오 프리페치에 실패했습니다(무시).', error)
+  })
 }
 
 export async function fetchMarketCycle(cycle, companyIds, coinStartPrice, seed, deviceId) {
