@@ -1,15 +1,9 @@
-// "가장 중요한 전체 서사 모델" — Claude Opus 4.6 (사용자 지정, 실제 호출로 유효성 확인됨).
+// "가장 중요한 전체 서사 모델" — Claude Opus 5 high (비용·속도·품질 실측 후 고정).
 // 런 시작 시 딱 한 번 호출해서 에필로그를 포함한 7주기 전체를 아우르는 RunPlan을 만든다.
 // (server/ai/config.js의 MODEL_TIERS.narrative.model 한 곳만 고치면 다른 모델로 교체 가능)
 //
-// 2026-08-09: effort를 high→medium→high로 두 번 바꿨다. 처음엔 RunPlan이 매 신규 게임
-// 시작마다 그 자리에서 생성돼 플레이어가 직접 로딩 화면에서 기다렸기 때문에 medium으로
-// 낮췄었다. 그런데 이후 RunPlan을 run_plan_pool에 미리 채워두고 무작위로 뽑아 쓰는
-// 전처리 방식으로 바꾸면서(server/ai/aiMarketCycle.js, scripts/generate-run-plan-pool.mjs)
-// 이 호출은 더 이상 플레이어 요청 경로에 있지 않다 — 관리자가 한가할 때 오프라인
-// 배치로 돌리는 것뿐이라 지연 시간이 문제되지 않는다. 그래서 "가장 중요한 핵심 서사
-// 모델"이라는 원래 취지에 맞게 다시 high로 올렸다. 판단 근거는
-// USD-spec/agent_workthrough_3.md 참고.
+// RunPlan은 run_plan_pool에 미리 생성하며, Opus 5의 high가 max와 비슷한 아크 밀도를
+// 유지하면서 비용과 생성 시간을 크게 줄여 high를 사용한다.
 
 import { getAnthropicClient } from './clients.js'
 import { MODEL_TIERS } from './config.js'

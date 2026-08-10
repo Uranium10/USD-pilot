@@ -12,6 +12,7 @@
 //   node --env-file=.env.local scripts/generate-run-plan-pool.mjs 30 5
 
 import { generateRunPlan } from '../server/ai/runPlanModel.js'
+import { MODEL_TIERS } from '../server/ai/config.js'
 import { createRunPlanPoolRepository } from '../server/runPlanPoolRepository.js'
 
 const count = Number(process.argv[2]) || 10
@@ -51,7 +52,7 @@ async function runBatch(items, worker, workerCount) {
 async function main() {
   const before = await repo.count()
   console.log(`현재 풀 크기: ${before}개`)
-  console.log(`${count}개를 동시 ${concurrency}개씩 생성합니다 (claude-opus-4-6, effort=high)...\n`)
+  console.log(`${count}개를 동시 ${concurrency}개씩 생성합니다 (${MODEL_TIERS.narrative.model}, effort=high)...\n`)
 
   const indices = Array.from({ length: count }, (_, i) => i + 1)
   const generated = await runBatch(indices, generateOne, concurrency)
