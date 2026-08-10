@@ -19,15 +19,12 @@ export const MODEL_TIERS = {
   weekly: {
     provider: 'openai',
     // 2026-08-09: gpt-5.5 → gpt-5.6-terra(사용자 지정).
-    // 2026-08-10: gpt-5.6-terra medium → gpt-5.6-luna low(사용자 지정). 같은 RunPlan
-    // 81·90을 1→7주차로 이어가는 14회 실측을 두 후보에 동일 조건으로 돌려 비교했다:
-    //   Terra medium — 314.5초 / $0.5690 (사이클당 22.5초 / $0.0406)
-    //   Luna  low    — 218.2초 / $0.2388 (사이클당 15.6초 / $0.0171)
-    // 비용 58.0%, 시간 30.6% 감소했고 강화된 검증(orphan rumor·주체 불일치 포함)에서
-    // 14/14 무결함이었다. 단가는 input $1 / cached $0.1 / output $6 per 1M.
-    model: 'gpt-5.6-luna',
+    // 2026-08-10: Luna low 실험은 비용·속도 면에서는 유리했지만 뉴스와 소문의 한국어
+    // 문장 품질 편차가 커, 마지막으로 안정성이 검증된 Terra medium 설정으로 복원했다.
+    // Luna low 설정과 프롬프트는 server/ai/backups/2026-08-10-luna-low/에 보존한다.
+    model: 'gpt-5.6-terra',
     // 이 티어의 reasoning effort. cycleScenarioModel.js가 기본값으로 읽어간다.
-    effort: 'low',
+    effort: 'medium',
     role: '주간 검증 모델 — 사이클별 시장 시나리오(CycleScenario) 초안 생성 + 자체 정합성 검증',
   },
   filler: {

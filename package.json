@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "check:coin": "node scripts/check-coin-balance.mjs",
+    "check:stock-path": "node scripts/check-stock-path-progression.mjs",
     "check:story-systems": "node scripts/check-story-systems.mjs",
     "check:session": "node --env-file=.env.local scripts/check-session-persistence.mjs",
     "check:restart-protection": "node --env-file=.env.local scripts/check-restart-protection.mjs",

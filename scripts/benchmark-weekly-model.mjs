@@ -27,6 +27,7 @@ const VARIANTS = variantName
 const REPEATS = Number(option('repeats', 2))
 const CYCLE = Number(option('cycle', 4))
 const RUN_PLAN_ID = option('run-plan-id', null)
+const PREVIEW = process.argv.includes('--preview')
 const STOCK_IDS = new Set(['stock-1', 'stock-2', 'stock-3', 'stock-4', 'stock-5'])
 
 function scoreScenario(value) {
@@ -124,6 +125,12 @@ async function main() {
       const firstDay = result.sample.days?.[0]
       console.log(`  headline: ${firstDay?.events?.[0]?.headline || '(none)'}`)
       console.log(`  intel: ${firstDay?.rumorSeeds?.[0]?.angle || '(none)'}`)
+      if (PREVIEW && index === 0) {
+        const events = result.sample.days.flatMap((day) => day.events || []).slice(0, 5)
+        const rumors = result.sample.days.flatMap((day) => day.rumorSeeds || []).slice(0, 5)
+        console.log('  뉴스:', events.map((event) => event.headline).join(' / '))
+        console.log('  소문:', rumors.map((rumor) => rumor.angle).join(' / '))
+      }
     }
     report.variants.push({
       ...variant,

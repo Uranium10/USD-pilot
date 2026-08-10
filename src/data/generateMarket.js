@@ -216,17 +216,29 @@ function selectCompanies(random, companyIds) {
   return shuffled.slice(0, LISTED_COMPANY_COUNT)
 }
 
-function makePath(startPrice, random, cycle) {
+export function getStockPathProfile(cycle, day) {
+  const elapsedDays = Math.max(0, (cycle - 1) * DAYS_PER_CYCLE + (day - 1))
+  const jaggedness = clamp(0.38 + (elapsedDays / (DAYS_PER_CYCLE * 2)) * 0.62, 0.38, 1)
+  return {
+    jaggedness,
+    minPointCount: jaggedness >= 1 ? 4 : 3,
+    pointCountRange: 2 + Math.round(jaggedness * 3),
+  }
+}
+
+function makePath(startPrice, random, cycle, day) {
   const volatility = VOLATILITY_BY_CYCLE[cycle - 1] ?? VOLATILITY_BY_CYCLE.at(-1)
-  const pointCount = 4 + Math.floor(random() * 5)
+  const profile = getStockPathProfile(cycle, day)
+  const pointCount = profile.minPointCount + Math.floor(random() * profile.pointCountRange)
   const progresses = Array.from({ length: pointCount - 2 }, () => 0.05 + random() * 0.9)
     .sort((left, right) => left - right)
   const points = [{ progress: 0, price: startPrice }]
   let price = startPrice
   for (const progress of [...progresses, 1]) {
-    const normalMove = gaussian(random) * STOCK_BASE_SIGMA * volatility
-    const shock = random() < STOCK_SHOCK_CHANCE
-      ? gaussian(random) * STOCK_SHOCK_SIGMA * Math.sqrt(volatility)
+    const normalMove = gaussian(random) * STOCK_BASE_SIGMA * volatility * profile.jaggedness
+    const shockChance = STOCK_SHOCK_CHANCE * (0.45 + profile.jaggedness * 0.55)
+    const shock = random() < shockChance
+      ? gaussian(random) * STOCK_SHOCK_SIGMA * Math.sqrt(volatility) * profile.jaggedness
       : 0
     const move = clamp(normalMove + shock, -STOCK_SEGMENT_MOVE_LIMIT, STOCK_SEGMENT_MOVE_LIMIT)
     price = clamp(
@@ -308,7 +320,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
         name,
         sector,
         startPrice,
-        path: makePath(startPrice, random, cycle),
+        path: makePath(startPrice, random, cycle, dayIndex + 1),
       }
       previousCloses[stockIndex] = stock.path.at(-1).price
       return stock
@@ -337,7 +349,7 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
       startPrice: sisyphusStart,
       path: cycle === 7 && dayIndex === 0
         ? makeSisyphusCrashPath(sisyphusStart, random)
-        : makePath(sisyphusStart, random, cycle),
+        : makePath(sisyphusStart, random, cycle, dayIndex + 1),
     }
     previousSisyphusClose = sisyphus.path.at(-1).price
     const stocks = [...companyStocks, sisyphus, coin]

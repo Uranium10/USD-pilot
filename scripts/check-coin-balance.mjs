@@ -116,7 +116,20 @@ const lateStockRanges = []
 const lateStockSegmentMoves = []
 const lateStockDailyReturns = []
 const lateCoinRanges = []
+const matureStockSegmentMoves = []
+const matureStockDailyReturns = []
 for (let seed = 1; seed <= 300; seed += 1) {
+  const matureMarket = generateMarketCycle({ cycle: 3, seed })
+  for (const day of matureMarket.days) {
+    for (const asset of day.stocks.filter((item) => item.assetType === 'company')) {
+      const prices = asset.path.map((point) => point.price)
+      matureStockDailyReturns.push(asset.path.at(-1).price / asset.startPrice - 1)
+      for (let index = 1; index < prices.length; index += 1) {
+        matureStockSegmentMoves.push(Math.abs(prices[index] / prices[index - 1] - 1))
+      }
+    }
+  }
+
   const market = generateMarketCycle({ cycle: 6, seed })
   for (const day of market.days) {
     for (const asset of day.stocks) {
@@ -137,10 +150,11 @@ for (let seed = 1; seed <= 300; seed += 1) {
 
 assert(selectedCompanyIds.size === 12, `기업 풀 일부가 선택되지 않았습니다: ${selectedCompanyIds.size}/12`)
 assert(Math.max(...stockSegmentMoves) <= STOCK_SEGMENT_MOVE_LIMIT + 0.001, '주식 구간 변동이 ±36% 상한을 벗어났습니다.')
-assert(quantile(stockSegmentMoves, 0.5) < 0.04, '가우시안 분포의 중앙 구간이 지나치게 큽니다.')
-assert(quantile(stockSegmentMoves, 0.95) >= 0.08, '가우시안 혼합분포의 꼬리가 충분히 넓지 않습니다.')
-assert(quantile(stockSegmentMoves, 0.99) >= 0.16, '상위 1% 주식 변동이 충분히 크지 않습니다.')
-assert(Math.abs(average(stockDailyReturns)) <= 0.03, '주식 가격 경로에 과도한 상승/하락 편향이 있습니다.')
+assert(quantile(stockSegmentMoves, 0.5) < quantile(matureStockSegmentMoves, 0.5), '1주차가 3주차보다 완만하지 않습니다.')
+assert(quantile(matureStockSegmentMoves, 0.5) < 0.04, '3주차 가우시안 분포의 중앙 구간이 지나치게 큽니다.')
+assert(quantile(matureStockSegmentMoves, 0.95) >= 0.08, '3주차 가우시안 혼합분포의 꼬리가 충분히 넓지 않습니다.')
+assert(quantile(matureStockSegmentMoves, 0.99) >= 0.16, '3주차 상위 1% 주식 변동이 충분히 크지 않습니다.')
+assert(Math.abs(average(matureStockDailyReturns)) <= 0.03, '3주차 주식 가격 경로에 과도한 상승/하락 편향이 있습니다.')
 assert(Math.max(...lateStockSegmentMoves) <= STOCK_SEGMENT_MOVE_LIMIT + 0.001, '6주차 주식 구간 변동이 ±36% 상한을 벗어났습니다.')
 assert(quantile(lateStockSegmentMoves, 0.99) >= 0.22, '6주차 상위 1% 주식 변동이 충분히 크지 않습니다.')
 assert(Math.abs(average(lateStockDailyReturns)) <= 0.04, '6주차 주식 경로에 과도한 상승/하락 편향이 있습니다.')
@@ -241,8 +255,9 @@ console.table(coverageRows.map((row) => ({
   coverage: `${(row.coverage * 100).toFixed(1)}%`,
 })))
 console.log(`500개 시드 평균 일중 변동폭: 코인/주식 = ${volatilityRatio.toFixed(2)}배`)
-console.log(`주식 구간 절대변동 P50/P95/P99 = ${(quantile(stockSegmentMoves, 0.5) * 100).toFixed(2)}% / ${(quantile(stockSegmentMoves, 0.95) * 100).toFixed(2)}% / ${(quantile(stockSegmentMoves, 0.99) * 100).toFixed(2)}%`)
-console.log(`주식 일간 평균 수익률 = ${(average(stockDailyReturns) * 100).toFixed(2)}%`)
+console.log(`1주차/3주차 주식 구간 P50 = ${(quantile(stockSegmentMoves, 0.5) * 100).toFixed(2)}% / ${(quantile(matureStockSegmentMoves, 0.5) * 100).toFixed(2)}%`)
+console.log(`3주차 주식 구간 P95/P99 = ${(quantile(matureStockSegmentMoves, 0.95) * 100).toFixed(2)}% / ${(quantile(matureStockSegmentMoves, 0.99) * 100).toFixed(2)}%`)
+console.log(`3주차 주식 일간 평균 수익률 = ${(average(matureStockDailyReturns) * 100).toFixed(2)}%`)
 console.log(`6주차 코인/주식 일중 변동폭 = ${lateVolatilityRatio.toFixed(2)}배, 주식 P99 = ${(quantile(lateStockSegmentMoves, 0.99) * 100).toFixed(2)}%`)
 console.log(`500개 시드 1주 종료 코인 평균가: ₡${average(finalCoinPrices).toFixed(2)}`)
 console.log(`300개 시드 7주 장기 보유: 중앙값 ${longHoldMedian.toFixed(2)}배 · 하위 10% ${longHoldLowerDecile.toFixed(2)}배 · 상승 확률 ${(longHoldWinRate * 100).toFixed(1)}%`)
