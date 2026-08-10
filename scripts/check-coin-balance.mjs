@@ -17,7 +17,7 @@ import {
   SISYPHUS_STOCK_ID,
   SISYPHUS_EPILOGUE_TARGET_PRICE,
 } from '../src/config.js'
-import { generateMarketCycle } from '../src/data/generateMarket.js'
+import { generateMarketCycle, injectMarketNoise } from '../src/data/generateMarket.js'
 import { minePaybackSeconds, mineRate, mineUpgradeCost } from '../src/logic/miningSystem.js'
 import { useGameStore } from '../src/store/gameStore.js'
 
@@ -165,6 +165,48 @@ assert(longHoldLowerDecile >= 1.1, `7주 장기 보유 하위 10%가 원금 대�
 assert(longHoldWinRate >= 0.9, `7주 장기 보유 상승 확률이 90% 미만입니다: ${(longHoldWinRate * 100).toFixed(1)}%`)
 
 const tradeTestMarket = generateMarketCycle({ cycle: 1, seed: 777 })
+const jaggedMarket = injectMarketNoise(structuredClone(tradeTestMarket))
+const jaggedVariationRatios = []
+let jaggedDirectionChanges = 0
+let jaggedDirectionComparisons = 0
+for (let dayIndex = 0; dayIndex < jaggedMarket.days.length; dayIndex += 1) {
+  for (let stockIndex = 0; stockIndex < jaggedMarket.days[dayIndex].stocks.length; stockIndex += 1) {
+    const coarseStock = tradeTestMarket.days[dayIndex].stocks[stockIndex]
+    const jaggedStock = jaggedMarket.days[dayIndex].stocks[stockIndex]
+    const coarseVariation = coarseStock.path.slice(1).reduce(
+      (total, point, index) => total + Math.abs(point.price - coarseStock.path[index].price),
+      0,
+    )
+    const jaggedVariation = jaggedStock.path.slice(1).reduce(
+      (total, point, index) => total + Math.abs(point.price - jaggedStock.path[index].price),
+      0,
+    )
+    if (coarseVariation > 0) jaggedVariationRatios.push(jaggedVariation / coarseVariation)
+
+    assert(jaggedStock.path.length >= 190, '랜덤워크 표본 밀도가 하루 190개 미만입니다.')
+    assert(
+      jaggedStock.path.every((point, index) => index === 0 || point.progress > jaggedStock.path[index - 1].progress),
+      '랜덤워크 시간축이 엄격히 증가하지 않습니다.',
+    )
+    assert(jaggedStock.path[0].price === coarseStock.path[0].price, '랜덤워크가 시가를 변경했습니다.')
+    assert(jaggedStock.path.at(-1).price === coarseStock.path.at(-1).price, '랜덤워크가 종가를 변경했습니다.')
+
+    const priceFloor = jaggedStock.startPrice * (jaggedStock.assetType === 'coin' ? COIN_DAILY_MIN_MULTIPLIER : STOCK_DAILY_MIN_MULTIPLIER)
+    const priceCeiling = jaggedStock.startPrice * (jaggedStock.assetType === 'coin' ? COIN_DAILY_MAX_MULTIPLIER : STOCK_DAILY_MAX_MULTIPLIER)
+    assert(jaggedStock.path.every((point) => point.price >= priceFloor - 0.01 && point.price <= priceCeiling + 0.01), '랜덤워크가 일중 가격 제한을 벗어났습니다.')
+
+    const moves = jaggedStock.path.slice(1)
+      .map((point, index) => point.price - jaggedStock.path[index].price)
+      .filter(Boolean)
+    for (let index = 1; index < moves.length; index += 1) {
+      jaggedDirectionComparisons += 1
+      if (Math.sign(moves[index]) !== Math.sign(moves[index - 1])) jaggedDirectionChanges += 1
+    }
+  }
+}
+assert(average(jaggedVariationRatios) >= 3.5, '랜덤워크의 미세 변동이 충분히 선명하지 않습니다.')
+assert(jaggedDirectionChanges / jaggedDirectionComparisons >= 0.44, '랜덤워크의 방향 전환이 충분히 빈번하지 않습니다.')
+
 useGameStore.getState().loadMarket(tradeTestMarket)
 useGameStore.getState().completeDayIntro()
 useGameStore.getState().startDay()

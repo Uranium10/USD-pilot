@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { DAY_DURATION_SECONDS } from '../config.js'
+import { formatMarketTime } from '../logic/marketClock.js'
 import { useGameStore } from '../store/gameStore.js'
 
-const formatClock = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
-const formatTimeline = (time) => `${Math.floor(time) + 1}일 ${formatClock((time % 1) * DAY_DURATION_SECONDS)}`
+// 시간축도 작업표시줄·속보와 같은 장 시계를 쓴다. 예전에는 여기만 실시간 경과 초를
+// 그대로 보여줘서(`1일 2:30`) 한 화면이 서로 다른 두 시간을 말했다.
+const formatTimeline = (time) => `${Math.floor(time) + 1}일 ${formatMarketTime(time % 1)}`
 
 function buildSeries(state, progress, stockId) {
   const series = []

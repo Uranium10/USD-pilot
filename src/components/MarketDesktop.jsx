@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, SISYPHUS_STOCK_ID } from '../config.js'
+import { COIN_ASSET_ID, COIN_SELL_SPREAD, DAY_DURATION_SECONDS, DAYS_PER_CYCLE, MARKET_CLOSING_WARN_SECONDS, SISYPHUS_STOCK_ID } from '../config.js'
+import { formatMarketTime, formatMarketTimeFromElapsed } from '../logic/marketClock.js'
 import { buyExecutionPrice, formatAssetQuantity, isCoinAsset, normalizeTradeQuantity, sellExecutionPrice } from '../logic/coinSystem.js'
 import { getMinPayment } from '../logic/debtSystem.js'
 import { mineRate } from '../logic/miningSystem.js'
@@ -15,15 +16,8 @@ import StockChart from './StockChart.jsx'
 
 const money = (value) => `₡${Math.round(value || 0).toLocaleString('ko-KR')}`
 const assetClass = (stock) => stock?.id === SISYPHUS_STOCK_ID ? 'asset-sisyphus' : stock?.id === COIN_ASSET_ID ? 'asset-coin' : ''
-const formatMarketTime = (progress) => {
-  const totalMinutes = 9 * 60 + Math.min(1, Math.max(0, progress)) * 9 * 60
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = Math.floor(totalMinutes % 60)
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
-
 function Taskbar({ activeApp, setActiveApp, onShutdown, elapsed, cycle, day, mailEligible }) {
-  const marketTime = formatMarketTime(elapsed / DAY_DURATION_SECONDS)
+  const marketTime = formatMarketTimeFromElapsed(elapsed)
   return <footer className="taskbar">
     <button className="shutdown" onClick={onShutdown} title="방으로 돌아가기">◐ 절전</button>
     <button title="U.S.D Market Terminal" className={activeApp === 'market' ? 'active' : ''} onClick={() => setActiveApp('market')}>▥ U.S.D Market Ter...</button>
@@ -162,7 +156,7 @@ export default function MarketDesktop() {
         : <section className="desktop-window market-window">
         <div className="window-titlebar">
           <b>U.S.D Market Terminal</b>
-          <span className={remaining < 60 ? 'red' : ''}>{weeklyModifier ? `${weeklyModifier.name} · ` : ''}장 마감 {Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}　— □ ×</span>
+          <span className={remaining < MARKET_CLOSING_WARN_SECONDS ? 'red' : ''}>{weeklyModifier ? `${weeklyModifier.name} · ` : ''}장 마감 {Math.floor(remaining / 60)}:{String(Math.floor(remaining % 60)).padStart(2, '0')}　— □ ×</span>
         </div>
         <section className="account-strip">
           <div className="asset-cell">

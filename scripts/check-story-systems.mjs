@@ -1,6 +1,7 @@
 import {
   EPILOGUE_CYCLE,
   DAY_DURATION_SECONDS,
+  MARKET_CLOSING_WARN_SECONDS,
   HACKING_DECK_COSTS,
   MAX_ENERGY,
   SISYPHUS_STOCK_ID,
@@ -9,6 +10,7 @@ import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
 import { compileScenario, isAiScenarioCycle } from '../server/ai/aiMarketCycle.js'
 import { cycleScenarioOutputConfig, findScenarioCopyIssues } from '../server/ai/cycleScenarioModel.js'
+import { formatMarketTime, formatMarketTimeFromElapsed } from '../src/logic/marketClock.js'
 import { newsBody } from '../src/logic/newsText.js'
 import { computeGameScale } from '../src/services/viewportScale.js'
 import { buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
@@ -177,6 +179,22 @@ assert(
   newsBody('오비탈 레일이 신규 계약을 체결했다.', '오비탈 레일') === '오비탈 레일이 신규 계약을 체결했다.',
   '구분자 없이 이어지는 종목명을 잘못 잘라냈습니다.',
 )
+// 게임 내 장 시계: 하루 진행률을 개장~마감 구간에 선형 매핑한다.
+assert(formatMarketTime(0) === '09:00', `개장 시각이 09:00이 아닙니다: ${formatMarketTime(0)}`)
+assert(formatMarketTime(1) === '13:30', `마감 시각이 13:30이 아닙니다: ${formatMarketTime(1)}`)
+assert(formatMarketTime(0.5) === '11:15', `장 중반 시각이 11:15가 아닙니다: ${formatMarketTime(0.5)}`)
+assert(formatMarketTime(-1) === '09:00' && formatMarketTime(2) === '13:30', '진행률 범위 밖에서 시계가 고정되지 않습니다.')
+// 경과 초 기준 변환이 하루 길이와 일관되어야 한다.
+assert(
+  formatMarketTimeFromElapsed(DAY_DURATION_SECONDS / 2) === formatMarketTime(0.5),
+  '경과 초 기준 장 시계가 진행률 기준과 일치하지 않습니다.',
+)
+// 장 마감 경고 구간은 하루 길이에 비례해야 한다(하루의 1/8).
+assert(
+  Math.abs(MARKET_CLOSING_WARN_SECONDS / DAY_DURATION_SECONDS - 0.125) < 1e-9,
+  '장 마감 경고 구간이 하루 길이의 1/8이 아닙니다.',
+)
+
 // 화면 배율: 고정 1024×768을 화면에 맞춰 균일 축소한다(가로/세로 중 더 빡빡한 쪽 기준).
 assert(computeGameScale(1024, 768) === 1, '디자인 해상도에서 배율이 1이 아닙니다.')
 assert(computeGameScale(2048, 1536) === 2, '큰 화면에서 배율이 확대되지 않습니다.')

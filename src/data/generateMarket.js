@@ -30,6 +30,9 @@ import {
 // 뉴스와 가격 반영 사이의 체감 간격이 유지되도록 초가 아니라 비율로 고정한다.
 const NEWS_LEAD_MIN_PROGRESS = -90 / 480
 const NEWS_LEAD_MAX_PROGRESS = 30 / 480
+const MARKET_NOISE_PROGRESS_STEP = 0.005
+const STOCK_NOISE_SCALE = 0.004
+const COIN_NOISE_SCALE = 0.008
 
 const companies = [
   ['오비탈 레일', '궤도 건설', 128, 'orbital-rail'],
@@ -424,39 +427,45 @@ export function generateMarketCycle({ cycle = 1, seed = Date.now(), companyIds, 
   }
 }
 
-function addBrownianBridge(coarsePoints, seed, volatilityScale) {
+function addBrownianBridge(coarsePoints, seed, volatilityScale, minPrice, maxPrice) {
   const random = seeded(seed)
   const densePoints = []
-  const PROGRESS_STEP = 0.01
+  const anchors = coarsePoints.reduce((points, point) => {
+    if (points.at(-1)?.progress === point.progress) points[points.length - 1] = point
+    else points.push(point)
+    return points
+  }, [])
 
-  for (let i = 0; i < coarsePoints.length - 1; i++) {
-    const p0 = coarsePoints[i]
-    const p1 = coarsePoints[i + 1]
-    
-    const steps = Math.max(2, Math.floor((p1.progress - p0.progress) / PROGRESS_STEP))
-    
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const p0 = anchors[i]
+    const p1 = anchors[i + 1]
+
+    const steps = Math.max(2, Math.ceil((p1.progress - p0.progress) / MARKET_NOISE_PROGRESS_STEP))
+
     const walk = [0]
-    for (let j = 1; j < steps; j++) {
-      walk.push(walk[j-1] + gaussian(random))
+    for (let j = 1; j <= steps; j++) {
+      walk.push(walk[j - 1] + gaussian(random))
     }
-    const walkEnd = walk[steps - 1]
-    
-    for (let j = 0; j < steps; j++) {
+    const walkEnd = walk[steps]
+
+    for (let j = 0; j <= steps; j++) {
+      if (i > 0 && j === 0) continue
+
       const t = j / steps
       const progress = p0.progress + t * (p1.progress - p0.progress)
       const linearPrice = p0.price + t * (p1.price - p0.price)
-      
-      const bridge = walk[j] - t * walkEnd 
-      const price = Math.max(0.01, linearPrice + bridge * volatilityScale)
-      
-      if (i === 0 && j === 0) {
-        densePoints.push({ progress: round(progress), price: round(price) })
-      } else if (j > 0) {
-        densePoints.push({ progress: round(progress), price: round(price) })
-      }
+
+      // 양 끝에서는 0이 되는 Brownian bridge로 큰 가격 사건과 종가를 보존하면서,
+      // 그 사이만 고주파 랜덤워크로 채워 차트의 국소적인 꺾임을 만든다.
+      const bridge = walk[j] - t * walkEnd
+      const price = clamp(linearPrice + bridge * volatilityScale, minPrice, maxPrice)
+
+      densePoints.push({
+        progress: Math.round(progress * 10000) / 10000,
+        price: round(price),
+      })
     }
   }
-  densePoints.push(coarsePoints[coarsePoints.length - 1])
   return densePoints
 }
 
@@ -467,11 +476,21 @@ export function injectMarketNoise(market) {
   market.days.forEach((dayData, dayIndex) => {
     dayData.stocks.forEach((stock, stockIndex) => {
       const subSeed = Number(seed) + cycle * 1000 + dayIndex * 100 + stockIndex
-      let volatilityScale = stock.startPrice * 0.003
+      let volatilityScale = stock.startPrice * STOCK_NOISE_SCALE
+      let minPrice = Math.max(0.01, stock.startPrice * STOCK_DAILY_MIN_MULTIPLIER)
+      let maxPrice = stock.startPrice * STOCK_DAILY_MAX_MULTIPLIER
       if (stock.assetType === 'coin') {
-        volatilityScale = stock.startPrice * 0.006
+        volatilityScale = stock.startPrice * COIN_NOISE_SCALE
+        minPrice = Math.max(
+          stock.startPrice * COIN_DAILY_MIN_MULTIPLIER,
+          COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MIN_MULTIPLIER,
+        )
+        maxPrice = Math.min(
+          stock.startPrice * COIN_DAILY_MAX_MULTIPLIER,
+          COIN_REFERENCE_PRICE * COIN_ABSOLUTE_MAX_MULTIPLIER,
+        )
       }
-      stock.path = addBrownianBridge(stock.path, subSeed, volatilityScale)
+      stock.path = addBrownianBridge(stock.path, subSeed, volatilityScale, minPrice, maxPrice)
     })
   })
   

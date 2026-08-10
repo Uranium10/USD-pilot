@@ -115,7 +115,9 @@
 .title-screen h1,
 .ending h1 {
   margin: 0;
-  font: 800 clamp(78px, 16vw, 180px) 'IBM Plex Mono';
+  /* 고정 프레임(1024px) 기준으로 환산한 값. vw는 프레임이 아니라 뷰포트를 가리켜서
+     창 크기에 따라 이 글자만 따로 커지거나 작아졌다(16vw × 1024px = 164px). */
+  font: 800 164px 'IBM Plex Mono';
   letter-spacing: -.08em;
   text-shadow: 0 0 40px #55e7ff55;
 }
@@ -3184,10 +3186,14 @@ button:hover {
   text-overflow: ellipsis;
 }
 
+/* 2026-08-10: min-height를 100vh에서 100%로 바꿨다. 게임 프레임은 1024×768 고정이고
+   화면 크기에는 --game-scale로만 대응하는데, 100vh는 프레임이 아니라 브라우저 뷰포트를
+   가리킨다. 그래서 창이 768px보다 높으면 컷씬만 프레임 밖으로 자라 배경 비율이 어긋나고
+   bottom 기준으로 배치된 대사창이 화면 아래로 잘려 나갔다. */
 .ending.ending-scene {
   position: relative;
   isolation: isolate;
-  min-height: 100vh;
+  min-height: 100%;
   background: #05070c var(--ending-background) center/cover no-repeat;
   overflow: hidden;
 }
@@ -3218,7 +3224,8 @@ button:hover {
 .ending-dialogue small { position: absolute; right: 18px; bottom: 10px; color: #8296ad; }
 
 .ending-result {
-  width: min(700px, 80vw);
+  /* 프레임 1024px 기준으로 80vw는 819px이라 항상 700px가 선택된다 — 뷰포트 의존을 없앤다. */
+  width: 700px;
   padding: 42px;
   background: #070c15e8;
   border: 1px solid #55dbff66;

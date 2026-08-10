@@ -8,6 +8,18 @@ const viteEnv = import.meta.env || {}
 //   일어나므로 하루 수익 기회는 유지되고 판단 시간만 짧아진다.
 // - 따라서 부채 곡선(FLOOR_BY_CYCLE)·정보 가격·7주차 시지프 목표는 조정하지 않는다.
 export const DAY_DURATION_SECONDS = Number(viteEnv.VITE_DAY_DURATION_SECONDS) || 4 * 60
+// 게임 내 장 시계. 낮 스테이지의 실시간 길이와 별개로, 화면에 표시되는 시각은 이 구간에
+// 선형 매핑된다 — 작업표시줄 시계, 속보 발표 시각, 차트 시간축이 모두 같은 시계를 쓴다.
+// 2026-08-10: 하루가 8분 → 4분이 되면서 기존 09:00~18:00(9시간)을 그대로 두면 게임 내
+// 시계가 두 배 빨라져 분 단위가 눈에 띄게 튄다. 실시간 1초당 게임 내 1.125분이라는 기존
+// 속도를 유지하도록 장 운영 시간을 절반(4시간 30분)으로 줄여 09:00~13:30으로 맞췄다.
+export const MARKET_OPEN_MINUTE = 9 * 60
+export const MARKET_SESSION_MINUTES = 4.5 * 60
+
+// 잔여 시간이 이 값 아래로 내려가면 장 마감 표시가 빨갛게 바뀐다. 하루 길이의 1/8로 두어
+// 하루가 바뀌어도 경고 구간이 차지하는 비중이 같다(8분이면 60초 = 기존 동작, 4분이면 30초).
+export const MARKET_CLOSING_WARN_SECONDS = DAY_DURATION_SECONDS / 8
+
 export const DAYS_PER_CYCLE = 7
 export const LISTED_COMPANY_COUNT = 5
 export const MARKET_ASSET_COUNT = 7 // 기업 5 + 코인 1 + 시지프 인텔리전스 1 (2026-08-10)
