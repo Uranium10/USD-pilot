@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/gameStore.js'
+import { tutorialSpotlightRect } from '../logic/tutorialSpotlight.js'
 
 const STEPS = [
   {
@@ -41,12 +42,16 @@ export default function NightTutorialOverlay() {
     const measure = () => {
       const overlayRect = overlay.getBoundingClientRect()
       const targetRect = target.getBoundingClientRect()
-      const padding = step.padding
-      const left = Math.max(0, targetRect.left - overlayRect.left - padding)
-      const top = Math.max(0, targetRect.top - overlayRect.top - padding)
-      const right = Math.min(overlayRect.width, targetRect.right - overlayRect.left + padding)
-      const bottom = Math.min(overlayRect.height, targetRect.bottom - overlayRect.top + padding)
-      setSpotlight({ target: step.target, left, top, width: right - left, height: bottom - top })
+      setSpotlight({
+        target: step.target,
+        ...tutorialSpotlightRect({
+          overlayRect,
+          targetRect,
+          overlayWidth: overlay.clientWidth,
+          overlayHeight: overlay.clientHeight,
+          padding: step.padding,
+        }),
+      })
     }
     const frame = window.requestAnimationFrame(measure)
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)

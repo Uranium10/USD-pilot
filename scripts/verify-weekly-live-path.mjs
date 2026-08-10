@@ -35,6 +35,15 @@ const costOf = (usage) => {
   return (uncached * price.input + cached * price.cached + Number(usage.completion_tokens || 0) * price.output) / 1e6
 }
 
+const usageOf = (attempts, key) => attempts.reduce(
+  (total, item) => total + Number(item.usage?.[key] || 0),
+  0,
+)
+const nestedUsageOf = (attempts, group, key) => attempts.reduce(
+  (total, item) => total + Number(item.usage?.[group]?.[key] || 0),
+  0,
+)
+
 async function loadRunPlans() {
   const client = createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN })
   const placeholders = RUN_PLAN_IDS.map(() => '?').join(', ')
@@ -74,12 +83,22 @@ async function main() {
       const events = (cycleScenario.days || []).flatMap((day) => day.events || []).length
       const rumors = (cycleScenario.days || []).flatMap((day) => day.rumorSeeds || []).length
 
-      rows.push({ id, cycle, seconds, cost, calls: attempts.length, firstIssues, issues, events, rumors })
+      const promptTokens = usageOf(attempts, 'prompt_tokens')
+      const cachedTokens = nestedUsageOf(attempts, 'prompt_tokens_details', 'cached_tokens')
+      const completionTokens = usageOf(attempts, 'completion_tokens')
+      const reasoningTokens = nestedUsageOf(attempts, 'completion_tokens_details', 'reasoning_tokens')
+      const sampleHeadline = cycleScenario.days?.[0]?.events?.[0]?.headline || '(뉴스 없음)'
+      const sampleRumor = cycleScenario.days?.[0]?.rumorSeeds?.[0]?.angle || '(정보 없음)'
+
+      rows.push({ id, cycle, seconds, cost, calls: attempts.length, firstIssues, issues, events, rumors, promptTokens, cachedTokens, completionTokens, reasoningTokens })
       console.log(
         `  c${cycle}: ${seconds.toFixed(1)}s $${cost.toFixed(4)} 호출 ${attempts.length}회`
         + ` | 첫 시도 결함 ${firstIssues.length} → 최종 ${issues.length}`
         + ` | 사건 ${events} 정보 ${rumors}`,
       )
+      console.log(`     토큰 입력 ${promptTokens.toLocaleString()} (캐시 ${cachedTokens.toLocaleString()}) / 출력 ${completionTokens.toLocaleString()} / reasoning ${reasoningTokens.toLocaleString()}`)
+      console.log(`     뉴스 표본: ${sampleHeadline}`)
+      console.log(`     정보 표본: ${sampleRumor}`)
       if (firstIssues.length) console.log(`     첫 시도: ${firstIssues.slice(0, 3).join(' / ')}`)
       worldState = cycleScenario.nextWorldState
     }
@@ -98,6 +117,7 @@ async function main() {
   console.log(`GPT 호출 ${total('calls')}회 (재시도 ${total('calls') - rows.length}회)`)
   console.log(`첫 시도 무결함 ${firstPassClean}/${rows.length} → 최종 무결함 ${finalClean}/${rows.length} (재시도로 구제 ${rescued}건)`)
   console.log(`첫 시도에서 orphan rumor ${orphanFirst}건, 주체 불일치 ${mismatchFirst}건 검출`)
+  console.log(`토큰 입력 ${total('promptTokens').toLocaleString()} (캐시 ${total('cachedTokens').toLocaleString()}) / 출력 ${total('completionTokens').toLocaleString()} / reasoning ${total('reasoningTokens').toLocaleString()}`)
   console.log(`사건 ${total('events')}개 / 정보 ${total('rumors')}개`)
 }
 

@@ -22,6 +22,7 @@ export function cycleScenarioOutputConfig(mode = process.env.AI_CYCLE_SCHEMA_MOD
 
 const INTERNAL_ID_PATTERN = /\bstock-[1-5]\b/i
 const BROKEN_COPY_PATTERN = /\.\.\.|\u2026|placeholder|corrupted/i
+const ABSTRACT_COMPARISON_PATTERN = /(?:보다|보다는)\s*[^.!?]{0,30}(?:절차|신뢰도|공정성|시장|평판)(?:이|가|은|는|을|를)/
 
 /**
  * \uD50C\uB808\uC774\uC5B4\uC5D0\uAC8C \uADF8\uB300\uB85C \uB178\uCD9C\uB418\uB294 \uBB38\uC7A5\uACFC, \uCEF4\uD30C\uC77C \uB2E8\uACC4\uC5D0\uC11C \uC870\uC6A9\uD788 \uC720\uC2E4\uB418\uB294 \uAD6C\uC870\uB97C \uAC80\uC0AC\uD55C\uB2E4.
@@ -43,6 +44,8 @@ export function findScenarioCopyIssues(scenario, { companies } = {}) {
       if (!/[\uAC00-\uD7A3]/.test(copy)) issues.push(`${label}: no Korean text`)
       if (INTERNAL_ID_PATTERN.test(copy)) issues.push(`${label}: internal stock id`)
       if (BROKEN_COPY_PATTERN.test(copy)) issues.push(`${label}: broken copy marker`)
+      if (label.endsWith('headline') && !/다[.!?]?$/.test(copy)) issues.push(`${label}: incomplete predicate`)
+      if (ABSTRACT_COMPARISON_PATTERN.test(copy)) issues.push(`${label}: ambiguous abstract comparison`)
     }
 
     // \uC18C\uBB38\uC774 \uAC19\uC740 \uB0A0\uC758 \uC0AC\uAC74\uC744 \uAC00\uB9AC\uD0A4\uC9C0 \uC54A\uC73C\uBA74 compileScenario()\uAC00 \uADF8 \uC18C\uBB38\uC744 \uD1B5\uC9F8\uB85C
@@ -59,6 +62,7 @@ export function findScenarioCopyIssues(scenario, { companies } = {}) {
     issues.push('each day needs at least one event and rumor')
   }
   issues.push(...findSubjectMismatches(scenario, companies))
+  issues.push(...findRumorTargetMismatches(scenario, companies))
   return issues
 }
 
@@ -79,6 +83,28 @@ function findSubjectMismatches(scenario, companies) {
         (company) => company.id !== event.primaryStockId && headline.includes(company.name)
       )
       if (other) issues.push(`day ${day.day} headline: subject mismatch (${ownName} \u2192 ${other.name})`)
+    }
+  }
+  return issues
+}
+
+// 대상 기업명이 생략된 중립적인 정보는 종목명 접두사로 보완할 수 있지만, 다른 상장사만
+// 언급하면 잘못된 대상을 가리키므로 재생성한다.
+function findRumorTargetMismatches(scenario, companies) {
+  if (!Array.isArray(companies) || !companies.length) return []
+  const nameById = new Map(companies.map((company) => [company.id, company.name]))
+  const issues = []
+  for (const day of scenario?.days || []) {
+    const eventById = new Map((day.events || []).map((event) => [event.eventId, event]))
+    for (const rumor of day.rumorSeeds || []) {
+      const event = eventById.get(rumor.targetEventId)
+      const ownName = nameById.get(event?.primaryStockId)
+      const angle = String(rumor.angle || '')
+      if (!ownName || angle.includes(ownName)) continue
+      const other = companies.find(
+        (company) => company.id !== event?.primaryStockId && angle.includes(company.name)
+      )
+      if (other) issues.push(`day ${day.day} rumor: subject mismatch (${ownName} → ${other.name})`)
     }
   }
   return issues

@@ -13,6 +13,7 @@ import { cycleScenarioOutputConfig, findScenarioCopyIssues } from '../server/ai/
 import { formatMarketTime, formatMarketTimeFromElapsed } from '../src/logic/marketClock.js'
 import { IMPACT_BY_MAGNITUDE, informationCost } from '../src/logic/informationEconomy.js'
 import { newsBody } from '../src/logic/newsText.js'
+import { tutorialSpotlightRect } from '../src/logic/tutorialSpotlight.js'
 import { computeGameScale } from '../src/services/viewportScale.js'
 import { buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
 import { buildRunPlanUserPrompt } from '../server/ai/prompts/runPlan.js'
@@ -126,6 +127,12 @@ assert(findScenarioCopyIssues(validCopyScenario).length === 0, '정상적인 한
 const brokenCopyScenario = structuredClone(validCopyScenario)
 brokenCopyScenario.days[0].events[0].headline = 'stock-1 급여명세서에 새 공제 코드 등장...'
 assert(findScenarioCopyIssues(brokenCopyScenario).some((issue) => issue.includes('internal stock id')), '내부 종목 ID가 노출된 뉴스를 걸러내지 못했습니다.')
+const nounHeadlineScenario = structuredClone(validCopyScenario)
+nounHeadlineScenario.days[0].events[0].headline = '유해 물질 검출 논란 확산과 대규모 집단 소송 예고.'
+assert(
+  findScenarioCopyIssues(nounHeadlineScenario).some((issue) => issue.includes('incomplete predicate')),
+  '서술어 없이 명사만 나열한 뉴스 헤드라인을 걸러내지 못했습니다.',
+)
 
 // 소문이 같은 날 사건을 가리키지 않으면 compileScenario가 그 소문을 버린다 —
 // 검증에서 먼저 잡아 재생성으로 이어져야 정보 상점이 조용히 비지 않는다.
@@ -164,6 +171,59 @@ neutralSubjectScenario.days[0].events[0].headline = '규제 당국이 임상 자
 assert(
   !findScenarioCopyIssues(neutralSubjectScenario, { companies: scenarioCompanies }).some((issue) => issue.includes('subject mismatch')),
   '기업명이 없는 정상 문장을 주체 불일치로 잘못 판정했습니다.',
+)
+
+const completeRumorScenario = structuredClone(mismatchScenario)
+completeRumorScenario.days[0].events[0] = {
+  eventId: 'e1',
+  primaryStockId: 'stock-1',
+  headline: '오비탈 레일이 신규 보수 계약을 체결해 매출 증가가 예상됐다.',
+}
+completeRumorScenario.days[0].rumorSeeds[0].angle = '건설 자재가 신규 작업 구역으로 이송됐다. 계약이 확정되면 오비탈 레일의 매출이 증가할 수 있다.'
+assert(
+  !findScenarioCopyIssues(completeRumorScenario, { companies: scenarioCompanies }).some((issue) => issue.includes('subject mismatch')),
+  '대상과 영향을 명시한 정상 정보가 거부됐습니다.',
+)
+const missingRumorTargetScenario = structuredClone(completeRumorScenario)
+missingRumorTargetScenario.days[0].rumorSeeds[0].angle = '건설 자재가 신규 작업 구역으로 이송되면서 계약 확대 가능성이 커졌다.'
+assert(
+  !findScenarioCopyIssues(missingRumorTargetScenario, { companies: scenarioCompanies }).some((issue) => issue.includes('subject mismatch')),
+  '기업명이 없는 중립적인 정보를 주체 불일치로 잘못 판정했습니다.',
+)
+const wrongRumorTargetScenario = structuredClone(completeRumorScenario)
+wrongRumorTargetScenario.days[0].rumorSeeds[0].angle = '리본 안드로이드가 신규 처리 계약을 확보해 매출이 증가할 수 있다.'
+assert(
+  findScenarioCopyIssues(wrongRumorTargetScenario, { companies: scenarioCompanies }).some((issue) => issue.includes('subject mismatch')),
+  '다른 기업만 언급한 정보를 주체 불일치로 잡아내지 못했습니다.',
+)
+const awkwardComparisonScenario = structuredClone(completeRumorScenario)
+awkwardComparisonScenario.days[0].rumorSeeds[0].angle = '게시물의 출처가 드러나면 셀레네 드릴보다 입찰 절차의 신뢰도가 먼저 흔들릴 수 있다.'
+assert(
+  findScenarioCopyIssues(awkwardComparisonScenario, { companies: scenarioCompanies }).some((issue) => issue.includes('ambiguous abstract comparison')),
+  '기업과 추상 개념을 잘못 비교한 정보 문장을 걸러내지 못했습니다.',
+)
+
+const scaledSpotlight = tutorialSpotlightRect({
+  overlayRect: { left: 100, top: 50, width: 512, height: 384 },
+  targetRect: { left: 356, top: 146, right: 484, bottom: 194 },
+  overlayWidth: 1024,
+  overlayHeight: 768,
+  padding: 8,
+})
+assert(
+  JSON.stringify(scaledSpotlight) === JSON.stringify({ left: 504, top: 184, width: 272, height: 112 }),
+  `축소 화면의 야간 튜토리얼 좌표가 맞지 않습니다: ${JSON.stringify(scaledSpotlight)}`,
+)
+const enlargedSpotlight = tutorialSpotlightRect({
+  overlayRect: { left: -244, top: -183, width: 1536, height: 1152 },
+  targetRect: { left: 140, top: 105, right: 524, bottom: 249 },
+  overlayWidth: 1024,
+  overlayHeight: 768,
+  padding: 6,
+})
+assert(
+  JSON.stringify(enlargedSpotlight) === JSON.stringify({ left: 250, top: 186, width: 268, height: 108 }),
+  `확대 화면의 야간 튜토리얼 좌표가 맞지 않습니다: ${JSON.stringify(enlargedSpotlight)}`,
 )
 
 // 속보 본문의 종목명 접두사 제거는 실제로 그 이름으로 시작할 때만 일어나야 한다.
