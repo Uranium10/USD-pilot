@@ -1320,3 +1320,10 @@
 - `scripts/check-story-systems.mjs`에 AI 충격 유지·내부 값·가격 차등 검사를, `scripts/check-coin-balance.mjs`에 모든 로컬 정보의 내부 충격량과 가격식 일치 검사를 추가했다.
 - 요청대로 예상 충격량은 화면에 표시하지 않았다. `App.jsx`와 `src/components/` 어디에서도 내부 필드를 참조하지 않는다.
 - `npm.cmd run lint`, `npm.cmd run check:story-systems`, `npm.cmd run check:coin`, `npm.cmd run build`, `git diff --check` 통과.
+
+## 2026-08-10 21:01 KST (Codex, 전체 push 및 현재 기기 DB 초기화)
+
+- 현재 작업 트리 전체를 `161965c feat: rebalance information value by market impact`로 커밋해 `origin/main`에 push했다.
+- Edge 로컬 저장소에서 배포 주소 `usd-pilot.vercel.app`의 device/session ID `1caee4d1-419d-4985-a250-085b5a14d750`을 확인했다. 삭제 전 Turso 세션은 `active · 1주차 1일차 · day`였고, 로컬 개발 주소의 별도 ID `7d4a628-8246-4432-ad5e-490b971dc1b2`에는 DB 행이 없었다.
+- 배포 device ID 하나를 조건으로 `holdings`, `sessions`, `ai_cycle_scenario`, `ai_cycle_world_state`, `ai_market_state`, `ai_restart_guard`를 삭제했다. 삭제 직후 여섯 테이블을 재조회해 모두 0건임을 확인했다.
+- 브라우저 `localStorage`의 로컬 백업은 DB 삭제 요청 범위가 아니므로 변경하지 않았다.
