@@ -1,0 +1,57 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>U.S.D 팀 소개 문서</title><style>
+@page { size: A4; margin: 18mm 17mm 19mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #172033; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size: 10.5pt; line-height: 1.68; word-break: keep-all; }
+body::before { content: "NAN2026 · U.S.D"; display: block; margin-bottom: 24mm; color: #16627a; font: 700 9pt monospace; letter-spacing: .18em; border-bottom: 2px solid #24c8ef; padding-bottom: 4mm; }
+h1 { margin: 0 0 12mm; color: #0d2940; font-size: 26pt; line-height: 1.25; letter-spacing: -.04em; }
+h2 { margin: 12mm 0 4mm; padding-bottom: 2mm; color: #11445b; font-size: 16pt; border-bottom: 1px solid #b8d9e4; break-after: avoid; }
+h3 { margin: 7mm 0 2mm; color: #12647c; font-size: 12.5pt; break-after: avoid; }
+h4 { color: #334b5d; }
+p { margin: 0 0 4mm; }
+ul, ol { margin: 1mm 0 5mm; padding-left: 7mm; }
+li { margin: 1.2mm 0; }
+table { width: 100%; margin: 4mm 0 7mm; border-collapse: collapse; font-size: 9.3pt; break-inside: avoid; }
+th { background: #e9f7fb; color: #123d50; font-weight: 700; }
+th, td { padding: 2.5mm 3mm; border: 1px solid #b8d4dd; text-align: left; vertical-align: top; }
+tr:nth-child(even) td { background: #f7fbfc; }
+code { padding: .3mm 1mm; border-radius: 2px; background: #eef3f5; color: #8b2f59; font-family: "Cascadia Mono", monospace; font-size: .9em; }
+a { color: #087a9d; text-decoration: none; }
+strong { color: #0b4b64; }
+hr { margin: 12mm 0 5mm; border: 0; border-top: 1px solid #9ebbc5; }
+</style></head><body><h1>U.S.D 팀 소개 문서</h1>
+<h2>1. 팀 개요</h2>
+<table><thead><tr><th>구분</th><th>내용</th></tr></thead><tbody><tr><td>팀명</td><td>[제출 전 팀명 기입]</td></tr><tr><td>작품명</td><td>U.S.D</td></tr><tr><td>참가 형태</td><td>[개인 / 2인 이상 팀 여부 기입]</td></tr><tr><td>대표자</td><td>[성명 또는 활동명 기입]</td></tr><tr><td>연락처</td><td>[제출용 이메일 기입]</td></tr></tbody></table>
+<p>U.S.D 팀은 생성형 AI를 게임 규칙의 대체물이 아니라 반복 가능한 내러티브 제작 도구로 활용하고, 실제 플레이의 판단과 결과는 명시적인 코드로 보장하는 것을 목표로 한다. 기획, 프로그래밍, UI·연출, 데이터 검증을 긴밀하게 연결해 짧은 파일럿 안에서도 완결된 플레이 흐름을 구현했다.</p>
+<p>※ 본 문서는 실제 팀원 정보가 저장소에서 확인되지 않아 역할 템플릿 중심으로 작성한 초안이다. 2인 이상 팀일 경우 아래 표를 실제 담당 내역에 맞게 수정해야 한다. 개인 참가라면 공모전 양식상 팀 소개 문서 제출 필요 여부를 확인한다.</p>
+<h2>2. 팀원별 역할</h2>
+<table><thead><tr><th>팀원</th><th>주요 담당</th><th>세부 업무</th><th>기여 산출물</th></tr></thead><tbody><tr><td>[팀원 1 / 대표]</td><td>기획·디렉팅</td><td>핵심 루프, 부채·시장·야간 활동 설계, 세계관, 밸런스 의사결정, 플레이 테스트 총괄</td><td>기획 문서, 밸런스 기준, 스토리 방향, 최종 빌드 검수</td></tr><tr><td>[팀원 2]</td><td>클라이언트·UI</td><td>React 화면, Canvas 차트, 대화·튜토리얼, 오디오·볼륨 UI, 반응형 화면 및 접근성</td><td>게임 클라이언트, UI 컴포넌트, 시각·음향 연출</td></tr><tr><td>[팀원 3]</td><td>서버·AI 시스템</td><td>Vercel Functions, Turso 저장, RunPlan·CycleScenario 파이프라인, 구조화 출력, 비용 최적화</td><td>AI 시장 API, DB 스키마, 생성·복구 로직</td></tr><tr><td>[팀원 4]</td><td>콘텐츠·QA</td><td>뉴스·소문·야간 활동·엔딩 콘텐츠, 회귀 테스트, 플레이 피드백 정리</td><td>콘텐츠 데이터, 테스트 시나리오, 제출 자료</td></tr></tbody></table>
+<p>팀원이 한 사람이 여러 영역을 담당했다면 행을 합치고 실제 기여율을 기입한다. 사용하지 않은 행은 삭제한다.</p>
+<h2>3. 협업 방식</h2>
+<h3>문서 중심 요구사항 관리</h3>
+<p>게임의 하루 구조, 상환 주기, 시장 종료 조건과 같은 핵심 규칙을 문서에 먼저 명시하고 구현과 문서가 달라질 때마다 수정했다. 특히 ‘낮은 8분, 밤은 플레이어가 종료할 때까지, 상환 주기는 7일’처럼 플레이 경험을 좌우하는 기준은 코드 상수와 테스트에서 함께 검증했다.</p>
+<h3>작은 단위 구현과 반복 검증</h3>
+<p>기능을 한 번에 완성하기보다 정보 거래, 차트, 야간 활동, 채굴, 저장, 스토리 순서로 나누어 구현했다. 각 단계에서 실제 화면과 요구사항을 대조하고 플레이 피드백을 반영했다. UI 오류나 저장 불일치처럼 시연에 치명적인 문제를 우선 수정했다.</p>
+<h3>AI 제안에 대한 사람의 최종 판단</h3>
+<p>복수의 AI 도구를 기획 검토와 구현 보조에 활용했으나 제안 간 충돌이나 잘못된 가정이 자주 발생할 수 있음을 전제로 했다. 모든 변경은 저장소 diff, 자동 테스트, 실제 API 호출 결과와 플레이 화면을 통해 확인한 뒤 반영했다. 비용 절감 실험 역시 측정 결과가 나쁜 병렬 방식은 적용하지 않았다.</p>
+<h2>4. 팀의 강점</h2>
+<ol>
+<li><strong>기획과 기술의 연결</strong>: 부채 압박, 정보 비대칭, 낮·밤 리듬이 각각 독립 기능이 아니라 하나의 경제 루프로 작동한다.</li>
+<li><strong>검증 가능한 AI 활용</strong>: AI 출력 범위와 코드 판정 범위를 분리하고 비용·속도·실패 조건을 수치로 기록했다.</li>
+<li><strong>시연 안정성 우선</strong>: 서버 장애 시 로컬 시장 전환, 브라우저·DB 이중 저장, 반복 재시작 보호 등 파일럿 운영 상황을 고려했다.</li>
+<li><strong>피드백 기반 개선</strong>: 팀원 및 테스트 참여자의 차트, 뉴스 정합성, 음량, 저장 문제 제보를 기능 개선으로 연결했다.</li>
+<li><strong>확장 가능한 데이터 구조</strong>: 기업, 정보, 야간 활동, 주간 제약과 엔딩을 데이터 중심으로 관리해 이후 콘텐츠 추가가 용이하다.</li>
+</ol>
+<h2>5. 개발 도구 및 기술 스택</h2>
+<ul>
+<li>프론트엔드: React, Vite, Zustand, Canvas API</li>
+<li>백엔드: Vercel Functions, Node.js</li>
+<li>데이터베이스: Turso(libSQL)</li>
+<li>생성형 AI API: Anthropic, OpenAI, Google GenAI 실험 경로</li>
+<li>품질 관리: oxlint, Vite production build, Node 기반 회귀·통합 검사</li>
+<li>형상 관리: Git, GitHub</li>
+</ul>
+<h2>6. 제출 전 팀 확인 서명</h2>
+<p>본 문서의 역할과 기여 내용이 실제 작업 내역과 일치하는지 모든 팀원이 확인한다.</p>
+<table><thead><tr><th>이름</th><th>확인</th><th>날짜</th></tr></thead><tbody><tr><td>[팀원 1]</td><td>[서명 또는 확인]</td><td>[날짜]</td></tr><tr><td>[팀원 2]</td><td>[서명 또는 확인]</td><td>[날짜]</td></tr></tbody></table>
+<hr>
+<p>작성 상태: 정보 기입 전 초안 필수 보완: 팀명, 참가 형태, 실명·활동명, 실제 역할, 기여율, 연락처</p></body></html>

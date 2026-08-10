@@ -1,0 +1,85 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>U.S.D 포트폴리오 및 참고자료</title><style>
+@page { size: A4; margin: 18mm 17mm 19mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #172033; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size: 10.5pt; line-height: 1.68; word-break: keep-all; }
+body::before { content: "NAN2026 · U.S.D"; display: block; margin-bottom: 24mm; color: #16627a; font: 700 9pt monospace; letter-spacing: .18em; border-bottom: 2px solid #24c8ef; padding-bottom: 4mm; }
+h1 { margin: 0 0 12mm; color: #0d2940; font-size: 26pt; line-height: 1.25; letter-spacing: -.04em; }
+h2 { margin: 12mm 0 4mm; padding-bottom: 2mm; color: #11445b; font-size: 16pt; border-bottom: 1px solid #b8d9e4; break-after: avoid; }
+h3 { margin: 7mm 0 2mm; color: #12647c; font-size: 12.5pt; break-after: avoid; }
+h4 { color: #334b5d; }
+p { margin: 0 0 4mm; }
+ul, ol { margin: 1mm 0 5mm; padding-left: 7mm; }
+li { margin: 1.2mm 0; }
+table { width: 100%; margin: 4mm 0 7mm; border-collapse: collapse; font-size: 9.3pt; break-inside: avoid; }
+th { background: #e9f7fb; color: #123d50; font-weight: 700; }
+th, td { padding: 2.5mm 3mm; border: 1px solid #b8d4dd; text-align: left; vertical-align: top; }
+tr:nth-child(even) td { background: #f7fbfc; }
+code { padding: .3mm 1mm; border-radius: 2px; background: #eef3f5; color: #8b2f59; font-family: "Cascadia Mono", monospace; font-size: .9em; }
+a { color: #087a9d; text-decoration: none; }
+strong { color: #0b4b64; }
+hr { margin: 12mm 0 5mm; border: 0; border-top: 1px solid #9ebbc5; }
+</style></head><body><h1>U.S.D 포트폴리오 및 참고자료</h1>
+<h2>1. 프로젝트 링크</h2>
+<table><thead><tr><th>항목</th><th>링크</th></tr></thead><tbody><tr><td>플레이 데모</td><td>[제출 전 Vercel 배포 URL 기입]</td></tr><tr><td>소스 저장소</td><td>https://github.com/Uranium10/USD-pilot</td></tr><tr><td>시연 영상</td><td>[제출 전 영상 URL 기입]</td></tr><tr><td>팀 포트폴리오</td><td>[선택 사항]</td></tr></tbody></table>
+<h2>2. 한 문장 소개</h2>
+<p>부모에게 상속된 거액의 빚을 갚기 위해, 8분의 시장과 끝나지 않는 밤을 반복하며 정보·노동·투자를 선택하는 채무 생존형 트레이딩 로그라이크.</p>
+<h2>3. 대표 기능 체크리스트</h2>
+<ul>
+<li>[ ] 타이틀 글리치, 이어하기 미리보기 및 오디오 연출 캡처</li>
+<li>[ ] 프롤로그 및 포트레이트 대화 장면 캡처</li>
+<li>[ ] 정보 거래소와 주간 모디파이어 캡처</li>
+<li>[ ] 다종목 시장 터미널, 차트 커서와 LIVE WIRE 캡처</li>
+<li>[ ] 정보 메모장과 완료 정보 표시 캡처</li>
+<li>[ ] 밤 방 화면, 야간 활동 및 수집품 캡처</li>
+<li>[ ] 채굴 설비·DUST 자산 화면 캡처</li>
+<li>[ ] 상환 화면과 엔딩 템플릿 캡처</li>
+</ul>
+<h2>4. 기술 구조 요약</h2>
+<h3>클라이언트</h3>
+<p>React 컴포넌트가 타이틀, 방, 정보 거래소, 시장 터미널, 야간 활동과 스토리 오버레이를 구성한다. 낮 시간 진행은 React 렌더링과 분리된 스테이지 엔진이 담당하며, Zustand가 시장·거래·인벤토리·스토리 상태를 중앙 관리한다. 차트는 Canvas로 렌더링해 장중 갱신과 커서 상호작용을 처리한다.</p>
+<h3>서버와 저장</h3>
+<p>Vercel Functions가 시장 생성과 세션 저장 API를 제공한다. Turso에는 게임 진행 세션, 보유 종목, AI 런 상태, RunPlan 풀과 재시작 보호 캐시가 분리 저장된다. 로컬 개발에서는 Vite 미들웨어가 동일 API 인터페이스를 제공한다.</p>
+<h3>AI 시장</h3>
+<p>사전 생성된 RunPlan이 7주 서사 골격을 제공하고 GPT 주간 모델이 현재 주차 사건을 구조화 출력으로 생성한다. 코드가 seed 기반 가격 경로에 사건을 컴파일한다. AI 장애 시 로컬 생성기로 전환한다.</p>
+<h2>5. 개발 과정에서 해결한 주요 문제</h2>
+<h3>배포·로컬 실행 경로 분리</h3>
+<p>초기에는 로컬 실행에도 Vercel 인증이 개입해 개발 서버가 곧바로 종료되는 문제가 있었다. 로컬에서는 Vite 미들웨어, 배포에서는 Vercel Function을 사용하도록 인터페이스를 통일해 인증 없이 <code>localhost:5173</code>에서 실행할 수 있게 했다.</p>
+<h3>저장 정합성</h3>
+<p>주차와 일차가 1로 돌아가는 문제를 해결하기 위해 세션 revision, 서버 응답 검증, 브라우저 백업과 Turso 저장을 함께 사용했다. 시장 데이터와 AI 세계 상태가 서로 덮어쓰지 않도록 저장 테이블도 분리했다.</p>
+<h3>생성 비용과 대기시간</h3>
+<p>RunPlan을 사전 생성 풀로 전환하고, 주간 GPT의 출력 스키마에서 런타임 미사용 필드를 제거했다. 소규모 동일 조건 실험에서 주간 호출 평균 시간이 35.2초에서 19.8초, 비용이 $0.0591에서 $0.0331로 감소했다. 반복 재시작에는 기기별 보호 캐시를 적용했다.</p>
+<h3>생성형 AI의 통제 범위</h3>
+<p>AI가 실제 가격을 직접 정하게 하지 않고 사건의 원인·방향·표현만 생성하도록 제한했다. 가격 상한, 부채, 소문 판정과 7주차 핵심 사건은 코드가 보장한다. 실험적 병렬 생성이 예상과 달리 느리고 비쌌던 사례는 정식 경로에서 제외했다.</p>
+<h2>6. 검증 항목</h2>
+<ul>
+<li>production build</li>
+<li>lint</li>
+<li>스토리·7주차·해킹 덱 상태 머신 검사</li>
+<li>코인 성장 곡선 검사</li>
+<li>세션 저장·복원 통합 검사</li>
+<li>Turso 재시작 보호 캐시 저장·조회·삭제 검사</li>
+<li>AI 모델 실존 및 구조화 출력 검사</li>
+<li>주간 모델 비용·시간 비교 벤치마크</li>
+</ul>
+<h2>7. 제출용 이미지 배치안</h2>
+<ol>
+<li>표지: 타이틀 화면과 한 문장 소개</li>
+<li>핵심 루프: 정보 구매 → 거래 → 밤 활동 → 상환의 4단 흐름</li>
+<li>시장 화면: 차트, 뉴스, 거래 UI 주석</li>
+<li>생활 화면: 방·야간 활동·수집품</li>
+<li>AI 구조: RunPlan → CycleScenario → 결정론적 컴파일 도식</li>
+<li>안정성: 저장·폴백·호출 보호 요약</li>
+<li>향후 확장: 엔딩, 스토리, 콘텐츠 풀</li>
+</ol>
+<h2>8. 최종 제출 전 점검</h2>
+<ul>
+<li>[ ] 실제 팀원과 기여 내역 확정</li>
+<li>[ ] 데모 URL과 영상 링크 삽입</li>
+<li>[ ] 대표 스크린샷 6~8장 삽입</li>
+<li>[ ] 사용 자산의 라이선스 확인 및 출처 정리</li>
+<li>[ ] API 모델명·비용 정보 최신 여부 확인</li>
+<li>[ ] 개인 정보와 API 키가 문서·저장소에 노출되지 않았는지 확인</li>
+<li>[ ] 공모전 파일명·용량·페이지 제한 확인</li>
+</ul>
+<hr>
+<p>작성 상태: 초안 1.0 본 문서는 선택 제출용 참고자료이며 게임 소개서·AI 기술 문서의 내용을 시각적으로 보완하는 용도로 구성한다.</p></body></html>
