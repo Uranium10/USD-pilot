@@ -3,6 +3,7 @@ import { generateCycleScenario } from './cycleScenarioModel.js'
 import { generateRunPlan } from './runPlanModel.js'
 import { createAiStateRepository } from '../aiStateRepository.js'
 import { createRunPlanPoolRepository } from '../runPlanPoolRepository.js'
+import { createRestartGuardRepository } from '../restartGuardRepository.js'
 
 // 2026-08-09 재작업: 이전 버전은 runPlanPromise/worldState를 모듈 스코프 변수로 캐싱했다.
 // 로컬 `vite dev`(Node 프로세스가 계속 살아있음)에선 문제없이 작동하지만, 실제 배포 환경인
@@ -30,6 +31,15 @@ function getPoolRepository() {
     authToken: process.env.TURSO_AUTH_TOKEN,
   })
   return poolRepository
+}
+
+let restartGuardRepository
+function getRestartGuardRepository() {
+  restartGuardRepository ||= createRestartGuardRepository({
+    url: process.env.TURSO_DATABASE_URL,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  })
+  return restartGuardRepository
 }
 
 // 같은 웜 인스턴스에 아주 가까운 시간에 같은 device_id로 요청이 두 번 들어오는 경우(예:
@@ -143,6 +153,16 @@ export async function generateAiMarketCycle(options) {
 
   const deviceId = options.deviceId
   try {
+    if (Number(options.cycle) === 1) {
+      const protectedRestart = await getRestartGuardRepository().reusable(deviceId)
+      if (protectedRestart.reuse) {
+        await getRepository().save(deviceId, {
+          runPlan: protectedRestart.cache.runPlan,
+          worldState: protectedRestart.cache.worldState,
+        })
+        return { ...protectedRestart.cache.market, restartProtected: true, restartProtectionReason: protectedRestart.reason }
+      }
+    }
     const state = await getRepository().get(deviceId)
     const runPlan = await getOrCreateRunPlan(deviceId, state?.runPlan)
     const { cycleScenario } = await generateCycleScenario({
@@ -154,9 +174,14 @@ export async function generateAiMarketCycle(options) {
 
     // 다음 호출(다음 사이클, 혹은 콜드 스타트 뒤 재시도)이 같은 RunPlan을 재사용하고
     // 이어지는 worldState를 받을 수 있도록 저장한다.
-    await getRepository().save(deviceId, { runPlan, worldState: cycleScenario.nextWorldState })
+    const nextWorldState = cycleScenario.nextWorldState
+    await getRepository().save(deviceId, { runPlan, worldState: nextWorldState })
 
-    return compileScenario(fallback, cycleScenario)
+    const compiled = compileScenario(fallback, cycleScenario)
+    if (Number(options.cycle) === 1) {
+      await getRestartGuardRepository().saveFresh(deviceId, { market: compiled, runPlan, worldState: nextWorldState })
+    }
+    return compiled
   } catch (error) {
     console.error('[ai-market] 기존 시장 생성기로 대체합니다.', error)
     return fallback

@@ -17,10 +17,19 @@ import { createDonationSchedule, getNightActivityOptions, nightActivityCashCost 
 import { chooseWeeklyModifier, getWeeklyModifier, modifiedNightEnergyCost, modifiedNightReward, modifiedRumorCost } from '../src/logic/weeklyModifiers.js'
 import { ENDING_BACKGROUNDS, ENDING_TEMPLATES } from '../src/data/endingTemplates.js'
 import { getNetWorth, useGameStore } from '../src/store/gameStore.js'
+import { MAX_FRESH_CYCLE_ONE_PER_WINDOW, RESTART_REUSE_MS, RESTART_WINDOW_MS, nextRestartWindow, restartProtectionDecision } from '../server/restartProtection.js'
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message)
 }
+
+const restartNow = 2_000_000_000_000
+const restartCache = { market: {}, runPlan: {}, worldState: {}, cachedAt: restartNow, windowStartedAt: restartNow, freshCount: 1 }
+assert(restartProtectionDecision(restartCache, restartNow + RESTART_REUSE_MS - 1).reason === 'cooldown', '30분 내 재시작 보호가 작동하지 않습니다.')
+const limitedCache = { ...restartCache, cachedAt: restartNow - RESTART_REUSE_MS, freshCount: MAX_FRESH_CYCLE_ONE_PER_WINDOW }
+assert(restartProtectionDecision(limitedCache, restartNow + RESTART_REUSE_MS).reason === 'daily-limit', '24시간 신규 생성 제한이 작동하지 않습니다.')
+assert(!restartProtectionDecision(limitedCache, restartNow + RESTART_WINDOW_MS + 1).reuse, '24시간 창이 지난 캐시가 계속 강제 재사용됩니다.')
+assert(nextRestartWindow(limitedCache, restartNow + RESTART_WINDOW_MS + 1).freshCount === 1, '새 24시간 창의 생성 횟수가 초기화되지 않습니다.')
 
 const dialogueVariables = { cycle: 3, cash: 12500, worldState: { codename: 'METIS' }, action: () => 'blocked' }
 assert(renderDialogueTemplate('{{cycle}}주차 · {{cash}} 크레딧 · {{worldState.codename}}', dialogueVariables) === '3주차 · 12,500 크레딧 · METIS', '대화 변수 치환이 잘못됐습니다.')

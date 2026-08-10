@@ -53,6 +53,18 @@ CREATE TABLE IF NOT EXISTS ai_market_state (
   updated_at        INTEGER NOT NULL
 );
 
+-- 반복 새 게임으로 1주차 GPT를 무제한 재호출하는 것을 막는 기기별 보호 캐시.
+-- 세이브/ai_market_state를 삭제해도 이 행은 남아 짧은 재시작에는 같은 1주차를 돌려준다.
+CREATE TABLE IF NOT EXISTS ai_restart_guard (
+  device_id          TEXT PRIMARY KEY,
+  market_json        TEXT NOT NULL,
+  run_plan_json      TEXT NOT NULL,
+  world_state_json   TEXT NOT NULL,
+  cached_at          INTEGER NOT NULL,
+  window_started_at  INTEGER NOT NULL,
+  fresh_count        INTEGER NOT NULL DEFAULT 1
+);
+
 -- 미리 만들어둔 RunPlan 풀 (2026-08-09 도입). 새 게임 시작 시 이 풀에서 무작위로 하나
 -- 뽑아 그 세션의 ai_market_state.run_plan_json으로 쓴다 — 플레이어가 "새로하기"를 누른
 -- 순간 RunPlan 생성(수십 초)을 기다리지 않게 하기 위함. RunPlan은 stock-1~stock-5라는

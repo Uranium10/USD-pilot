@@ -9,6 +9,7 @@
     "check:coin": "node scripts/check-coin-balance.mjs",
     "check:story-systems": "node scripts/check-story-systems.mjs",
     "check:session": "node --env-file=.env.local scripts/check-session-persistence.mjs",
+    "check:restart-protection": "node --env-file=.env.local scripts/check-restart-protection.mjs",
     "check:ai": "node --env-file=.env.local scripts/test-ai-models.mjs",
     "check:ai-cost": "node --env-file=.env.local scripts/check-ai-cost.mjs",
     "check:ai-persistence": "node --env-file=.env.local scripts/check-ai-persistence.mjs",
