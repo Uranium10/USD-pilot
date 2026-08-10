@@ -1,6 +1,6 @@
 import { WORLD_TONE } from './shared.js'
 
-export const CYCLE_SCENARIO_SYSTEM_PROMPT = `
+export const CYCLE_SCENARIO_VERBOSE_SYSTEM_PROMPT = `
 당신은 U.S.D(가제)라는 채무-생존 트레이딩 로그라이크 게임의 주간 시장 시나리오 담당자다.
 런 전체 서사 계획(RunPlan)이 주어지면, 이번 사이클(7일치) 하나만의 상세 시나리오 초안을
 MarketScenarioDraft 스키마에 맞춰 만든다.
@@ -27,6 +27,16 @@ ${WORLD_TONE}
 - 시지프 인텔리전스의 강제 대폭락과 가격 경로는 코드가 별도로 보장하므로 만들거나 덮어쓰지 않는다.
 - stock-1~stock-5 기업들이 대폭락 이후 어떤 선택을 하고 어떤 새 질서에 놓이는지에 집중한다.
 `.trim()
+
+export const CYCLE_SCENARIO_SYSTEM_PROMPT = CYCLE_SCENARIO_VERBOSE_SYSTEM_PROMPT
+  .replace('- companyStates는 정확히 5개, stock-1~stock-5 각각 하나씩 빠짐없이.\n', '')
+  .replace('- causeEventId가 없는 사건은 null로 채울 것 (필드 자체를 생략하지 말 것).\n', '')
+  .concat(`
+
+출력 절약 원칙:
+- 스키마에 없는 해설·상태·인과 메모는 출력하지 않는다.
+- 플레이어가 보는 headline과 소문 angle에는 기존과 같은 구체성·세계관 어조를 유지한다.
+- nextWorldState에는 다음 주 서사 연속성에 꼭 필요한 미해결 상태만 간결하게 남긴다.`)
 
 export function buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) {
   const activeArcs = (runPlan?.arcs ?? []).filter(

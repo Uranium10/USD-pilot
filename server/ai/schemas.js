@@ -87,7 +87,7 @@ export const RUN_PLAN_SCHEMA = {
 // --- CycleScenario (= for_agent_plan.md의 MarketScenarioDraft): 사이클 1개분 시장 서사 초안 ---
 // companyStates는 정확히 5개(stock-1~5), days는 정확히 7개여야 하지만 이 역시
 // 프롬프트 지시 + 향후 애플리케이션 검증으로 강제한다 (스키마 minItems/maxItems 사용 불가).
-export const CYCLE_SCENARIO_SCHEMA = {
+export const CYCLE_SCENARIO_VERBOSE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: [
@@ -243,6 +243,27 @@ export const CYCLE_SCENARIO_SCHEMA = {
   },
 }
 
+// 실제 게임 컴파일러가 소비하는 필드만 남긴 기본 스키마. verbose 스키마는 위에 온전히
+// 보존되어 있으며 AI_CYCLE_SCHEMA_MODE=verbose로 즉시 복구할 수 있다.
+const slimCycleScenarioSchema = JSON.parse(JSON.stringify(CYCLE_SCENARIO_VERBOSE_SCHEMA))
+for (const field of ['openingNarration', 'weeklyTheme', 'marketMood', 'companyStates']) {
+  delete slimCycleScenarioSchema.properties[field]
+  slimCycleScenarioSchema.required = slimCycleScenarioSchema.required.filter((item) => item !== field)
+}
+const slimDay = slimCycleScenarioSchema.properties.days.items
+delete slimDay.properties.dailyTheme
+slimDay.required = slimDay.required.filter((item) => item !== 'dailyTheme')
+const slimEvent = slimDay.properties.events.items
+for (const field of ['relatedStockIds', 'detail', 'causeEventId']) {
+  delete slimEvent.properties[field]
+  slimEvent.required = slimEvent.required.filter((item) => item !== field)
+}
+const slimSelfCheck = slimCycleScenarioSchema.properties.selfCheck
+delete slimSelfCheck.properties.notes
+slimSelfCheck.required = slimSelfCheck.required.filter((item) => item !== 'notes')
+
+export const CYCLE_SCENARIO_SCHEMA = slimCycleScenarioSchema
+
 // --- CycleSkeleton (실험용, 2026-08-09) ---
 // CYCLE_SCENARIO_SCHEMA를 "구조 결정"과 "문장 작성"으로 쪼갠 실험적 대안의 앞부분.
 // companyStates/nextWorldState/selfCheck는 그대로 두고, 날짜별 사건·소문은 headline/
@@ -271,7 +292,7 @@ export const CYCLE_SKELETON_SCHEMA = {
     openingNarration: { type: 'string' },
     weeklyTheme: { type: 'string' },
     marketMood: { type: 'string', enum: ['calm', 'uneasy', 'speculative', 'panic'] },
-    companyStates: CYCLE_SCENARIO_SCHEMA.properties.companyStates,
+    companyStates: CYCLE_SCENARIO_VERBOSE_SCHEMA.properties.companyStates,
     days: {
       type: 'array',
       description: '정확히 7개, day 1~7 각각 하나씩. 이 단계는 구조만 정한다 — 문장은 안 씀.',
@@ -338,8 +359,8 @@ export const CYCLE_SKELETON_SCHEMA = {
         },
       },
     },
-    nextWorldState: CYCLE_SCENARIO_SCHEMA.properties.nextWorldState,
-    selfCheck: CYCLE_SCENARIO_SCHEMA.properties.selfCheck,
+    nextWorldState: CYCLE_SCENARIO_VERBOSE_SCHEMA.properties.nextWorldState,
+    selfCheck: CYCLE_SCENARIO_VERBOSE_SCHEMA.properties.selfCheck,
   },
 }
 

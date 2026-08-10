@@ -9,8 +9,16 @@
 
 import { getOpenAIClient } from './clients.js'
 import { MODEL_TIERS } from './config.js'
-import { CYCLE_SCENARIO_SCHEMA } from './schemas.js'
-import { CYCLE_SCENARIO_SYSTEM_PROMPT, buildCycleScenarioUserPrompt } from './prompts/cycleScenario.js'
+import { CYCLE_SCENARIO_SCHEMA, CYCLE_SCENARIO_VERBOSE_SCHEMA } from './schemas.js'
+import { CYCLE_SCENARIO_SYSTEM_PROMPT, CYCLE_SCENARIO_VERBOSE_SYSTEM_PROMPT, buildCycleScenarioUserPrompt } from './prompts/cycleScenario.js'
+
+export function cycleScenarioOutputConfig(mode = process.env.AI_CYCLE_SCHEMA_MODE) {
+  const verbose = mode === 'verbose'
+  return {
+    prompt: verbose ? CYCLE_SCENARIO_VERBOSE_SYSTEM_PROMPT : CYCLE_SCENARIO_SYSTEM_PROMPT,
+    schema: verbose ? CYCLE_SCENARIO_VERBOSE_SCHEMA : CYCLE_SCENARIO_SCHEMA,
+  }
+}
 
 /**
  * @param {{ cycle: number, runPlan: object, worldState?: object }} params
@@ -19,6 +27,7 @@ import { CYCLE_SCENARIO_SYSTEM_PROMPT, buildCycleScenarioUserPrompt } from './pr
 export async function generateCycleScenario({ cycle, runPlan, worldState }) {
   const client = getOpenAIClient()
   const { model } = MODEL_TIERS.weekly
+  const outputConfig = cycleScenarioOutputConfig()
 
   const completion = await client.chat.completions.create({
     model,
@@ -28,14 +37,14 @@ export async function generateCycleScenario({ cycle, runPlan, worldState }) {
     // 확인했다. 근거: USD-spec/agent_workthrough_2.md.
     reasoning_effort: 'medium',
     messages: [
-      { role: 'system', content: CYCLE_SCENARIO_SYSTEM_PROMPT },
+      { role: 'system', content: outputConfig.prompt },
       { role: 'user', content: buildCycleScenarioUserPrompt({ cycle, runPlan, worldState }) },
     ],
     response_format: {
       type: 'json_schema',
       json_schema: {
         name: 'cycle_scenario',
-        schema: CYCLE_SCENARIO_SCHEMA,
+        schema: outputConfig.schema,
         strict: true,
       },
     },

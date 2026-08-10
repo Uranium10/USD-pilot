@@ -16,7 +16,7 @@ import { MODEL_TIERS } from '../server/ai/config.js'
 // 이 테이블도 같이 갱신해야 한다.
 const PRICING = {
   [MODEL_TIERS.narrative.model]: { input: 5.00, output: 25.00, source: 'shared/models.md 캐시(claude-api 스킬)' },
-  [MODEL_TIERS.weekly.model]: { input: 2.00, output: 12.00, source: 'developers.openai.com/api/docs/pricing (short context)' },
+  [MODEL_TIERS.weekly.model]: { input: 2.50, output: 15.00, source: 'developers.openai.com/api/docs/models/compare' },
   [MODEL_TIERS.filler.model]: { input: 1.50, output: 7.50, source: 'ai.google.dev/gemini-api/docs/pricing (standard tier)' },
 }
 

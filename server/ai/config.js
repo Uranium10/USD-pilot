@@ -19,7 +19,7 @@ export const MODEL_TIERS = {
   weekly: {
     provider: 'openai',
     // 2026-08-09: gpt-5.5 → gpt-5.6-terra로 교체(사용자 지정). 직접 호출로 실존·정상
-    // 응답 확인. 가격도 gpt-5.5($5/$30)보다 낮음($2/$12 per 1M, short context) —
+    // 응답 확인. 현재 공식 표준 단가는 $2.5/$15 per 1M이며 cached input은 $0.25 —
     // developers.openai.com/api/docs/pricing 조회로 확인.
     model: 'gpt-5.6-terra',
     role: '주간 검증 모델 — 사이클별 시장 시나리오(CycleScenario) 초안 생성 + 자체 정합성 검증',

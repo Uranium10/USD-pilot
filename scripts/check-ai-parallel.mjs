@@ -13,7 +13,7 @@ import { MODEL_TIERS } from '../server/ai/config.js'
 
 // 가격은 WebFetch로 공식 페이지에서 확인한 값(USD / 1M 토큰). 모델이 바뀌면 갱신할 것.
 const PRICING = {
-  [MODEL_TIERS.weekly.model]: { input: 2.00, output: 12.00 },
+  [MODEL_TIERS.weekly.model]: { input: 2.50, output: 15.00 },
   [MODEL_TIERS.filler.model]: { input: 1.50, output: 7.50 },
 }
 

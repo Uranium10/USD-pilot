@@ -37,7 +37,7 @@ async function testCycleScenario(runPlan) {
   section(`[3/3] weekly (CycleScenario) — ${MODEL_TIERS.weekly.provider}/${MODEL_TIERS.weekly.model}`)
   const { cycleScenario, raw } = await generateCycleScenario({ cycle: 1, runPlan, worldState: null })
   console.log(`제목: ${cycleScenario.title}`)
-  console.log(`분위기: ${cycleScenario.marketMood}`)
+  console.log(`시나리오: ${cycleScenario.title}${cycleScenario.marketMood ? ` / 분위기: ${cycleScenario.marketMood}` : ''}`)
   console.log(`days 개수: ${cycleScenario.days?.length}`)
   console.log(`selfCheck: ${JSON.stringify(cycleScenario.selfCheck)}`)
   console.log(`토큰 사용량: ${JSON.stringify(raw.usage)}`)

@@ -8,9 +8,10 @@ import {
 import { generateMarketCycle } from '../src/data/generateMarket.js'
 import { NIGHT_ACTIVITIES, NIGHT_ITEMS } from '../src/data/nightContent.js'
 import { compileScenario, isAiScenarioCycle } from '../server/ai/aiMarketCycle.js'
+import { cycleScenarioOutputConfig } from '../server/ai/cycleScenarioModel.js'
 import { buildCycleScenarioUserPrompt } from '../server/ai/prompts/cycleScenario.js'
 import { buildRunPlanUserPrompt } from '../server/ai/prompts/runPlan.js'
-import { CYCLE_SCENARIO_SCHEMA, RUN_PLAN_SCHEMA } from '../server/ai/schemas.js'
+import { CYCLE_SCENARIO_SCHEMA, CYCLE_SCENARIO_VERBOSE_SCHEMA, RUN_PLAN_SCHEMA } from '../server/ai/schemas.js'
 import { parseDialogueBold, renderDialogueTemplate } from '../src/logic/dialogueTemplate.js'
 import { createDonationSchedule, getNightActivityOptions, nightActivityCashCost } from '../src/logic/nightActivities.js'
 import { chooseWeeklyModifier, getWeeklyModifier, modifiedNightEnergyCost, modifiedNightReward, modifiedRumorCost } from '../src/logic/weeklyModifiers.js'
@@ -86,6 +87,11 @@ assert(useGameStore.getState().marketReady === false, '7주차 시장을 받기 
 const epilogueMarket = generateMarketCycle({ cycle: EPILOGUE_CYCLE, seed: 710, companyIds: cycleSix.companyIds })
 assert(isAiScenarioCycle(EPILOGUE_CYCLE) && !isAiScenarioCycle(EPILOGUE_CYCLE + 1), 'AI 시나리오 생성 범위가 7주차까지 열려 있지 않습니다.')
 assert(CYCLE_SCENARIO_SCHEMA.properties.cycle.enum.includes(7), 'CycleScenario 스키마가 7주차를 거부합니다.')
+assert(!CYCLE_SCENARIO_SCHEMA.properties.companyStates && !CYCLE_SCENARIO_SCHEMA.properties.openingNarration, '기본 CycleScenario에 미사용 상위 필드가 남아 있습니다.')
+assert(!CYCLE_SCENARIO_SCHEMA.properties.days.items.properties.events.items.properties.detail, '기본 CycleScenario 이벤트에 미사용 상세 필드가 남아 있습니다.')
+assert(CYCLE_SCENARIO_VERBOSE_SCHEMA.properties.companyStates && CYCLE_SCENARIO_VERBOSE_SCHEMA.properties.days.items.properties.events.items.properties.detail, 'verbose 복구 스키마가 손상되었습니다.')
+assert(cycleScenarioOutputConfig('verbose').schema === CYCLE_SCENARIO_VERBOSE_SCHEMA, 'AI_CYCLE_SCHEMA_MODE=verbose 복구 경로가 연결되지 않았습니다.')
+assert(cycleScenarioOutputConfig().schema === CYCLE_SCENARIO_SCHEMA, '기본 CycleScenario가 슬림 스키마를 사용하지 않습니다.')
 assert(RUN_PLAN_SCHEMA.properties.arcs.items.properties.landingCycle.enum.includes(7), 'RunPlan 스키마가 7주차 결말 아크를 거부합니다.')
 assert(buildRunPlanUserPrompt().includes('cycle 1~7'), 'RunPlan 프롬프트가 7주차를 요청하지 않습니다.')
 assert(buildCycleScenarioUserPrompt({ cycle: 7, runPlan: { arcs: [] } }).includes('에필로그'), '7주차 시나리오 프롬프트에 에필로그 지시가 없습니다.')
