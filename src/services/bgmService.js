@@ -48,10 +48,10 @@ class BgmPlayer {
     return this.muted
   }
 
-  setVolume(value) {
+  setVolume(value, { persist = true } = {}) {
     this.volume = clampVolume(value)
     this.audio.volume = this.volume
-    writePreference(VOLUME_KEY, this.volume)
+    if (persist) writePreference(VOLUME_KEY, this.volume)
   }
 
   setMuted(muted) {

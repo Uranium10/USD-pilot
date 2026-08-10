@@ -17,6 +17,7 @@ import {
   SISYPHUS_STOCK_ID,
   SISYPHUS_EPILOGUE_TARGET_PRICE,
 } from '../src/config.js'
+import { getMinPayment } from '../src/logic/debtSystem.js'
 import { generateMarketCycle, injectMarketNoise } from '../src/data/generateMarket.js'
 import { informationCost } from '../src/logic/informationEconomy.js'
 import { minePaybackSeconds, mineRate, mineUpgradeCost } from '../src/logic/miningSystem.js'
@@ -30,6 +31,8 @@ const quantile = (values, ratio) => [...values].sort((left, right) => left - rig
 const weekSeconds = DAY_DURATION_SECONDS * DAYS_PER_CYCLE
 
 assert(DAY_DURATION_SECONDS === 240, '낮 스테이지는 4분(240초)이어야 합니다.')
+assert(FLOOR_BY_CYCLE.join(',') === '18000,23000,29000,39000,53000,71000', '주차별 최소 상환 하한이 ₡1,000씩 완화되지 않았습니다.')
+assert(getMinPayment(165000, 1) === 18800, '부채 비례분이 적용되는 1주차도 기존보다 ₡1,000 낮아야 합니다.')
 // 하루 길이를 절반으로 줄이면서 채굴 레이트를 2배로 올려 하루/주차당 경제 규모를 보존했다.
 // 이 두 값은 항상 함께 움직여야 하므로 곱을 직접 검증한다(T.0 기준 하루 ₡180).
 assert(
@@ -57,7 +60,7 @@ const coverageRows = FLOOR_BY_CYCLE.map((floor, index) => {
   const totalFloorIncome = miningValue + JOB_REWARD * DAYS_PER_CYCLE
   return { cycle: index + 1, tier, floor, totalFloorIncome, coverage: totalFloorIncome / floor }
 })
-assert(coverageRows[0].coverage <= 0.32, '1주차 안전망 수입이 최소 상환액의 32%를 넘습니다.')
+assert(coverageRows[0].coverage <= 0.34, '1주차 안전망 수입이 완화된 최소 상환액의 34%를 넘습니다.')
 assert(coverageRows.every((row, index) => index === 0 || row.coverage <= coverageRows[index - 1].coverage), '주차가 지날수록 안전망 커버율이 낮아져야 합니다.')
 
 const stockRanges = []

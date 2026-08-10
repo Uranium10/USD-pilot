@@ -18,11 +18,15 @@ export default function BgmController() {
   const draggingRef = useRef(false)
   const focusWithinRef = useRef(false)
   const closeTimerRef = useRef(null)
+  const renderFrameRef = useRef(null)
 
   useEffect(() => { bgmPlayer.setMode(mode) }, [mode])
   useEffect(() => { bgmPlayer.setRoomFilter(roomBandpass) }, [roomBandpass])
 
-  useEffect(() => () => window.clearTimeout(closeTimerRef.current), [])
+  useEffect(() => () => {
+    window.clearTimeout(closeTimerRef.current)
+    window.cancelAnimationFrame(renderFrameRef.current)
+  }, [])
 
   const cancelClose = () => window.clearTimeout(closeTimerRef.current)
   const scheduleClose = () => {
@@ -35,10 +39,14 @@ export default function BgmController() {
     const rect = sliderRef.current?.getBoundingClientRect()
     if (!rect?.height) return
     const nextVolume = Math.min(1, Math.max(0, (rect.bottom - clientY) / rect.height))
-    bgmPlayer.setVolume(nextVolume)
+    // 포인터 이동 중에는 오디오만 즉시 반영한다. 매 이벤트마다 localStorage와
+    // React 렌더링까지 수행하면 특히 Firefox에서 슬라이더가 끊겨 보일 수 있다.
+    bgmPlayer.setVolume(nextVolume, { persist: false })
     if (bgmPlayer.isMuted()) bgmPlayer.setMuted(false)
     setMuted(false)
-    setVolume(nextVolume)
+    window.cancelAnimationFrame(renderFrameRef.current)
+    renderFrameRef.current = window.requestAnimationFrame(() => setVolume(nextVolume))
+    return nextVolume
   }
   const startDrag = (event) => {
     cancelClose()
@@ -50,8 +58,19 @@ export default function BgmController() {
     if (draggingRef.current) updateFromPointer(event.clientY)
   }
   const stopDrag = (event) => {
+    const finalVolume = updateFromPointer(event.clientY)
     draggingRef.current = false
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    if (finalVolume !== undefined) {
+      bgmPlayer.setVolume(finalVolume)
+      setVolume(finalVolume)
+    }
+    scheduleClose()
+  }
+  const cancelDrag = (event) => {
+    draggingRef.current = false
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    bgmPlayer.setVolume(bgmPlayer.getVolume())
     scheduleClose()
   }
   const changeByKeyboard = (event) => {
@@ -73,7 +92,7 @@ export default function BgmController() {
 
   return <div className={`bgm-control ${muted ? 'muted' : ''}`}>
     <button type="button" className="bgm-launch" aria-label="볼륨 조절 열기" onClick={() => { setExpanded(true); scheduleClose() }}><SpeakerIcon /></button>
-    <aside className={`bgm-volume ${expanded ? 'expanded' : 'collapsed'} ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨" onMouseEnter={scheduleClose} onMouseMove={scheduleClose} onMouseLeave={scheduleClose} onFocusCapture={() => { focusWithinRef.current = true; cancelClose() }} onBlurCapture={() => { focusWithinRef.current = false; scheduleClose() }}>
+    <aside className={`bgm-volume ${expanded ? 'expanded' : 'collapsed'} ${muted ? 'muted' : ''}`} aria-label="배경음악 볼륨" onMouseMove={cancelClose} onMouseLeave={scheduleClose} onFocusCapture={() => { focusWithinRef.current = true; cancelClose() }} onBlurCapture={() => { focusWithinRef.current = false; scheduleClose() }}>
       <div
       ref={sliderRef}
       className="bgm-volume-slider"
@@ -87,7 +106,7 @@ export default function BgmController() {
       onPointerDown={startDrag}
       onPointerMove={moveDrag}
       onPointerUp={stopDrag}
-      onPointerCancel={stopDrag}
+      onPointerCancel={cancelDrag}
       onKeyDown={changeByKeyboard}
       >
         {Array.from({ length: 12 }, (_, index) => <span key={index} className={index < filledSegments ? 'filled' : ''} />)}

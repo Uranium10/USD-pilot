@@ -1,4 +1,4 @@
-import { DEBT_RATIO, FLOOR_BY_CYCLE, INTEREST_RATE, MAX_CYCLES } from '../config.js'
+import { DEBT_PAYMENT_RELIEF, DEBT_RATIO, FLOOR_BY_CYCLE, INTEREST_RATE, MAX_CYCLES } from '../config.js'
 
 // U.S.D 부채 시스템(B 구조). USD-spec/USD_debt_system.md의 명세를 그대로 옮긴 순수 함수들이다.
 //
@@ -13,7 +13,9 @@ import { DEBT_RATIO, FLOOR_BY_CYCLE, INTEREST_RATE, MAX_CYCLES } from '../config
 // 선상환으로 부채 비례분이 작아져도 압박이 유지된다.
 // 하한은 지수식이 아니라 실측으로 조정한 계단형 배열(FLOOR_BY_CYCLE)을 그대로 찾아 쓴다.
 export function getMinPayment(debt, cycle) {
-  const proportional = Math.round(debt * DEBT_RATIO)
+  // 하한만 ₡1,000 낮추면 1주차처럼 부채 비례분이 더 큰 구간은 전혀 쉬워지지 않는다.
+  // 비례분에도 같은 완화값을 빼서 어느 경로에서도 기존 계산보다 정확히 ₡1,000 낮춘다.
+  const proportional = Math.max(0, Math.round(debt * DEBT_RATIO) - DEBT_PAYMENT_RELIEF)
   const floor = FLOOR_BY_CYCLE[cycle - 1] ?? FLOOR_BY_CYCLE.at(-1)
   return Math.min(debt, Math.max(proportional, floor))
 }
