@@ -3,20 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
     <link rel="preload" href="/sounds/bgm/bgm_title.mp3" as="audio" type="audio/mpeg" />
     <title>usd</title>
   </head>
   <body>
     <div id="root"></div>
-    <!-- 세로 화면의 좁은 기기에서만 보이는 안내. 게임 프레임은 --game-scale로 축소되므로
-         이 안내가 프레임 안에 있으면 같이 작아져 읽을 수 없다. 그래서 #root 바깥에 둔다. -->
-    <div id="rotate-notice">
-      <div class="rotate-notice-card">
-        <strong>가로로 돌려주세요</strong>
-        <span>이 게임은 가로 화면에 맞춰 만들어졌습니다.</span>
-      </div>
-    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

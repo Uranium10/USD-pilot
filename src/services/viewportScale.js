@@ -27,7 +27,22 @@ function apply() {
   const width = viewport?.width || window.innerWidth
   const height = viewport?.height || window.innerHeight
   const scale = computeGameScale(width, height)
-  document.documentElement.style.setProperty('--game-scale', String(scale))
+  const rootStyle = document.documentElement.style
+  rootStyle.setProperty('--game-scale', String(scale))
+  rootStyle.setProperty('--viewport-width', `${width}px`)
+  rootStyle.setProperty('--viewport-height', `${height}px`)
+  rootStyle.setProperty('--viewport-left', `${viewport?.offsetLeft || 0}px`)
+  rootStyle.setProperty('--viewport-top', `${viewport?.offsetTop || 0}px`)
+}
+
+let applyFrame = null
+
+function scheduleApply() {
+  if (applyFrame !== null) return
+  applyFrame = window.requestAnimationFrame(() => {
+    applyFrame = null
+    apply()
+  })
 }
 
 function refreshFirefoxFontLayer() {
@@ -54,8 +69,9 @@ export function startViewportScale() {
   if (started || typeof window === 'undefined') return
   started = true
   apply()
-  window.addEventListener('resize', apply, { passive: true })
-  window.addEventListener('orientationchange', apply, { passive: true })
-  window.visualViewport?.addEventListener('resize', apply, { passive: true })
+  window.addEventListener('resize', scheduleApply, { passive: true })
+  window.addEventListener('orientationchange', scheduleApply, { passive: true })
+  window.visualViewport?.addEventListener('resize', scheduleApply, { passive: true })
+  window.visualViewport?.addEventListener('scroll', scheduleApply, { passive: true })
   refreshFirefoxFontLayer()
 }

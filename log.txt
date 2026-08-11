@@ -1382,3 +1382,10 @@
 - 코인과 완전히 동일한 패턴으로 고쳤다: `generateMarketCycle()`에 `companyStartPrices`(stock-1~5 종가 배열)/`sisyphusStartPrice` 파라미터를 추가해 로스터가 그대로 유지된 사이클(companyIdsPinned)에 한해 직전 종가를 기준가로 쓰고, 없으면 기존 공식으로 폴백한다. `src/services/marketService.js`(buildUrl/requestMarketCycle/prefetchMarketCycle/fetchMarketCycle) → `api/market-cycle.js`(stockPrices/sisyphusPrice 쿼리 파싱) → `src/App.jsx`(정산 화면의 prefetch/next/epilogue 3곳, `companyStartPricesOf()` 헬퍼로 state.currentPrices에서 추출) 전체 경로를 관통시켰다. `src/services/sessionService.js`에도 세션 복원 시 world.market이 유실된 폴백 경로용으로 같은 필드를 저장하도록 추가했다.
 - 검증: 같은 시드로 재실측 — 수정 후 괴리가 전부 ±1.25%(의도된 오버나이트 갭 지터) 이내로 줄었다. 시지프 7주차 대폭락 스크립트도 진입가를 8000으로 강제해도 목표가(320) 근처로 정상 붕괴함을 확인해 연속성 수정이 스크립트를 깨지 않음을 검증했다. `npm run lint`/`build`/`check:coin`/`check-stock-path-progression.mjs`/`check-debt-balance.mjs` 전부 통과.
 - 그 외 확인한 것(문제 아님, 참고용): VOLATILITY_BY_CYCLE/COIN_VOLATILITY_BY_CYCLE/INFO_COST_MULTIPLIER는 배열 길이가 6(1~6주차)뿐이라 7주차는 `?? .at(-1)`로 6주차 값을 그대로 재사용— 안전한 폴백이라 버그는 아니지만, COIN_GROWTH_TARGET_BY_CYCLE/COIN_SEGMENT_DRIFT_BY_CYCLE는 이미 7개 항목으로 확장돼 있어 배열 길이가 일관되지 않는다(사용자 판단 필요, 지금은 손대지 않음).
+
+## 2026-08-12 (Codex, 모바일 뷰포트 안정화)
+
+- 데스크톱용 1024×768 내부 레이아웃은 그대로 보존하고, 모바일에서는 `visualViewport`의 실제 폭·높이에 맞춰 프레임 전체를 균일 배율로 표시하도록 루트 컨테이너의 크기와 위치를 연동했다.
+- 모바일 주소창 접힘, 방향 전환, 표시 영역 이동 때 중복 발생하던 배율 계산을 애니메이션 프레임당 한 번으로 통합해 화면 흔들림을 줄였다.
+- 세로 화면을 가리던 회전 강제 안내를 제거해 가로·세로 방향을 모두 허용하고, 모바일 브라우저의 자동 텍스트 확대가 고정 레이아웃을 깨뜨리지 않도록 보정했다.
+- lint, 스토리 시스템 검사, production build를 통과했다.
