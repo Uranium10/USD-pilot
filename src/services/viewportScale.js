@@ -21,18 +21,13 @@ export function computeGameScale(width, height) {
 }
 
 function apply() {
-  // visualViewport는 모바일에서 주소창이 접히고 펴질 때의 실제 표시 영역을 알려준다.
-  // 없으면 innerWidth/innerHeight로 폴백한다.
-  const viewport = window.visualViewport
-  const width = viewport?.width || window.innerWidth
-  const height = viewport?.height || window.innerHeight
+  // #root와 동일한 CSS 레이아웃 뷰포트로 계산한다. visualViewport의 offset/크기를
+  // fixed 루트에 다시 적용하면 일부 삼성 인터넷 회전 상태에서 보정이 이중 적용되어
+  // 1024×768 프레임이 화면 우하단으로 밀려난다.
+  const width = document.documentElement.clientWidth || window.innerWidth
+  const height = document.documentElement.clientHeight || window.innerHeight
   const scale = computeGameScale(width, height)
-  const rootStyle = document.documentElement.style
-  rootStyle.setProperty('--game-scale', String(scale))
-  rootStyle.setProperty('--viewport-width', `${width}px`)
-  rootStyle.setProperty('--viewport-height', `${height}px`)
-  rootStyle.setProperty('--viewport-left', `${viewport?.offsetLeft || 0}px`)
-  rootStyle.setProperty('--viewport-top', `${viewport?.offsetTop || 0}px`)
+  document.documentElement.style.setProperty('--game-scale', String(scale))
 }
 
 let applyFrame = null
@@ -72,6 +67,5 @@ export function startViewportScale() {
   window.addEventListener('resize', scheduleApply, { passive: true })
   window.addEventListener('orientationchange', scheduleApply, { passive: true })
   window.visualViewport?.addEventListener('resize', scheduleApply, { passive: true })
-  window.visualViewport?.addEventListener('scroll', scheduleApply, { passive: true })
   refreshFirefoxFontLayer()
 }

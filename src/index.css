@@ -10,19 +10,18 @@
 }
 * { box-sizing: border-box; }
 /* 게임은 1024×768 고정 해상도로 그려지고 --game-scale로 축소된다(App.css의 .game-frame).
-   모바일 주소창과 방향 전환으로 실제 표시 영역이 달라질 수 있어 #root의 크기·위치는
-   viewportScale.js가 visualViewport 기준 CSS 변수로 갱신한다. 방향 자체는 제한하지 않는다. */
+   루트와 배율 계산이 같은 CSS 레이아웃 뷰포트를 사용해야 삼성 인터넷처럼 회전 시
+   visualViewport 오프셋을 별도로 보고하는 브라우저에서도 중앙이 어긋나지 않는다. */
 html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; background: #020407; }
-body { margin: 0; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; }
 #root {
   position: fixed;
-  left: var(--viewport-left, 0px);
-  top: var(--viewport-top, 0px);
-  width: var(--viewport-width, 100vw);
-  height: var(--viewport-height, 100vh);
+  inset: 0;
   display: grid;
   place-items: center;
   overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 
 button, input { font: inherit; }

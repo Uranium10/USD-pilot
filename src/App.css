@@ -16,11 +16,13 @@
   width: 1024px;
   height: 768px;
   aspect-ratio: 4/3;
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   overflow: hidden;
   background: #070a10;
   box-shadow: 0 0 80px #000;
-  transform: translateZ(0) scale(var(--game-scale, 1));
+  transform: translate(-50%, -50%) translateZ(0) scale(var(--game-scale, 1));
   transform-origin: center center;
   backface-visibility: hidden;
   will-change: transform;
@@ -321,7 +323,7 @@
 /* Firefox는 웹폰트가 로드되기 전에 합성된 transform 레이어를 간혹 선택/드래그 시점까지
    다시 그리지 않는다. fonts.ready 뒤 Z축을 한 프레임만 바꿔 텍스트 레이어를 갱신한다. */
 .game-frame.firefox-font-refresh {
-  transform: translateZ(.01px) scale(var(--game-scale, 1));
+  transform: translate(-50%, -50%) translateZ(.01px) scale(var(--game-scale, 1));
 }
 
 .day-transition.leaving {

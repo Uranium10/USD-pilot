@@ -1389,3 +1389,14 @@
 - 모바일 주소창 접힘, 방향 전환, 표시 영역 이동 때 중복 발생하던 배율 계산을 애니메이션 프레임당 한 번으로 통합해 화면 흔들림을 줄였다.
 - 세로 화면을 가리던 회전 강제 안내를 제거해 가로·세로 방향을 모두 허용하고, 모바일 브라우저의 자동 텍스트 확대가 고정 레이아웃을 깨뜨리지 않도록 보정했다.
 - lint, 스토리 시스템 검사, production build를 통과했다.
+
+## 2026-08-12 (Codex, 모바일 중앙 배치 재수정)
+
+- 실기기 제보 사진과 390×844·844×390 브라우저 재현을 통해, 변환 전 너비가 1024px인 `.game-frame`을 CSS Grid가 작은 화면에서 안전 정렬하며 중앙 대신 시작점에 배치하는 문제를 확인했다. 이후 중앙 기준 축소가 적용돼 프레임이 우하단으로 밀리고 있었다.
+- `visualViewport`의 크기·오프셋을 fixed 루트에 재적용하던 보정을 제거하고, 루트를 `fixed; inset: 0`으로 고정했다. 게임 프레임은 `left/top: 50%`와 `translate(-50%, -50%)`로 명시적으로 중앙 배치해 Grid의 overflow 정렬에 의존하지 않도록 수정했다.
+- 390×844 세로 화면에서는 프레임 전체가 폭에 맞춰 중앙에, 844×390 가로 화면에서는 높이에 맞춰 중앙에 표시되는 것을 실제 Chromium 스크린샷으로 확인했다. 데스크톱 1024×768 내부 배치는 변경하지 않았다.
+
+## 2026-08-12 01:26 KST (Claude, 29차)
+
+- 이전 배치(msgbatch_012gUUppbtPtC1hWdttnNNPR, 8/10 제출)를 회수하려다 사용자가 제지 — 다른 환경에서 이미 회수했을 가능성이 있어 건너뜀. 대신 Batches API로 RunPlan 20개를 새로 제출했다.
+- **새 batch_id: msgbatch_01B9rG3pF2o8cbyLn88UgcJK** — `node --env-file=.env.local scripts/collect-run-plan-batch.mjs msgbatch_01B9rG3pF2o8cbyLn88UgcJK`로 나중에 회수. 옛 batch_id(msgbatch_012gUUppbtPtC1hWdttnNNPR)는 이미 처리됐을 수 있으니 회수 전에 먼저 run_plan_pool 최신 항목들의 생성 시각을 확인해 중복 회수를 피할 것.
